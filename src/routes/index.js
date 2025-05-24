@@ -1,19 +1,21 @@
 // src/routes/index.js
 const express = require("express");
-const router = express.Router(); // Paso 1: Crear una instancia del Router de Express
+const router = express.Router();
 
-// (Aquí es donde más adelante importarás y usarás tus otras rutas, como rol.routes.js)
-// Ejemplo:
-// const rolRoutes = require('./rol.routes.js');
-// router.use('/roles', rolRoutes);
+// Importar las rutas de las entidades
+const rolRoutes = require("./rol.routes.js"); // Asegúrate que esta línea esté
+// const usuarioRoutes = require('./usuario.routes.js');
 
-// Ruta de prueba para verificar que este router funciona
+// Montar las rutas de las entidades en el router principal
+router.use("/roles", rolRoutes); // Y esta línea también
+// router.use('/usuarios', usuarioRoutes);
+
 router.get("/", (req, res) => {
   res.status(200).json({
-    message: "Punto de entrada de /api funcionando correctamente!",
+    message:
+      "Punto de entrada de la API de SteticSoft V1 Funcionando. Bienvenido!",
     status: "ok",
   });
 });
 
-// Paso 2: Exportar la instancia del router
 module.exports = router;

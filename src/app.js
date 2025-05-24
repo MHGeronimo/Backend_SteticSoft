@@ -1,63 +1,100 @@
 // src/app.js
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const path = require("path");
+const helmet = require("helmet"); // Para seguridad básica de cabeceras HTTP
+const morgan = require("morgan"); // Logger de peticiones HTTP
+const path = require("path"); // Módulo 'path' de Node.js para manejar rutas de archivos
 
+// Importar configuraciones y variables de entorno centralizadas
 const {
   CORS_ORIGIN,
   NODE_ENV,
   LOG_LEVEL,
-  APP_NAME,
-} = require("./config/env.config");
+  // APP_NAME, // APP_NAME se usa más en server.js para el log de inicio
+} = require("./config/env.config.js");
+
+// Importar middlewares configurados
 const sessionMiddleware = require("./config/session.config.js");
-const apiRoutes = require("./routes");
+const apiRoutes = require("./routes/index.js"); // Router principal de la API
 
-const { NotFoundError } = require("./errors/NotFoundError");
-const errorHandler = require("./middlewares/errorHandler.middleware");
+// Importar manejadores de errores y clases de error personalizadas
+const { NotFoundError } = require("./errors/NotFoundError.js");
+const errorHandler = require("./middlewares/errorHandler.middleware.js");
 
+// Crear la instancia de la aplicación Express
 const app = express();
 
+// --- Middlewares Esenciales ---
+
+// 1. Helmet: Ayuda a proteger la aplicación estableciendo varias cabeceras HTTP de seguridad.
 app.use(helmet());
+
+// 2. CORS (Cross-Origin Resource Sharing): Permite o restringe las solicitudes de diferentes orígenes.
 app.use(
   cors({
-    origin: CORS_ORIGIN,
-    credentials: true,
+    origin: CORS_ORIGIN, // Origen(s) permitidos (desde variables de entorno)
+    credentials: true, // Permite el envío de cookies y cabeceras de autorización
   })
 );
 
+// 3. Morgan: Logger de peticiones HTTP. Útil para desarrollo.
 if (NODE_ENV === "development") {
-  app.use(morgan(LOG_LEVEL || "dev"));
+  app.use(morgan(LOG_LEVEL || "dev")); // 'dev' es un formato común para Morgan
 }
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// 4. Parseadores de Cuerpo de Solicitud: Para manejar datos JSON y URL-encoded.
+app.use(express.json({ limit: "10mb" })); // Parsea cuerpos JSON (límite de tamaño opcional)
+app.use(express.urlencoded({ extended: true, limit: "10mb" })); // Parsea cuerpos URL-encoded
 
+// 5. Configuración de Sesiones: Manejo de sesiones de usuario.
 app.use(sessionMiddleware);
 
+// --- Rutas Estáticas y de Bienvenida ---
+
+// Servir archivos estáticos desde la carpeta 'src/public'
+// Ej: imágenes, CSS, JS del lado del cliente para la página de bienvenida.
 app.use(express.static(path.join(__dirname, "public")));
 
+// Ruta raíz para servir la página de bienvenida (welcome.html)
 app.get("/", (req, res) => {
+  // __dirname es el directorio del archivo actual (src/)
   res.sendFile(path.join(__dirname, "public", "welcome.html"));
 });
 
-app.use("/api", apiRoutes); // Esta podría ser una línea problemática si apiRoutes no es un router/función
+// --- Rutas Principales de la API ---
+// Todas las rutas definidas en src/routes/index.js (y sus sub-rutas)
+// estarán prefijadas con /api
+app.use("/api", apiRoutes);
 
-// Manejo de Rutas No Encontradas (404)
+// --- Manejo de Errores ---
+
+// Manejador para Rutas No Encontradas (404)
+// Se ejecuta si ninguna ruta anterior (estática, raíz, /api/*) coincide.
 const manejador404 = (req, res, next) => {
-  if (req.path !== "/" && !req.path.startsWith("/api")) {
+  // Solo consideramos un 404 si la ruta no fue manejada por express.static,
+  // la ruta raíz, o las rutas de /api.
+  // (Express maneja implícitamente 404 para archivos estáticos no encontrados si express.static está antes)
+  // Este manejador es más para rutas "dinámicas" no encontradas.
+  if (!req.route && req.path !== "/" && !req.path.startsWith("/api/")) {
+    // Verifica si alguna ruta de Express coincidió
     return next(
-      new NotFoundError( // Aquí se usa
-        `No se encontró el recurso: ${req.method} ${req.originalUrl}`
+      new NotFoundError(
+        `El recurso solicitado no fue encontrado: ${req.method} ${req.originalUrl}`
       )
     );
   }
+  // Si la solicitud fue para / o /api/* pero no hubo un match específico dentro de apiRoutes,
+  // el router de apiRoutes debería manejar su propio 404 o dejar que el error global lo capture.
+  // Sin embargo, si apiRoutes no maneja un 404 interno, este next() podría llevar a un error no manejado.
+  // Es mejor que apiRoutes tenga un manejador 404 al final si es necesario.
+  // Por ahora, si es una ruta /api no encontrada, el error global lo tomará.
   next();
 };
 app.use(manejador404);
 
 // Middleware Global de Manejo de Errores
-app.use(errorHandler); // Si el error es aquí, errorHandler no es una función válida.
+// DEBE ser el último middleware que se registra con app.use().
+app.use(errorHandler);
 
+// Exportar la instancia de la aplicación Express para ser usada por server.js
 module.exports = app;
