@@ -71,10 +71,6 @@ app.use("/api", apiRoutes);
 // Manejador para Rutas No Encontradas (404)
 // Se ejecuta si ninguna ruta anterior (estática, raíz, /api/*) coincide.
 const manejador404 = (req, res, next) => {
-  // Solo consideramos un 404 si la ruta no fue manejada por express.static,
-  // la ruta raíz, o las rutas de /api.
-  // (Express maneja implícitamente 404 para archivos estáticos no encontrados si express.static está antes)
-  // Este manejador es más para rutas "dinámicas" no encontradas.
   if (!req.route && req.path !== "/" && !req.path.startsWith("/api/")) {
     // Verifica si alguna ruta de Express coincidió
     return next(
@@ -83,11 +79,6 @@ const manejador404 = (req, res, next) => {
       )
     );
   }
-  // Si la solicitud fue para / o /api/* pero no hubo un match específico dentro de apiRoutes,
-  // el router de apiRoutes debería manejar su propio 404 o dejar que el error global lo capture.
-  // Sin embargo, si apiRoutes no maneja un 404 interno, este next() podría llevar a un error no manejado.
-  // Es mejor que apiRoutes tenga un manejador 404 al final si es necesario.
-  // Por ahora, si es una ruta /api no encontrada, el error global lo tomará.
   next();
 };
 app.use(manejador404);
