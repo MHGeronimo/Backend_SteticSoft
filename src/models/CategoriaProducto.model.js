@@ -1,3 +1,6 @@
+// src/models/CategoriaProducto.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const CategoriaProducto = sequelize.define(
     "CategoriaProducto",
@@ -8,41 +11,38 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         field: "idcategoria",
       },
-      nombre: {
-        type: DataTypes.STRING(45),
-        unique: true,
-      },
-      descripcion: {
-        type: DataTypes.STRING(45),
-      },
+      nombre: { type: DataTypes.STRING(45), unique: true, field: "nombre" },
+      descripcion: { type: DataTypes.STRING(45), field: "descripcion" },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+        allowNull: false, // Ajustado
+        field: "estado",
       },
-      vidaUtilDias: {
-        type: DataTypes.INTEGER,
-        field: "vida_util_dias",
-      },
+      vidaUtilDias: { type: DataTypes.INTEGER, field: "vida_util_dias" },
       tipoUso: {
-        type: DataTypes.ENUM("Interno", "Externo"),
+        type: DataTypes.STRING(10), // O DataTypes.ENUM('Interno', 'Externo')
         allowNull: false,
         field: "tipo_uso",
+        validate: { isIn: [["Interno", "Externo"]] },
       },
     },
     {
-      tableName: "Categoria_producto", 
+      tableName: "categoria_producto",
       timestamps: false,
     }
   );
 
   CategoriaProducto.associate = (models) => {
-    CategoriaProducto.hasMany(models.Producto, {
-      foreignKey: {
-        name: "categoriaProductoId",
-        field: "Categoria_producto_idCategoria",
-      }, 
-      as: "productos",
-    });
+    if (models.Producto) {
+      CategoriaProducto.hasMany(models.Producto, {
+        foreignKey: {
+          name: "categoriaProductoId",
+          field: "categoria_producto_idcategoria",
+        },
+        as: "productos",
+      });
+    }
   };
 
   return CategoriaProducto;

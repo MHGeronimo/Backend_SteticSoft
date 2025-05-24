@@ -1,3 +1,6 @@
+// src/models/Venta.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Venta = sequelize.define(
     "Venta",
@@ -11,69 +14,86 @@ module.exports = (sequelize, DataTypes) => {
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-      },
+        allowNull: false,
+        field: "estado",
+      }, // Ajustado
       fecha: {
         type: DataTypes.DATEONLY,
-      },
+        defaultValue: DataTypes.NOW,
+        field: "fecha",
+      }, // Ajustado
       total: {
         type: DataTypes.DECIMAL(10, 2),
-      },
-      iva: {
-        type: DataTypes.DECIMAL(10, 2),
-        field: "IVA",
-      },
+        defaultValue: 0.0,
+        field: "total",
+      }, // Ajustado
+      iva: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0, field: "iva" }, // Ajustado
       clienteId: {
         type: DataTypes.INTEGER,
-        field: "Cliente_idCliente", 
-        references: {
-          model: "Cliente",
-          key: "idCliente",
-        },
+        allowNull: true,
+        field: "cliente_idcliente",
+        references: { model: "cliente", key: "idcliente" },
+        onDelete: "SET NULL",
+        onUpdate: "CASCADE",
       },
       dashboardId: {
         type: DataTypes.INTEGER,
-        field: "Dashboard_idDashboard",
-        references: {
-          model: "Dashboard",
-          key: "idDashboard",
-        },
+        allowNull: true,
+        field: "dashboard_iddashboard",
+        references: { model: "dashboard", key: "iddashboard" },
+        onDelete: "SET NULL",
+        onUpdate: "CASCADE",
       },
-      estadoId: {
+      estadoVentaId: {
         type: DataTypes.INTEGER,
-        field: "Estado_idEstado", 
-        references: {
-          model: "Estado",
-          key: "idEstado",
-        },
+        allowNull: true,
+        field: "estado_idestado",
+        references: { model: "estado", key: "idestado" },
+        onDelete: "SET NULL",
+        onUpdate: "CASCADE",
       },
     },
     {
-      tableName: "Venta",
+      tableName: "venta",
       timestamps: false,
     }
   );
 
   Venta.associate = (models) => {
-    Venta.belongsTo(models.Cliente, {
-      foreignKey: { name: "clienteId", field: "Cliente_idCliente" }, 
-      as: "cliente",
-    });
-    Venta.belongsTo(models.Dashboard, {
-      foreignKey: { name: "dashboardId", field: "Dashboard_idDashboard" }, 
-      as: "dashboard",
-    });
-    Venta.belongsTo(models.Estado, {
-      foreignKey: { name: "estadoId", field: "Estado_idEstado" }, 
-      as: "estadoVenta", 
-    });
-    Venta.hasMany(models.ProductoXVenta, {
-      foreignKey: { name: "ventaId", field: "Venta_idVenta" }, 
-      as: "productosVendidos",
-    });
-    Venta.hasMany(models.VentaXServicio, {
-      foreignKey: { name: "ventaId", field: "Venta_idVenta" },
-      as: "serviciosVendidos",
-    });
+    if (models.Cliente) {
+      Venta.belongsTo(models.Cliente, {
+        foreignKey: { name: "clienteId", field: "cliente_idcliente" },
+        as: "cliente",
+      });
+    }
+    if (models.Dashboard) {
+      Venta.belongsTo(models.Dashboard, {
+        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" },
+        as: "dashboard",
+      });
+    }
+    if (models.Estado) {
+      Venta.belongsTo(models.Estado, {
+        foreignKey: { name: "estadoVentaId", field: "estado_idestado" },
+        as: "estadoDetalle",
+      });
+    }
+    if (models.Producto && models.ProductoXVenta) {
+      Venta.belongsToMany(models.Producto, {
+        through: models.ProductoXVenta,
+        foreignKey: { name: "ventaId", field: "venta_idventa" },
+        otherKey: { name: "productoId", field: "producto_idproducto" },
+        as: "productosVendidos",
+      });
+    }
+    if (models.Servicio && models.VentaXServicio) {
+      Venta.belongsToMany(models.Servicio, {
+        through: models.VentaXServicio,
+        foreignKey: { name: "ventaId", field: "venta_idventa" },
+        otherKey: { name: "servicioId", field: "servicio_idservicio" },
+        as: "serviciosVendidos",
+      });
+    }
   };
 
   return Venta;

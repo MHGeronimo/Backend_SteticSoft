@@ -1,3 +1,6 @@
+// src/models/Abastecimiento.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Abastecimiento = sequelize.define(
     "Abastecimiento",
@@ -11,15 +14,15 @@ module.exports = (sequelize, DataTypes) => {
       cantidad: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        field: "cantidad",
       },
       productoId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: "Producto_idProducto", 
-        references: {
-          model: "Producto",
-          key: "idProducto",
-        },
+        field: "producto_idproducto",
+        references: { model: "producto", key: "idproducto" },
+        onDelete: "RESTRICT", // Reflejando DDL
+        onUpdate: "CASCADE",
       },
       fechaIngreso: {
         type: DataTypes.DATEONLY,
@@ -29,41 +32,47 @@ module.exports = (sequelize, DataTypes) => {
       },
       empleadoAsignado: {
         type: DataTypes.INTEGER,
+        allowNull: true,
         field: "empleado_asignado",
-        references: {
-          model: "Empleado",
-          key: "idEmpleado",
-        },
+        references: { model: "empleado", key: "idempleado" },
+        onDelete: "SET NULL",
+        onUpdate: "CASCADE",
       },
       estaAgotado: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
+        allowNull: false,
         field: "esta_agotado",
-      },
-      razonAgotamiento: {
-        type: DataTypes.TEXT,
-        field: "razon_agotamiento",
-      },
+      }, // Ajustado
+      razonAgotamiento: { type: DataTypes.TEXT, field: "razon_agotamiento" },
       fechaAgotamiento: {
         type: DataTypes.DATEONLY,
         field: "fecha_agotamiento",
       },
     },
     {
-      tableName: "Abastecimiento",
+      tableName: "abastecimiento",
       timestamps: false,
     }
   );
 
   Abastecimiento.associate = (models) => {
-    Abastecimiento.belongsTo(models.Producto, {
-      foreignKey: { name: "productoId", field: "Producto_idProducto" }, 
-      as: "producto",
-    });
-    Abastecimiento.belongsTo(models.Empleado, {
-      foreignKey: { name: "empleadoAsignado", field: "empleado_asignado" },
-      as: "empleado",
-    });
+    if (models.Producto) {
+      Abastecimiento.belongsTo(models.Producto, {
+        foreignKey: {
+          name: "productoId",
+          field: "producto_idproducto",
+          allowNull: false,
+        },
+        as: "productoAbastecido",
+      });
+    }
+    if (models.Empleado) {
+      Abastecimiento.belongsTo(models.Empleado, {
+        foreignKey: { name: "empleadoAsignado", field: "empleado_asignado" },
+        as: "empleadoResponsable",
+      });
+    }
   };
 
   return Abastecimiento;

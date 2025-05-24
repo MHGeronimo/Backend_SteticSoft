@@ -1,3 +1,6 @@
+// src/models/Especialidad.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Especialidad = sequelize.define(
     "Especialidad",
@@ -12,35 +15,41 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING(45),
         allowNull: false,
         unique: true,
+        field: "nombre",
       },
-      descripcion: {
-        type: DataTypes.TEXT,
-      },
+      descripcion: { type: DataTypes.TEXT, field: "descripcion" },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+        allowNull: false, // Ajustado
+        field: "estado",
       },
     },
     {
-      tableName: "Especialidad",
+      tableName: "especialidad",
       timestamps: false,
     }
   );
 
   Especialidad.associate = (models) => {
-    Especialidad.belongsToMany(models.Empleado, {
-      through: models.EmpleadoEspecialidad,
-      foreignKey: { name: "idEspecialidad", field: "idespecialidad" },
-      otherKey: { name: "idEmpleado", field: "idempleado" },
-      as: "empleados",
-    });
-    Especialidad.hasMany(models.Servicio, {
-      foreignKey: {
-        name: "especialidadId",
-        field: "Especialidad_idEspecialidad",
-      }, 
-      as: "servicios",
-    });
+    if (models.Empleado && models.EmpleadoEspecialidad) {
+      Especialidad.belongsToMany(models.Empleado, {
+        through: models.EmpleadoEspecialidad,
+        foreignKey: { name: "idEspecialidad", field: "idespecialidad" },
+        otherKey: { name: "idEmpleado", field: "idempleado" },
+        as: "empleadosConEspecialidad",
+      });
+    }
+    if (models.Servicio) {
+      Especialidad.hasMany(models.Servicio, {
+        foreignKey: {
+          name: "especialidadId",
+          field: "especialidad_idespecialidad",
+          allowNull: true,
+        },
+        as: "serviciosDeEspecialidad",
+      });
+    }
   };
 
   return Especialidad;

@@ -1,3 +1,6 @@
+// src/models/Novedades.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Novedades = sequelize.define(
     "Novedades",
@@ -18,42 +21,40 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "horainicio",
       },
-      horaFin: {
-        type: DataTypes.TIME,
-        allowNull: false,
-        field: "horafin",
-      },
+      horaFin: { type: DataTypes.TIME, allowNull: false, field: "horafin" },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-      },
+        allowNull: false,
+        field: "estado",
+      }, // Ajustado
       empleadoId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: "Empleado_idEmpleado", 
-        references: {
-          model: "Empleado",
-          key: "idEmpleado",
-        },
+        field: "empleado_idempleado",
+        references: { model: "empleado", key: "idempleado" },
+        onDelete: "CASCADE", // Reflejando DDL
+        onUpdate: "CASCADE",
       },
     },
     {
-      tableName: "Novedades",
+      tableName: "novedades",
       timestamps: false,
-      indexes: [
-        {
-          unique: true,
-          fields: ["Empleado_idEmpleado", "diasemana"], 
-        },
-      ],
+      indexes: [{ unique: true, fields: ["empleado_idempleado", "diasemana"] }],
     }
   );
 
   Novedades.associate = (models) => {
-    Novedades.belongsTo(models.Empleado, {
-      foreignKey: { name: "empleadoId", field: "Empleado_idEmpleado" }, 
-      as: "empleado",
-    });
+    if (models.Empleado) {
+      Novedades.belongsTo(models.Empleado, {
+        foreignKey: {
+          name: "empleadoId",
+          field: "empleado_idempleado",
+          allowNull: false,
+        },
+        as: "empleadoConNovedad",
+      });
+    }
   };
 
   return Novedades;

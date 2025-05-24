@@ -1,3 +1,6 @@
+// src/models/Dashboard.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Dashboard = sequelize.define(
     "Dashboard",
@@ -9,37 +12,46 @@ module.exports = (sequelize, DataTypes) => {
         field: "iddashboard",
       },
       fechaCreacion: {
-        type: DataTypes.DATEONLY,
+        // JS camelCase
+        type: DataTypes.DATEONLY, // Tu DDL dice DATE
         allowNull: false,
-        defaultValue: DataTypes.NOW,
-        field: "fecha_creacion",
+        defaultValue: DataTypes.NOW, // Sequelize usará la función NOW() de la BD
+        field: "fecha_creacion", // BD snake_case
       },
       nombreDashboard: {
+        // JS camelCase
         type: DataTypes.STRING(100),
-        field: "nombre_dashboard",
+        field: "nombre_dashboard", // BD snake_case
       },
     },
     {
-      tableName: "Dashboard",
-      timestamps: true, 
-      createdAt: "fechaCreacion", 
-      updatedAt: false, 
+      tableName: "dashboard",
+      // Para esta tabla, sí gestionamos un timestamp de creación, pero con nombre específico
+      timestamps: true, // Habilitar timestamps
+      createdAt: "fecha_creacion", // Mapear 'createdAt' de Sequelize a tu columna 'fecha_creacion'
+      updatedAt: false, // No tienes columna 'updatedAt'
     }
   );
 
   Dashboard.associate = (models) => {
-    Dashboard.hasMany(models.Compra, {
-      foreignKey: { name: "dashboardId", field: "Dashboard_idDashboard" }, 
-      as: "compras",
-    });
-    Dashboard.hasMany(models.Venta, {
-      foreignKey: { name: "dashboardId", field: "Dashboard_idDashboard" }, 
-      as: "ventas",
-    });
-    Dashboard.hasMany(models.ProductoXVenta, {
-      foreignKey: { name: "dashboardId", field: "Dashboard_idDashboard" }, 
-      as: "productosPorVenta",
-    });
+    if (models.Compra) {
+      Dashboard.hasMany(models.Compra, {
+        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" }, // FK en tabla 'compra'
+        as: "compras",
+      });
+    }
+    if (models.Venta) {
+      Dashboard.hasMany(models.Venta, {
+        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" }, // FK en tabla 'venta'
+        as: "ventas",
+      });
+    }
+    if (models.ProductoXVenta) {
+      Dashboard.hasMany(models.ProductoXVenta, {
+        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" }, // FK en tabla 'productoxventa'
+        as: "detallesVentaConDashboard",
+      });
+    }
   };
 
   return Dashboard;

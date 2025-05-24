@@ -1,3 +1,6 @@
+// src/models/Empleado.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Empleado = sequelize.define(
     "Empleado",
@@ -8,9 +11,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         field: "idempleado",
       },
-      nombre: {
-        type: DataTypes.STRING(45),
-      },
+      nombre: { type: DataTypes.STRING(45), field: "nombre" },
       tipoDocumento: {
         type: DataTypes.TEXT,
         allowNull: false,
@@ -27,39 +28,51 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "fechanacimiento",
       },
-      celular: {
-        type: DataTypes.STRING(45),
-      },
+      celular: { type: DataTypes.STRING(45), field: "celular" },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+        allowNull: false, // Ajustado
+        field: "estado",
       },
     },
     {
-      tableName: "Empleado",
+      tableName: "empleado",
       timestamps: false,
     }
   );
 
   Empleado.associate = (models) => {
-    Empleado.belongsToMany(models.Especialidad, {
-      through: models.EmpleadoEspecialidad,
-      foreignKey: { name: "idEmpleado", field: "idempleado" },
-      otherKey: { name: "idEspecialidad", field: "idespecialidad" },
-      as: "especialidades",
-    });
-    Empleado.hasMany(models.Cita, {
-      foreignKey: { name: "empleadoId", field: "Empleado_idEmpleado" }, 
-      as: "citas",
-    });
-    Empleado.hasMany(models.Abastecimiento, {
-      foreignKey: { name: "empleadoAsignado", field: "empleado_asignado" },
-      as: "abastecimientos",
-    });
-    Empleado.hasMany(models.Novedades, {
-      foreignKey: { name: "empleadoId", field: "Empleado_idEmpleado" }, 
-      as: "novedades",
-    });
+    if (models.Especialidad && models.EmpleadoEspecialidad) {
+      Empleado.belongsToMany(models.Especialidad, {
+        through: models.EmpleadoEspecialidad,
+        foreignKey: { name: "idEmpleado", field: "idempleado" },
+        otherKey: { name: "idEspecialidad", field: "idespecialidad" },
+        as: "especialidades",
+      });
+    }
+    if (models.Cita) {
+      Empleado.hasMany(models.Cita, {
+        foreignKey: { name: "empleadoId", field: "empleado_idempleado" },
+        as: "citasAtendidas",
+      });
+    }
+    if (models.Abastecimiento) {
+      Empleado.hasMany(models.Abastecimiento, {
+        foreignKey: { name: "empleadoAsignado", field: "empleado_asignado" },
+        as: "abastecimientosAsignados",
+      });
+    }
+    if (models.Novedades) {
+      Empleado.hasMany(models.Novedades, {
+        foreignKey: {
+          name: "empleadoId",
+          field: "empleado_idempleado",
+          allowNull: false,
+        },
+        as: "novedadesHorario",
+      });
+    }
   };
 
   return Empleado;

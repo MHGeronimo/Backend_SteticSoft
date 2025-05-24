@@ -1,3 +1,6 @@
+// src/models/Compra.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const Compra = sequelize.define(
     "Compra",
@@ -10,50 +13,59 @@ module.exports = (sequelize, DataTypes) => {
       },
       fecha: {
         type: DataTypes.DATEONLY,
-      },
+        defaultValue: DataTypes.NOW,
+        field: "fecha",
+      }, // Ajustado
       total: {
         type: DataTypes.DECIMAL(10, 2),
-      },
-      iva: {
-        type: DataTypes.DECIMAL(10, 2),
-        field: "IVA", 
-      },
+        defaultValue: 0.0,
+        field: "total",
+      }, // Ajustado
+      iva: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0, field: "iva" }, // Ajustado
       proveedorId: {
         type: DataTypes.INTEGER,
-        field: "Proveedor_idProveedor", 
-        references: {
-          model: "Proveedor",
-          key: "idProveedor",
-        },
+        allowNull: true,
+        field: "proveedor_idproveedor",
+        references: { model: "proveedor", key: "idproveedor" },
+        onDelete: "SET NULL", // Reflejando DDL
+        onUpdate: "CASCADE",
       },
       dashboardId: {
         type: DataTypes.INTEGER,
-        field: "Dashboard_idDashboard",
-        references: {
-          model: "Dashboard",
-          key: "idDashboard",
-        },
+        allowNull: true,
+        field: "dashboard_iddashboard",
+        references: { model: "dashboard", key: "iddashboard" },
+        onDelete: "SET NULL", // Reflejando DDL
+        onUpdate: "CASCADE",
       },
     },
     {
-      tableName: "Compra",
+      tableName: "compra",
       timestamps: false,
     }
   );
 
   Compra.associate = (models) => {
-    Compra.belongsTo(models.Proveedor, {
-      foreignKey: { name: "proveedorId", field: "Proveedor_idProveedor" },
-      as: "proveedor",
-    });
-    Compra.belongsTo(models.Dashboard, {
-      foreignKey: { name: "dashboardId", field: "Dashboard_idDashboard" }, 
-      as: "dashboard",
-    });
-    Compra.hasMany(models.CompraXProducto, {
-      foreignKey: { name: "compraId", field: "Compra_idCompra" }, 
-      as: "detallesCompra",
-    });
+    if (models.Proveedor) {
+      Compra.belongsTo(models.Proveedor, {
+        foreignKey: { name: "proveedorId", field: "proveedor_idproveedor" },
+        as: "proveedor",
+      });
+    }
+    if (models.Dashboard) {
+      Compra.belongsTo(models.Dashboard, {
+        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" },
+        as: "dashboard",
+      });
+    }
+    if (models.Producto && models.CompraXProducto) {
+      Compra.belongsToMany(models.Producto, {
+        through: models.CompraXProducto,
+        foreignKey: { name: "compraId", field: "compra_idcompra" },
+        otherKey: { name: "productoId", field: "producto_idproducto" },
+        as: "productosComprados",
+      });
+    }
   };
 
   return Compra;

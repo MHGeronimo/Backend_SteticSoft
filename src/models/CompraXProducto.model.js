@@ -1,3 +1,6 @@
+// src/models/CompraXProducto.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const CompraXProducto = sequelize.define(
     "CompraXProducto",
@@ -10,43 +13,51 @@ module.exports = (sequelize, DataTypes) => {
       },
       cantidad: {
         type: DataTypes.INTEGER,
+        field: "cantidad",
       },
       valorUnitario: {
+        // JS camelCase
         type: DataTypes.DECIMAL(10, 2),
-        field: "valorunitario",
+        field: "valorunitario", // BD snake_case o minúsculas
       },
       compraId: {
+        // JS: compraId, FK: Compra_idCompra
         type: DataTypes.INTEGER,
-        field: "Compra_idCompra", 
+        field: "compra_idcompra",
         references: {
-          model: "Compra",
-          key: "idCompra",
+          model: "compra",
+          key: "idcompra",
         },
       },
       productoId: {
+        // JS: productoId, FK: Producto_idProducto
         type: DataTypes.INTEGER,
-        field: "Producto_idProducto",
+        field: "producto_idproducto",
         references: {
-          model: "Producto",
-          key: "idProducto",
+          model: "producto",
+          key: "idproducto",
         },
       },
     },
     {
-      tableName: "CompraXProducto",
+      tableName: "compraxproducto",
       timestamps: false,
     }
   );
 
   CompraXProducto.associate = (models) => {
-    CompraXProducto.belongsTo(models.Compra, {
-      foreignKey: { name: "compraId", field: "Compra_idCompra" }, 
-      as: "compra",
-    });
-    CompraXProducto.belongsTo(models.Producto, {
-      foreignKey: { name: "productoId", field: "Producto_idProducto" }, 
-      as: "producto",
-    });
+    if (models.Compra) {
+      CompraXProducto.belongsTo(models.Compra, {
+        foreignKey: { name: "compraId", field: "compra_idcompra" },
+        as: "compra",
+      });
+    }
+    if (models.Producto) {
+      CompraXProducto.belongsTo(models.Producto, {
+        foreignKey: { name: "productoId", field: "producto_idproducto" },
+        as: "producto",
+      });
+    }
   };
 
   return CompraXProducto;

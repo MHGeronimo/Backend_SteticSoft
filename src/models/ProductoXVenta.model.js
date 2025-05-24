@@ -1,3 +1,6 @@
+// src/models/ProductoXVenta.model.js
+"use strict";
+
 module.exports = (sequelize, DataTypes) => {
   const ProductoXVenta = sequelize.define(
     "ProductoXVenta",
@@ -10,55 +13,66 @@ module.exports = (sequelize, DataTypes) => {
       },
       cantidad: {
         type: DataTypes.INTEGER,
+        field: "cantidad",
       },
       valorUnitario: {
         type: DataTypes.DECIMAL(10, 2),
         field: "valorunitario",
       },
       productoId: {
+        // JS: productoId, FK: Producto_idProducto
         type: DataTypes.INTEGER,
-        field: "Producto_idProducto",
+        field: "producto_idproducto",
         references: {
-          model: "Producto",
-          key: "idProducto",
+          model: "producto",
+          key: "idproducto",
         },
       },
       ventaId: {
+        // JS: ventaId, FK: Venta_idVenta
         type: DataTypes.INTEGER,
-        field: "Venta_idVenta", 
+        field: "venta_idventa",
         references: {
-          model: "Venta",
-          key: "idVenta",
+          model: "venta",
+          key: "idventa",
         },
       },
       dashboardId: {
+        // JS: dashboardId, FK: Dashboard_idDashboard
         type: DataTypes.INTEGER,
-        field: "Dashboard_idDashboard", 
+        allowNull: true, // Asumiendo que puede ser nulo según DDL
+        field: "dashboard_iddashboard",
         references: {
-          model: "Dashboard",
-          key: "idDashboard",
+          model: "dashboard",
+          key: "iddashboard",
         },
       },
     },
     {
-      tableName: "ProductoXVenta",
+      tableName: "productoxventa",
       timestamps: false,
     }
   );
 
   ProductoXVenta.associate = (models) => {
-    ProductoXVenta.belongsTo(models.Producto, {
-      foreignKey: { name: "productoId", field: "Producto_idProducto" }, 
-      as: "producto",
-    });
-    ProductoXVenta.belongsTo(models.Venta, {
-      foreignKey: { name: "ventaId", field: "Venta_idVenta" }, 
-      as: "venta",
-    });
-    ProductoXVenta.belongsTo(models.Dashboard, {
-      foreignKey: { name: "dashboardId", field: "Dashboard_idDashboard" }, 
-      as: "dashboard",
-    });
+    if (models.Producto) {
+      ProductoXVenta.belongsTo(models.Producto, {
+        foreignKey: { name: "productoId", field: "producto_idproducto" },
+        as: "producto",
+      });
+    }
+    if (models.Venta) {
+      ProductoXVenta.belongsTo(models.Venta, {
+        foreignKey: { name: "ventaId", field: "venta_idventa" },
+        as: "venta",
+      });
+    }
+    if (models.Dashboard) {
+      ProductoXVenta.belongsTo(models.Dashboard, {
+        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" },
+        as: "dashboard",
+      });
+    }
   };
 
   return ProductoXVenta;
