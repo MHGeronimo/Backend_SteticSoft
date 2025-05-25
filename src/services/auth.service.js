@@ -88,6 +88,23 @@ const registrarUsuario = async (datosRegistro) => {
 
     const { contrasena: _, ...usuarioSinContrasena } = nuevoUsuario.toJSON();
 
+    try {
+      const htmlBienvenida = `<h1>¡Bienvenido a SteticSoft, ${
+        datosRegistro.nombre || nuevoUsuario.correo
+      }!</h1><p>Gracias por registrarte. Esperamos verte pronto.</p>`; // Podrías tener un template más elaborado
+      await mailerService({
+        to: nuevoUsuario.correo,
+        subject: "¡Bienvenido a SteticSoft!",
+        html: htmlBienvenida,
+      });
+    } catch (emailError) {
+      console.error(
+        `Error al enviar correo de bienvenida a ${nuevoUsuario.correo}:`,
+        emailError
+      );
+      // No relanzar el error para no afectar el flujo de registro si el envío de correo falla
+    }
+
     return { usuario: usuarioSinContrasena, token };
   } catch (error) {
     if (error.name === "SequelizeUniqueConstraintError") {
