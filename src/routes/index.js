@@ -5,7 +5,8 @@ const router = express.Router();
 // Importar las rutas de las entidades
 const rolRoutes = require("./rol.routes.js");
 const permisoRoutes = require("./permiso.routes.js");
-const usuarioRoutes = require("./usuario.routes.js");
+const usuarioRoutes = require("./usuario.routes.js"); 
+const authRoutes = require("./auth.routes.js"); 
 const estadoRoutes = require("./estado.routes.js");
 const clienteRoutes = require("./cliente.routes.js");
 const empleadoRoutes = require("./empleado.routes.js");
@@ -17,15 +18,16 @@ const productoRoutes = require("./producto.routes.js");
 const compraRoutes = require("./compra.routes.js");
 const ventaRoutes = require("./venta.routes.js");
 const citaRoutes = require("./cita.routes.js");
-const servicioRoutes = require('./servicio.routes.js');
-const abastecimientoRoutes = require('./abastecimiento.routes.js');
-const novedadesRoutes = require('./novedades.routes.js'); // <--- NUEVA LÍNEA
+const servicioRoutes = require("./servicio.routes.js");
+const abastecimientoRoutes = require("./abastecimiento.routes.js");
+const novedadesRoutes = require("./novedades.routes.js");
 // ... y así para otras entidades
 
 // Montar las rutas de las entidades en el router principal
+router.use("/auth", authRoutes); 
 router.use("/roles", rolRoutes);
 router.use("/permisos", permisoRoutes);
-router.use("/usuarios", usuarioRoutes);
+router.use("/usuarios", usuarioRoutes); 
 router.use("/estados", estadoRoutes);
 router.use("/clientes", clienteRoutes);
 router.use("/empleados", empleadoRoutes);
@@ -37,9 +39,9 @@ router.use("/productos", productoRoutes);
 router.use("/compras", compraRoutes);
 router.use("/ventas", ventaRoutes);
 router.use("/citas", citaRoutes);
-router.use('/servicios', servicioRoutes);
-router.use('/abastecimientos', abastecimientoRoutes);
-router.use('/novedades', novedadesRoutes); // <--- NUEVA LÍNEA
+router.use("/servicios", servicioRoutes);
+router.use("/abastecimientos", abastecimientoRoutes);
+router.use("/novedades", novedadesRoutes);
 // ...
 
 router.get("/", (req, res) => {
