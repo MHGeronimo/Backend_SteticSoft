@@ -94,7 +94,7 @@ const crearCita = async (datosCita) => {
     // Ejemplo de verificación de colisión (muy simplificada)
     const citasSuperpuestas = await db.Cita.findOne({
       where: {
-        idEmpleado: empleado.idEmpleado,
+        empleadoId: empleado.idEmpleado,
         estado: true, // Solo considerar citas activas para colisiones
         [Op.or]: [
           // La nueva cita no debe empezar ni terminar dentro de otra cita existente,
