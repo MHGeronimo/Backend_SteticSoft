@@ -53,3 +53,4 @@ coverage/
 # Archivos específicos del proyecto (si los hubiera)
 generar_secretos.js
 generarTokenDesarrollo.js
+hashPassword.js

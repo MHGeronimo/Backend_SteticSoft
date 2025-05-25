@@ -2,7 +2,7 @@
 const jwt = require("jsonwebtoken");
 const db = require("../models"); // Ajusta la ruta si tu carpeta models está en otro lugar
 const { JWT_SECRET } = require("../config/env.config"); // Importa JWT_SECRET desde tu config centralizada
-const { UnauthorizedError } = require("../errors/UnauthorizedError"); // Importa tu error personalizado
+const UnauthorizedError = require("../errors/UnauthorizedError"); // Importa tu error personalizado
 
 const authMiddleware = async (req, res, next) => {
   try {
