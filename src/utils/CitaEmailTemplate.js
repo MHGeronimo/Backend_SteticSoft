@@ -1,25 +1,9 @@
 // src/utils/CitaEmailTemplate.js
 "use strict";
 
-const mailerService = require("../services/mailer.service.js"); // Ajusta la ruta si es necesario
-const { formatDateTime } = require("./dateHelpers.js"); // Necesitamos el formateador
+const mailerService = require("../services/mailer.service.js");
+const { formatDateTime } = require("./dateHelpers.js");
 
-/**
- * Genera el template HTML para el correo de notificación de una cita.
- * @param {object} datosCorreo
- * @param {string} datosCorreo.nombreCliente
- * @param {object} datosCorreo.citaInfo
- * @param {string} datosCorreo.citaInfo.accion - ej: "agendada", "actualizada", "cancelada", "recordatorio"
- * @param {string} datosCorreo.citaInfo.fechaHora - Ya formateada
- * @param {string} datosCorreo.citaInfo.empleado
- * @param {string} datosCorreo.citaInfo.estado - Estado del proceso de la cita
- * @param {Array<object>} datosCorreo.citaInfo.servicios - [{ nombre, precio, descripcion? }]
- * @param {number} datosCorreo.citaInfo.total - Total de los servicios de la cita
- * @param {string} [datosCorreo.citaInfo.mensajeAdicional]
- * @param {string} [datosCorreo.citaInfo.enlaceCancelacion] - Opcional, para cancelar/modificar
- * @param {string} [datosCorreo.citaInfo.enlaceConfirmacion] - Opcional, para confirmar
- * @returns {string} El contenido HTML generado.
- */
 const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
   const serviciosHTML =
     citaInfo.servicios && citaInfo.servicios.length > 0
@@ -30,6 +14,11 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
               <strong style="color: #333;">${s.nombre}</strong> - $${Number(
               s.precio || 0
             ).toFixed(2)}
+              ${
+                s.duracion_estimada
+                  ? `<span style="font-size:0.9em; color: #777;"> (Duración: ${s.duracion_estimada} min)</span>`
+                  : ""
+              }
               ${
                 s.descripcion
                   ? `<br><em style="font-size: 0.9em; color: #555;">${s.descripcion}</em>`
@@ -48,8 +37,33 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
     parrafoPrincipal = `Te recordamos tu próxima cita en SteticSoft.`;
   }
 
-  // Estilos en línea para máxima compatibilidad
+  let duracionFormateadaHTML = "";
+
+  if (citaInfo.duracionTotalEstimada && citaInfo.duracionTotalEstimada > 0) {
+    const horas = Math.floor(citaInfo.duracionTotalEstimada / 60);
+    const minutos = citaInfo.duracionTotalEstimada % 60;
+    let duracionTexto = "";
+    if (horas > 0) {
+      duracionTexto += `${horas} hora${horas > 1 ? "s" : ""}`;
+    }
+    if (minutos > 0) {
+      if (horas > 0) duracionTexto += " y ";
+      duracionTexto += `${minutos} minuto${minutos > 1 ? "s" : ""}`;
+    }
+
+    if (duracionTexto) {
+      // Los estilos deben estar definidos ANTES de usarlos aquí
+      const localStyles = {
+        // Defino localStyles aquí para el ejemplo, idealmente styles está definido antes
+        detailItem: "font-size: 16px; margin-bottom: 8px; color: #333;",
+        strong: "font-weight: bold; color: #222;",
+      };
+      duracionFormateadaHTML = `<p style="${localStyles.detailItem}"><strong style="${localStyles.strong}">Duración Estimada Total:</strong> ${duracionTexto}</p>`;
+    } 
+  }
+
   const styles = {
+    /* ... (tus estilos existentes como los tenías) ... */
     container:
       "font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 25px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;",
     header:
@@ -88,6 +102,7 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
         <p style="${styles.detailItem}"><strong style="${
     styles.strong
   }">Estado de la Cita:</strong> ${citaInfo.estado}</p>
+        ${duracionFormateadaHTML} 
       </div>
 
       <h3 style="color: #007bff; margin-top: 25px; margin-bottom: 10px;">Servicios Agendados:</h3>
@@ -100,13 +115,11 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
             ).toFixed(2)}</p>`
           : ""
       }
-
       ${
         citaInfo.mensajeAdicional
           ? `<div style="${styles.additionalMessage}"><p>${citaInfo.mensajeAdicional}</p></div>`
           : ""
       }
-      
       ${
         citaInfo.enlaceConfirmacion
           ? `<a href="${citaInfo.enlaceConfirmacion}" style="${styles.button}">Confirmar Cita</a>`
@@ -126,12 +139,8 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
   `;
 };
 
-/**
- * Envía el correo de notificación de cita.
- * @param {object} datos - { correo, nombreCliente, citaInfo }
- */
 const enviarCorreoCita = async ({ correo, nombreCliente, citaInfo }) => {
-  // Validaciones básicas de los parámetros necesarios
+
   if (
     !correo ||
     !nombreCliente ||
@@ -156,20 +165,16 @@ const enviarCorreoCita = async ({ correo, nombreCliente, citaInfo }) => {
 
   try {
     const resultadoEnvio = await mailerService({
-      // Usamos el mailerService refactorizado
       to: correo,
       subject,
       html: htmlContent,
     });
-    // Retornar el resultado del envío puede ser útil para el servicio que llama
-    return resultadoEnvio; // Asumiendo que mailerService devuelve { success: true, ... } o { success: false, error }
+    return resultadoEnvio;
   } catch (error) {
-    // El mailerService ya debería loguear el error, pero podemos loguear aquí también el contexto
     console.error(
       `Fallo al intentar enviar correo de cita (${citaInfo.accion}) a ${correo}:`,
       error.message
     );
-    // No relanzar para no detener el flujo principal, pero devolver un indicador de fallo
     return { success: false, error: error };
   }
 };
