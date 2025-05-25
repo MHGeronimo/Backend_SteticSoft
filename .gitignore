@@ -51,5 +51,5 @@ coverage/
 coverage/
 
 # Archivos específicos del proyecto (si los hubiera)
-# مثلا:
-# local_backups/
+generar_secretos.js
+generarTokenDesarrollo.js
