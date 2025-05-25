@@ -11,7 +11,8 @@ const clienteRoutes = require("./cliente.routes.js");
 const empleadoRoutes = require("./empleado.routes.js");
 const especialidadRoutes = require("./especialidad.routes.js");
 const proveedorRoutes = require("./proveedor.routes.js");
-const categoriaProductoRoutes = require("./categoriaProducto.routes.js"); // <--- NUEVA LÍNEA
+const categoriaProductoRoutes = require("./categoriaProducto.routes.js");
+const categoriaServicioRoutes = require("./categoriaServicio.routes.js"); // <--- NUEVA LÍNEA
 // ... y así para otras entidades
 
 // Montar las rutas de las entidades en el router principal
@@ -23,7 +24,8 @@ router.use("/clientes", clienteRoutes);
 router.use("/empleados", empleadoRoutes);
 router.use("/especialidades", especialidadRoutes);
 router.use("/proveedores", proveedorRoutes);
-router.use("/categorias-producto", categoriaProductoRoutes); // <--- NUEVA LÍNEA (o el path que prefieras)
+router.use("/categorias-producto", categoriaProductoRoutes);
+router.use("/categorias-servicio", categoriaServicioRoutes); // <--- NUEVA LÍNEA
 // ...
 
 router.get("/", (req, res) => {
