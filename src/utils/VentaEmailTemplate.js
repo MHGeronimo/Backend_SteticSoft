@@ -1,8 +1,8 @@
 // src/utils/VentaEmailTemplate.js
 "use strict";
 
-const mailerService = require("../services/mailer.service.js"); // Ajusta la ruta si es necesario
-const { formatDate } = require("./dateHelpers.js"); // Necesitamos el formateador
+const mailerService = require("../services/mailer.service.js");
+const { formatDate } = require("./dateHelpers.js");
 
 /**
  * Genera el template HTML para el correo de notificación de una venta.
@@ -10,7 +10,7 @@ const { formatDate } = require("./dateHelpers.js"); // Necesitamos el formateado
  * @param {string} datosCorreo.nombreCliente
  * @param {object} datosCorreo.ventaInfo
  * @param {number} datosCorreo.ventaInfo.idVenta
- * @param {string} datosCorreo.ventaInfo.accion - ej: "registrada", "actualizada", "completada", "anulada"
+ * @param {string} datosCorreo.ventaInfo.accion
  * @param {string} datosCorreo.ventaInfo.fecha - Ya formateada
  * @param {string} datosCorreo.ventaInfo.estado - Estado del proceso de la venta
  * @param {Array<object>} datosCorreo.ventaInfo.productos - [{ nombre, cantidad, valorUnitario, descripcion? }]
@@ -18,6 +18,7 @@ const { formatDate } = require("./dateHelpers.js"); // Necesitamos el formateado
  * @param {number} datosCorreo.ventaInfo.subtotal
  * @param {number} datosCorreo.ventaInfo.iva
  * @param {number} datosCorreo.ventaInfo.total
+ * @param {number} datosCorreo.ventaInfo.tasaIvaAplicada - La tasa de IVA usada (ej. 0.19 para 19%)
  * @param {string} [datosCorreo.ventaInfo.mensajeAdicional]
  * @returns {string} El contenido HTML generado.
  */
@@ -73,7 +74,9 @@ const generarTemplateVenta = ({ nombreCliente, ventaInfo }) => {
   const tieneProductos = ventaInfo.productos && ventaInfo.productos.length > 0;
   const tieneServicios = ventaInfo.servicios && ventaInfo.servicios.length > 0;
 
-  // Estilos en línea
+  const tasaIvaParaMostrar =
+    ventaInfo.tasaIvaAplicada !== undefined ? ventaInfo.tasaIvaAplicada : 0.19; // Fallback si no se pasa
+
   const styles = {
     container:
       "font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; padding: 25px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;",
@@ -160,7 +163,7 @@ const generarTemplateVenta = ({ nombreCliente, ventaInfo }) => {
     styles.strong
   }">Subtotal:</strong> $${Number(ventaInfo.subtotal || 0).toFixed(2)}</p>
         <p style="${styles.totalItem}"><strong style="${styles.strong}">IVA (${(
-    TASA_IVA_POR_DEFECTO * 100
+    tasaIvaParaMostrar * 100
   ).toFixed(0)}%):</strong> $${Number(ventaInfo.iva || 0).toFixed(2)}</p>
         <p style="${styles.grandTotal}">Total General: $${Number(
     ventaInfo.total || 0
@@ -181,15 +184,12 @@ const generarTemplateVenta = ({ nombreCliente, ventaInfo }) => {
   `;
 };
 
-/**
- * Envía el correo de notificación de venta.
- * @param {object} datos - { correoCliente, nombreCliente, ventaInfo }
- */
 const enviarCorreoVenta = async ({
   correoCliente,
   nombreCliente,
   ventaInfo,
 }) => {
+  // ... (la validación de datos de entrada que tenías está bien)
   if (
     !correoCliente ||
     !nombreCliente ||
@@ -197,13 +197,14 @@ const enviarCorreoVenta = async ({
     !ventaInfo.accion ||
     !ventaInfo.fecha ||
     !ventaInfo.estado ||
-    !ventaInfo.idVenta
+    !ventaInfo.idVenta ||
+    ventaInfo.tasaIvaAplicada === undefined
   ) {
-    console.error("Datos incompletos para enviar correo de venta:", {
-      correoCliente,
-      nombreCliente,
-      ventaInfo,
-    });
+    // Añadida validación para tasaIvaAplicada
+    console.error(
+      "Datos incompletos para enviar correo de venta (incluyendo tasaIvaAplicada):",
+      { correoCliente, nombreCliente, ventaInfo }
+    );
     throw new Error(
       "Datos incompletos para generar y enviar el correo de venta."
     );

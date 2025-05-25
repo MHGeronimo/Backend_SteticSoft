@@ -257,6 +257,7 @@ const crearVenta = async (datosVenta) => {
             subtotal: subtotalGeneral,
             iva: ivaCalculado,
             total: totalCalculado,
+            tasaIvaAplicada: TASA_IVA_POR_DEFECTO,
           },
         });
       } catch (emailError) {
@@ -505,6 +506,7 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
             subtotal:
               Number(ventaActualizadaConDetalles.total) -
               Number(ventaActualizadaConDetalles.iva),
+            tasaIvaAplicada: TASA_IVA_POR_DEFECTO,
           },
         });
       } catch (emailError) {
