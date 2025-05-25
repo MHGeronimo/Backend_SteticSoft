@@ -8,12 +8,12 @@ const {
   ConflictError,
   CustomError,
   BadRequestError,
-} = require("../errors");
+} = require("../errors"); // Asegúrate que la ruta sea correcta
 const moment = require("moment-timezone");
-const { enviarCorreoVenta } = require("../utils/VentaEmailTemplate.js");
-const { formatDate } = require("../utils/dateHelpers.js");
+const { enviarCorreoVenta } = require("../utils/VentaEmailTemplate.js"); // Asegúrate que esta ruta y función existan
+const { formatDate } = require("../utils/dateHelpers.js"); // Asegúrate que esta ruta y función existan
 
-const TASA_IVA_POR_DEFECTO = 0.19;
+const TASA_IVA_POR_DEFECTO = 0.19; // Considera hacerlo configurable globalmente
 
 /**
  * Función helper interna para obtener una venta por su ID con todos los detalles.
@@ -42,7 +42,7 @@ const obtenerVentaCompletaPorIdInterno = async (
       {
         model: db.Producto,
         as: "productosVendidos",
-        attributes: ["idProducto", "nombre", "descripcion", "precio"], // precio del producto base
+        attributes: ["idProducto", "nombre", "descripcion", "precio"],
         through: {
           model: db.ProductoXVenta,
           as: "detalleProductoVenta",
@@ -52,7 +52,7 @@ const obtenerVentaCompletaPorIdInterno = async (
       {
         model: db.Servicio,
         as: "serviciosVendidos",
-        attributes: ["idServicio", "nombre", "descripcion", "precio"], // precio del servicio base
+        attributes: ["idServicio", "nombre", "descripcion", "precio"],
         through: {
           model: db.VentaXServicio,
           as: "detalleServicioVenta",
@@ -129,13 +129,14 @@ const crearVenta = async (datosVenta) => {
       }
       productosParaCrearDetalle.push({
         productoId: itemP.productoId,
-        cantidad: itemP.cantidad,
-        valorUnitario: productoDB.precio,
+        cantidad: Number(itemP.cantidad),
+        valorUnitario: Number(productoDB.precio), // Tomar de la BD como número
         dbInstance: productoDB,
         nombre: productoDB.nombre,
         descripcion: productoDB.descripcion,
       });
-      subtotalCalculadoProductos += itemP.cantidad * productoDB.precio;
+      subtotalCalculadoProductos +=
+        Number(itemP.cantidad) * Number(productoDB.precio);
     }
 
     for (const itemS of servicios) {
@@ -159,12 +160,12 @@ const crearVenta = async (datosVenta) => {
       }
       serviciosParaCrearDetalle.push({
         servicioId: itemS.servicioId,
-        valorServicio: servicioDB.precio,
+        valorServicio: Number(servicioDB.precio), // Tomar de la BD como número
         citaId: itemS.citaId || null,
         nombre: servicioDB.nombre,
         descripcion: servicioDB.descripcion,
       });
-      subtotalCalculadoServicios += servicioDB.precio;
+      subtotalCalculadoServicios += Number(servicioDB.precio); // Asumiendo cantidad 1
     }
 
     const subtotalGeneral =
@@ -172,14 +173,29 @@ const crearVenta = async (datosVenta) => {
     const ivaCalculado = subtotalGeneral * TASA_IVA_POR_DEFECTO;
     const totalCalculado = subtotalGeneral + ivaCalculado;
 
+    // // OPCIONAL: Logs de depuración para valores calculados
+    // console.log('--- DEBUG VALORES VENTA (Calculados para Crear) ---');
+    // console.log('Subtotal Productos:', subtotalCalculadoProductos);
+    // console.log('Subtotal Servicios:', subtotalCalculadoServicios);
+    // console.log('Subtotal General:', subtotalGeneral);
+    // console.log('IVA Calculado:', ivaCalculado);
+    // console.log('Total Calculado:', totalCalculado);
+    // productosParaCrearDetalle.forEach(p => {
+    //     console.log(`Producto ID ${p.productoId} - Cantidad: ${p.cantidad}, ValorUnitario (de BD): ${p.valorUnitario}`);
+    // });
+    // serviciosParaCrearDetalle.forEach(s => {
+    //     console.log(`Servicio ID ${s.servicioId} - ValorServicio (de BD): ${s.valorServicio}`);
+    // });
+    // console.log('--- FIN DEBUG VALORES VENTA ---');
+
     const nuevaVenta = await db.Venta.create(
       {
         fecha: fecha || new Date(),
         clienteId,
         dashboardId: dashboardId || null,
         estadoVentaId,
-        total: parseFloat(totalCalculado).toFixed(2),
-        iva: parseFloat(ivaCalculado).toFixed(2),
+        total: Number(totalCalculado), // CORREGIDO: Pasar como número
+        iva: Number(ivaCalculado), // CORREGIDO: Pasar como número
         estado: typeof estado === "boolean" ? estado : true,
       },
       { transaction }
@@ -191,7 +207,7 @@ const crearVenta = async (datosVenta) => {
           ventaId: nuevaVenta.idVenta,
           productoId: itemP.productoId,
           cantidad: itemP.cantidad,
-          valorUnitario: parseFloat(itemP.valorUnitario).toFixed(2),
+          valorUnitario: Number(itemP.valorUnitario), // CORREGIDO: Pasar como número
           dashboardId: dashboardId || null,
         },
         { transaction }
@@ -213,7 +229,7 @@ const crearVenta = async (datosVenta) => {
         {
           ventaId: nuevaVenta.idVenta,
           servicioId: itemS.servicioId,
-          valorServicio: parseFloat(itemS.valorServicio).toFixed(2),
+          valorServicio: Number(itemS.valorServicio), // CORREGIDO: Pasar como número
           citaId: itemS.citaId,
         },
         { transaction }
@@ -348,7 +364,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
 };
 
 const obtenerVentaPorId = async (idVenta) => {
-  const venta = await obtenerVentaCompletaPorIdInterno(idVenta); // Usando la función helper
+  const venta = await obtenerVentaCompletaPorIdInterno(idVenta);
   if (!venta) {
     throw new NotFoundError("Venta no encontrada.");
   }
@@ -372,8 +388,19 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
           through: {
             model: db.ProductoXVenta,
             as: "detalleProductoVenta",
-            attributes: ["cantidad"],
+            attributes: ["cantidad", "valorUnitario"], // Necesitamos valorUnitario para el correo
           },
+        },
+        {
+          // Incluir Cliente y Estado para el correo
+          model: db.Cliente,
+          as: "cliente",
+          attributes: ["nombre", "correo"],
+        },
+        {
+          model: db.Estado,
+          as: "estadoDetalle",
+          attributes: ["nombreEstado"],
         },
       ],
       transaction,
@@ -384,7 +411,7 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
     }
 
     const estadoOriginalBooleano = venta.estado;
-    // const estadoProcesoOriginal = venta.estadoVentaId ? await db.Estado.findByPk(venta.estadoVentaId, {transaction}) : null; // No es necesario cargarlo para el correo si usamos obtenerVentaCompletaPorIdInterno al final
+    // const estadoProcesoOriginalNombre = venta.estadoDetalle ? venta.estadoDetalle.nombreEstado : null; // Para el correo
 
     const camposParaActualizar = {};
     if (estadoVentaId !== undefined) {
@@ -403,24 +430,15 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
 
     if (Object.keys(camposParaActualizar).length > 0) {
       await venta.update(camposParaActualizar, { transaction });
-      // No es necesario el reload aquí si vamos a llamar a obtenerVentaCompletaPorIdInterno al final
+      // Recargar para reflejar todos los cambios y asociaciones actualizadas para el correo
+      venta = await obtenerVentaCompletaPorIdInterno(idVenta, transaction);
     }
 
-    // Lógica de ajuste de inventario si el estado BOLEANO de la Venta cambió
-    // Para que esta lógica funcione bien, 'venta' debe tener los datos actualizados.
-    // Hacemos un reload implícito al llamar a obtenerVentaCompletaPorIdInterno antes del correo,
-    // o si es crítico para la lógica de inventario, un reload aquí.
-    // Por simplicidad, la lógica de inventario usará el 'venta.estado' que ya fue actualizado en memoria por el update
-    // si el `await venta.update` modifica la instancia en memoria (Sequelize lo hace).
     if (
       datosActualizar.hasOwnProperty("estado") &&
-      estadoOriginalBooleano !== datosActualizar.estado
+      estadoOriginalBooleano !== venta.estado
     ) {
-      // Usar datosActualizar.estado
-      const estadoProcesoActual = await db.Estado.findByPk(
-        venta.estadoVentaId,
-        { transaction }
-      ); // Usar el estadoVentaId de la instancia 'venta' (ya actualizado si vino en datosActualizar)
+      const estadoProcesoActual = venta.estadoDetalle;
       if (
         estadoProcesoActual &&
         (estadoProcesoActual.nombreEstado === "Completado" ||
@@ -433,16 +451,18 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
             });
             const cantVendida = pV.detalleProductoVenta.cantidad;
             if (pDB && cantVendida > 0) {
-              if (datosActualizar.estado)
+              if (venta.estado)
+                // Si se está HABILITANDO (estado ahora es true, antes era false)
                 await pDB.decrement("existencia", {
                   by: cantVendida,
                   transaction,
-                }); // Habilitando (antes false)
+                });
+              // Si se está ANULANDO (estado ahora es false, antes era true)
               else
                 await pDB.increment("existencia", {
                   by: cantVendida,
                   transaction,
-                }); // Anulando (antes true)
+                });
             }
           }
         }
@@ -450,62 +470,65 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
     }
 
     await transaction.commit();
-    const ventaActualizadaConDetalles = await obtenerVentaCompletaPorIdInterno(
-      idVenta
-    );
 
     if (
-      ventaActualizadaConDetalles &&
-      ventaActualizadaConDetalles.cliente &&
-      ventaActualizadaConDetalles.cliente.correo &&
-      ventaActualizadaConDetalles.estado
+      venta &&
+      venta.cliente &&
+      venta.cliente.correo &&
+      (datosActualizar.hasOwnProperty("estadoVentaId") ||
+        datosActualizar.hasOwnProperty("estado"))
     ) {
       let accionCorreo = "actualizada";
-      // Para determinar la acción del correo, necesitamos el estado del proceso *antes* de la actualización
-      // Esta parte se complica si no pasamos el estado original.
-      // Simplificación: el correo dirá "actualizada" o usará el nuevo estado del proceso.
-      const estadoProcesoNuevo = ventaActualizadaConDetalles.estadoDetalle;
-
-      if (estadoOriginalBooleano !== ventaActualizadaConDetalles.estado) {
-        accionCorreo = ventaActualizadaConDetalles.estado
+      if (estadoOriginalBooleano !== venta.estado) {
+        accionCorreo = venta.estado
           ? "reactivada (inventario ajustado)"
           : "anulada (inventario ajustado)";
-      } else if (estadoProcesoNuevo) {
-        accionCorreo = `actualizada (nuevo estado: ${estadoProcesoNuevo.nombreEstado})`;
+      } else if (venta.estadoDetalle) {
+        accionCorreo = `actualizada (nuevo estado: ${venta.estadoDetalle.nombreEstado})`;
       }
 
       try {
+        let subtotalProductosCorreo = 0;
+        venta.productosVendidos.forEach((p) => {
+          subtotalProductosCorreo +=
+            p.detalleProductoVenta.cantidad *
+            p.detalleProductoVenta.valorUnitario;
+        });
+        let subtotalServiciosCorreo = 0;
+        venta.serviciosVendidos.forEach((s) => {
+          subtotalServiciosCorreo += Number(
+            s.detalleServicioVenta.valorServicio
+          );
+        });
+        const subtotalGeneralCorreo =
+          subtotalProductosCorreo + subtotalServiciosCorreo;
+        const ivaCorreo = subtotalGeneralCorreo * TASA_IVA_POR_DEFECTO;
+        const totalCorreo = subtotalGeneralCorreo + ivaCorreo;
+
         await enviarCorreoVenta({
-          correoCliente: ventaActualizadaConDetalles.cliente.correo,
-          nombreCliente:
-            ventaActualizadaConDetalles.cliente.nombre || "Cliente Estimado",
+          correoCliente: venta.cliente.correo,
+          nombreCliente: venta.cliente.nombre || "Cliente Estimado",
           ventaInfo: {
-            idVenta: ventaActualizadaConDetalles.idVenta,
+            idVenta: venta.idVenta,
             accion: accionCorreo,
-            fecha: formatDate(ventaActualizadaConDetalles.fecha),
-            estado: estadoProcesoNuevo
-              ? estadoProcesoNuevo.nombreEstado
+            fecha: formatDate(venta.fecha),
+            estado: venta.estadoDetalle
+              ? venta.estadoDetalle.nombreEstado
               : "Desconocido",
-            productos: ventaActualizadaConDetalles.productosVendidos.map(
-              (p) => ({
-                nombre: p.nombre,
-                cantidad: p.detalleProductoVenta.cantidad,
-                valorUnitario: p.detalleProductoVenta.valorUnitario,
-                descripcion: p.descripcion,
-              })
-            ),
-            servicios: ventaActualizadaConDetalles.serviciosVendidos.map(
-              (s) => ({
-                nombre: s.nombre,
-                valorServicio: s.detalleServicioVenta.valorServicio,
-                descripcion: s.descripcion,
-              })
-            ),
-            total: ventaActualizadaConDetalles.total,
-            iva: ventaActualizadaConDetalles.iva,
-            subtotal:
-              Number(ventaActualizadaConDetalles.total) -
-              Number(ventaActualizadaConDetalles.iva),
+            productos: venta.productosVendidos.map((p) => ({
+              nombre: p.nombre,
+              cantidad: p.detalleProductoVenta.cantidad,
+              valorUnitario: p.detalleProductoVenta.valorUnitario,
+              descripcion: p.descripcion,
+            })),
+            servicios: venta.serviciosVendidos.map((s) => ({
+              nombre: s.nombre,
+              valorServicio: s.detalleServicioVenta.valorServicio,
+              descripcion: s.descripcion,
+            })),
+            total: totalCorreo,
+            iva: ivaCorreo,
+            subtotal: subtotalGeneralCorreo,
             tasaIvaAplicada: TASA_IVA_POR_DEFECTO,
           },
         });
@@ -516,7 +539,7 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
         );
       }
     }
-    return ventaActualizadaConDetalles;
+    return venta;
   } catch (error) {
     await transaction.rollback();
     if (error instanceof NotFoundError || error instanceof BadRequestError)
@@ -541,7 +564,6 @@ const habilitarVenta = async (idVenta) => {
 };
 
 const eliminarVentaFisica = async (idVenta) => {
-  // ... (lógica como la tenías, asegurando que el alias sea correcto para obtener cantidad)
   const transaction = await db.sequelize.transaction();
   try {
     const venta = await db.Venta.findByPk(idVenta, {
@@ -576,7 +598,7 @@ const eliminarVentaFisica = async (idVenta) => {
           const pDB = await db.Producto.findByPk(pV.idProducto, {
             transaction,
           });
-          const cantVendida = pV.detalleProductoVenta.cantidad; // Usando alias
+          const cantVendida = pV.detalleProductoVenta.cantidad;
           if (pDB && cantVendida > 0)
             await pDB.increment("existencia", { by: cantVendida, transaction });
         }
