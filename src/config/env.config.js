@@ -13,7 +13,8 @@ module.exports = {
   IS_TEST: isTest,
 
   PORT: process.env.PORT || 3000,
-  APP_NAME: process.env.APP_NAME || "SteticSoft API",
+  APP_NAME: process.env.APP_NAME || "SteticSoft",
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3001',
 
   // Configuración de Base de Datos (ejemplo para desarrollo, ajustar para producción)
   DB_HOST: process.env.DB_HOST || "localhost",
