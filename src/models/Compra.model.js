@@ -13,35 +13,49 @@ module.exports = (sequelize, DataTypes) => {
       },
       fecha: {
         type: DataTypes.DATEONLY,
-        defaultValue: DataTypes.NOW,
+        defaultValue: DataTypes.NOW, // Sequelize puede manejar el default
         field: "fecha",
-      }, // Ajustado
+      },
       total: {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0.0,
         field: "total",
-      }, // Ajustado
-      iva: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0, field: "iva" }, // Ajustado
+      },
+      iva: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.0,
+        field: "iva",
+      },
       proveedorId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: "proveedor_idproveedor",
-        references: { model: "proveedor", key: "idproveedor" },
-        onDelete: "SET NULL", // Reflejando DDL
-        onUpdate: "CASCADE",
+        references: {
+          model: "proveedor",
+          key: "idproveedor",
+        },
+        onDelete: "SET NULL",
       },
       dashboardId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: "dashboard_iddashboard",
-        references: { model: "dashboard", key: "iddashboard" },
-        onDelete: "SET NULL", // Reflejando DDL
-        onUpdate: "CASCADE",
+        references: {
+          model: "dashboard",
+          key: "iddashboard",
+        },
+        onDelete: "SET NULL",
+      },
+      estado: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false,
+        field: "estado",
       },
     },
     {
       tableName: "compra",
-      timestamps: false,
+      timestamps: false, // Asumiendo que no tienes createdAt/updatedAt aquí
     }
   );
 
@@ -61,8 +75,8 @@ module.exports = (sequelize, DataTypes) => {
     if (models.Producto && models.CompraXProducto) {
       Compra.belongsToMany(models.Producto, {
         through: models.CompraXProducto,
-        foreignKey: { name: "compraId", field: "compra_idcompra" },
-        otherKey: { name: "productoId", field: "producto_idproducto" },
+        foreignKey: { name: "compraId", field: "compra_idcompra" }, // Clave en CompraXProducto que referencia a Compra
+        otherKey: { name: "productoId", field: "producto_idproducto" }, // Clave en CompraXProducto que referencia a Producto
         as: "productosComprados",
       });
     }
