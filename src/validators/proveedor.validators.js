@@ -1,0 +1,232 @@
+// src/validators/proveedor.validators.js
+const { body, param } = require("express-validator");
+const {
+  handleValidationErrors,
+} = require("../middlewares/validation.middleware.js");
+const db = require("../models");
+
+const crearProveedorValidators = [
+  body("nombre")
+    .trim()
+    .notEmpty()
+    .withMessage("El nombre del proveedor es obligatorio.")
+    .isString()
+    .withMessage("El nombre debe ser texto.")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("El nombre debe tener entre 2 y 100 caracteres."),
+  body("tipo")
+    .trim()
+    .notEmpty()
+    .withMessage(
+      'El tipo de proveedor es obligatorio (ej. "Natural", "Jurídico").'
+    )
+    .isString()
+    .withMessage("El tipo debe ser texto."),
+  body("telefono")
+    .trim()
+    .notEmpty()
+    .withMessage("El teléfono principal es obligatorio.")
+    .isString()
+    .withMessage("El teléfono debe ser texto.")
+    .isLength({ min: 7, max: 45 })
+    .withMessage("El teléfono debe tener entre 7 y 45 caracteres."),
+  body("correo")
+    .trim()
+    .notEmpty()
+    .withMessage("El correo principal es obligatorio.")
+    .isEmail()
+    .withMessage("Debe proporcionar un correo electrónico válido.")
+    .isLength({ max: 100 })
+    .withMessage("El correo no debe exceder los 100 caracteres.")
+    .normalizeEmail()
+    .custom(async (value) => {
+      const proveedorExistente = await db.Proveedor.findOne({
+        where: { correo: value },
+      });
+      if (proveedorExistente) {
+        return Promise.reject(
+          "El correo electrónico principal ya está registrado."
+        );
+      }
+    }),
+  body("direccion")
+    .trim()
+    .notEmpty()
+    .withMessage("La dirección es obligatoria.")
+    .isString()
+    .withMessage("La dirección debe ser texto.")
+    .isLength({ min: 5, max: 255 })
+    .withMessage("La dirección debe tener entre 5 y 255 caracteres."),
+  body("tipoDocumento")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString(),
+  body("numeroDocumento")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .isLength({ max: 45 }),
+  body("nitEmpresa")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .withMessage("El NIT de la empresa debe ser texto.")
+    .isLength({ max: 45 })
+    .withMessage("El NIT no debe exceder los 45 caracteres.")
+    .custom(async (value) => {
+      if (value) {
+        const proveedorExistente = await db.Proveedor.findOne({
+          where: { nitEmpresa: value },
+        });
+        if (proveedorExistente) {
+          return Promise.reject("El NIT de empresa ya está registrado.");
+        }
+      }
+    }),
+  body("nombrePersonaEncargada")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .withMessage("El nombre de la persona encargada debe ser texto.")
+    .isLength({ max: 100 })
+    .withMessage(
+      "El nombre de la persona encargada no debe exceder los 100 caracteres."
+    ),
+  body("telefonoPersonaEncargada")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .withMessage("El teléfono de la persona encargada debe ser texto.")
+    .isLength({ max: 45 })
+    .withMessage(
+      "El teléfono de la persona encargada no debe exceder los 45 caracteres."
+    ),
+  body("emailPersonaEncargada")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage(
+      "Debe proporcionar un correo electrónico válido para la persona encargada."
+    )
+    .isLength({ max: 100 })
+    .withMessage(
+      "El correo de la persona encargada no debe exceder los 100 caracteres."
+    )
+    .normalizeEmail(),
+  body("estado")
+    .optional()
+    .isBoolean()
+    .withMessage("El estado debe ser un valor booleano."),
+  handleValidationErrors,
+];
+
+const actualizarProveedorValidators = [
+  param("idProveedor")
+    .isInt({ gt: 0 })
+    .withMessage("ID de proveedor inválido."),
+  body("nombre")
+    .optional()
+    .trim()
+    .notEmpty()
+    .isString()
+    .isLength({ min: 2, max: 100 }),
+  body("tipo").optional().trim().notEmpty().isString(),
+  body("telefono")
+    .optional()
+    .trim()
+    .notEmpty()
+    .isString()
+    .isLength({ min: 7, max: 45 }),
+  body("correo")
+    .optional()
+    .trim()
+    .notEmpty()
+    .isEmail()
+    .isLength({ max: 100 })
+    .normalizeEmail()
+    .custom(async (value, { req }) => {
+      if (value) {
+        const idProveedor = Number(req.params.idProveedor);
+        const proveedorExistente = await db.Proveedor.findOne({
+          where: {
+            correo: value,
+            idProveedor: { [db.Sequelize.Op.ne]: idProveedor },
+          },
+        });
+        if (proveedorExistente) {
+          return Promise.reject(
+            "El correo electrónico principal ya está registrado por otro proveedor."
+          );
+        }
+      }
+    }),
+  body("direccion")
+    .optional()
+    .trim()
+    .notEmpty()
+    .isString()
+    .isLength({ min: 5, max: 255 }),
+  body("tipoDocumento")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString(),
+  body("numeroDocumento")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .isLength({ max: 45 }),
+  body("nitEmpresa")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .withMessage("NIT inválido.")
+    .isLength({ max: 45 })
+    .custom(async (value, { req }) => {
+      if (value) {
+        const idProveedor = Number(req.params.idProveedor);
+        const proveedorExistente = await db.Proveedor.findOne({
+          where: {
+            nitEmpresa: value,
+            idProveedor: { [db.Sequelize.Op.ne]: idProveedor },
+          },
+        });
+        if (proveedorExistente) {
+          return Promise.reject(
+            "El NIT de empresa ya está registrado por otro proveedor."
+          );
+        }
+      }
+    }),
+  body("nombrePersonaEncargada")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .isLength({ max: 100 }),
+  body("telefonoPersonaEncargada")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString()
+    .isLength({ max: 45 }),
+  body("emailPersonaEncargada")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage("Correo de persona encargada inválido.")
+    .isLength({ max: 100 })
+    .normalizeEmail(),
+  body("estado").optional().isBoolean(),
+  handleValidationErrors,
+];
+
+const idProveedorValidator = [
+  param("idProveedor")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del proveedor debe ser un entero positivo."),
+  handleValidationErrors,
+];
+
+module.exports = {
+  crearProveedorValidators,
+  actualizarProveedorValidators,
+  idProveedorValidator,
+};

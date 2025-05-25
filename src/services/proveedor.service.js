@@ -1,0 +1,361 @@
+// src/services/proveedor.service.js
+const db = require("../models");
+const { Op } = db.Sequelize;
+const { NotFoundError, ConflictError, CustomError } = require("../errors");
+
+/**
+ * Crear un nuevo proveedor.
+ */
+const crearProveedor = async (datosProveedor) => {
+  const {
+    nombre,
+    tipo,
+    telefono,
+    correo,
+    direccion,
+    tipoDocumento,
+    numeroDocumento,
+    nitEmpresa,
+    nombrePersonaEncargada,
+    telefonoPersonaEncargada,
+    emailPersonaEncargada,
+    estado,
+  } = datosProveedor;
+
+  // Validaciones de unicidad (los validadores de ruta ya hacen esto, pero una doble capa es segura)
+  if (nitEmpresa) {
+    const proveedorConNit = await db.Proveedor.findOne({
+      where: { nitEmpresa },
+    });
+    if (proveedorConNit) {
+      throw new ConflictError(
+        `El NIT de empresa '${nitEmpresa}' ya está registrado.`
+      );
+    }
+  }
+  const proveedorConNombreTipo = await db.Proveedor.findOne({
+    where: { nombre, tipo },
+  });
+  if (proveedorConNombreTipo) {
+    throw new ConflictError(
+      `Ya existe un proveedor con el nombre '${nombre}' y tipo '${tipo}'.`
+    );
+  }
+  const proveedorConCorreo = await db.Proveedor.findOne({ where: { correo } });
+  if (proveedorConCorreo) {
+    throw new ConflictError(
+      `El correo electrónico '${correo}' ya está registrado para otro proveedor.`
+    );
+  }
+
+  try {
+    const nuevoProveedor = await db.Proveedor.create({
+      nombre,
+      tipo,
+      telefono,
+      correo,
+      direccion,
+      tipoDocumento: tipoDocumento || null,
+      numeroDocumento: numeroDocumento || null,
+      nitEmpresa: nitEmpresa || null,
+      nombrePersonaEncargada: nombrePersonaEncargada || null,
+      telefonoPersonaEncargada: telefonoPersonaEncargada || null,
+      emailPersonaEncargada: emailPersonaEncargada || null,
+      estado: typeof estado === "boolean" ? estado : true,
+    });
+    return nuevoProveedor;
+  } catch (error) {
+    if (error.name === "SequelizeUniqueConstraintError") {
+      let campoConflictivo = "un campo único";
+      if (error.fields) {
+        if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
+        else if (
+          error.fields.proveedor_nombre_tipo_key ||
+          (error.fields.nombre && error.fields.tipo)
+        )
+          campoConflictivo = `la combinación de nombre ('${nombre}') y tipo ('${tipo}')`;
+        else if (error.fields.correo) campoConflictivo = "correo electrónico";
+      }
+      throw new ConflictError(
+        `Ya existe un proveedor con el mismo valor para ${campoConflictivo}.`
+      );
+    }
+    console.error(
+      "Error al crear el proveedor en el servicio:",
+      error.message,
+      error.stack
+    );
+    throw new CustomError(`Error al crear el proveedor: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Obtener todos los proveedores.
+ */
+const obtenerTodosLosProveedores = async (opcionesDeFiltro = {}) => {
+  try {
+    return await db.Proveedor.findAll({
+      where: opcionesDeFiltro,
+      order: [["nombre", "ASC"]],
+    });
+  } catch (error) {
+    console.error(
+      "Error al obtener todos los proveedores en el servicio:",
+      error.message
+    );
+    throw new CustomError(
+      `Error al obtener proveedores: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Obtener un proveedor por su ID.
+ */
+const obtenerProveedorPorId = async (idProveedor) => {
+  try {
+    const proveedor = await db.Proveedor.findByPk(idProveedor);
+    if (!proveedor) {
+      throw new NotFoundError("Proveedor no encontrado.");
+    }
+    return proveedor;
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    console.error(
+      `Error al obtener el proveedor con ID ${idProveedor} en el servicio:`,
+      error.message
+    );
+    throw new CustomError(
+      `Error al obtener el proveedor: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Actualizar un proveedor existente.
+ */
+const actualizarProveedor = async (idProveedor, datosActualizar) => {
+  try {
+    const proveedor = await db.Proveedor.findByPk(idProveedor);
+    if (!proveedor) {
+      throw new NotFoundError("Proveedor no encontrado para actualizar.");
+    }
+
+    const { nombre, tipo, nitEmpresa, correo } = datosActualizar;
+
+    if (nitEmpresa && nitEmpresa !== proveedor.nitEmpresa) {
+      const otroProveedorConNit = await db.Proveedor.findOne({
+        where: {
+          nitEmpresa: nitEmpresa,
+          idProveedor: { [Op.ne]: idProveedor },
+        },
+      });
+      if (otroProveedorConNit) {
+        throw new ConflictError(
+          `El NIT de empresa '${nitEmpresa}' ya está registrado para otro proveedor.`
+        );
+      }
+    }
+
+    if (correo && correo !== proveedor.correo) {
+      const otroProveedorConCorreo = await db.Proveedor.findOne({
+        where: { correo: correo, idProveedor: { [Op.ne]: idProveedor } },
+      });
+      if (otroProveedorConCorreo) {
+        throw new ConflictError(
+          `El correo electrónico '${correo}' ya está registrado para otro proveedor.`
+        );
+      }
+    }
+
+    const nombreActualizado = datosActualizar.hasOwnProperty("nombre")
+      ? nombre
+      : proveedor.nombre;
+    const tipoActualizado = datosActualizar.hasOwnProperty("tipo")
+      ? tipo
+      : proveedor.tipo;
+
+    if (
+      (datosActualizar.hasOwnProperty("nombre") ||
+        datosActualizar.hasOwnProperty("tipo")) &&
+      (nombreActualizado !== proveedor.nombre ||
+        tipoActualizado !== proveedor.tipo)
+    ) {
+      const otroProveedorConNombreTipo = await db.Proveedor.findOne({
+        where: {
+          nombre: nombreActualizado,
+          tipo: tipoActualizado,
+          idProveedor: { [Op.ne]: idProveedor },
+        },
+      });
+      if (otroProveedorConNombreTipo) {
+        throw new ConflictError(
+          `Ya existe un proveedor con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
+        );
+      }
+    }
+    // Los campos que pueden ser null si no se envían o se envían como null explícitamente
+    // Sequelize maneja bien `update` con `undefined` (no actualiza el campo)
+    // Para poner un campo a null explícitamente, datosActualizar debe contener { miCampo: null }
+    const camposAActualizar = { ...datosActualizar };
+    if (
+      datosActualizar.hasOwnProperty("tipoDocumento") &&
+      datosActualizar.tipoDocumento === null
+    )
+      camposAActualizar.tipoDocumento = null;
+    if (
+      datosActualizar.hasOwnProperty("numeroDocumento") &&
+      datosActualizar.numeroDocumento === null
+    )
+      camposAActualizar.numeroDocumento = null;
+    if (
+      datosActualizar.hasOwnProperty("nitEmpresa") &&
+      datosActualizar.nitEmpresa === null
+    )
+      camposAActualizar.nitEmpresa = null;
+    if (
+      datosActualizar.hasOwnProperty("telefonoPersonaEncargada") &&
+      datosActualizar.telefonoPersonaEncargada === null
+    )
+      camposAActualizar.telefonoPersonaEncargada = null;
+    if (
+      datosActualizar.hasOwnProperty("emailPersonaEncargada") &&
+      datosActualizar.emailPersonaEncargada === null
+    )
+      camposAActualizar.emailPersonaEncargada = null;
+    if (
+      datosActualizar.hasOwnProperty("nombrePersonaEncargada") &&
+      datosActualizar.nombrePersonaEncargada === null
+    )
+      camposAActualizar.nombrePersonaEncargada = null;
+
+    await proveedor.update(camposAActualizar);
+    return proveedor;
+  } catch (error) {
+    if (error instanceof NotFoundError || error instanceof ConflictError)
+      throw error;
+    if (error.name === "SequelizeUniqueConstraintError") {
+      let campoConflictivo = "un campo único";
+      if (error.fields) {
+        if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
+        else if (
+          error.fields.proveedor_nombre_tipo_key ||
+          (error.fields.nombre && error.fields.tipo)
+        )
+          campoConflictivo = `la combinación de nombre y tipo`;
+        else if (error.fields.correo) campoConflictivo = "correo electrónico";
+      }
+      throw new ConflictError(
+        `Ya existe un proveedor con el mismo valor para ${campoConflictivo}.`
+      );
+    }
+    console.error(
+      `Error al actualizar el proveedor con ID ${idProveedor} en el servicio:`,
+      error.message,
+      error.stack
+    );
+    throw new CustomError(
+      `Error al actualizar el proveedor: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Anular un proveedor.
+ */
+const anularProveedor = async (idProveedor) => {
+  try {
+    const proveedor = await db.Proveedor.findByPk(idProveedor);
+    if (!proveedor) {
+      throw new NotFoundError("Proveedor no encontrado para anular.");
+    }
+    if (!proveedor.estado) {
+      return proveedor;
+    }
+    await proveedor.update({ estado: false });
+    return proveedor;
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    console.error(
+      `Error al anular el proveedor con ID ${idProveedor} en el servicio:`,
+      error.message
+    );
+    throw new CustomError(
+      `Error al anular el proveedor: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Habilitar un proveedor.
+ */
+const habilitarProveedor = async (idProveedor) => {
+  try {
+    const proveedor = await db.Proveedor.findByPk(idProveedor);
+    if (!proveedor) {
+      throw new NotFoundError("Proveedor no encontrado para habilitar.");
+    }
+    if (proveedor.estado) {
+      return proveedor;
+    }
+    await proveedor.update({ estado: true });
+    return proveedor;
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    console.error(
+      `Error al habilitar el proveedor con ID ${idProveedor} en el servicio:`,
+      error.message
+    );
+    throw new CustomError(
+      `Error al habilitar el proveedor: ${error.message}`,
+      500
+    );
+  }
+};
+
+/**
+ * Eliminar un proveedor físicamente.
+ */
+const eliminarProveedorFisico = async (idProveedor) => {
+  try {
+    const proveedor = await db.Proveedor.findByPk(idProveedor);
+    if (!proveedor) {
+      throw new NotFoundError(
+        "Proveedor no encontrado para eliminar físicamente."
+      );
+    }
+    const filasEliminadas = await db.Proveedor.destroy({
+      where: { idProveedor },
+    });
+    return filasEliminadas;
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    if (error.name === "SequelizeForeignKeyConstraintError") {
+      throw new ConflictError(
+        "No se puede eliminar el proveedor porque está siendo referenciado en Compras."
+      );
+    }
+    console.error(
+      `Error al eliminar físicamente el proveedor con ID ${idProveedor} en el servicio:`,
+      error.message
+    );
+    throw new CustomError(
+      `Error al eliminar físicamente el proveedor: ${error.message}`,
+      500
+    );
+  }
+};
+
+module.exports = {
+  crearProveedor,
+  obtenerTodosLosProveedores,
+  obtenerProveedorPorId,
+  actualizarProveedor,
+  anularProveedor,
+  habilitarProveedor,
+  eliminarProveedorFisico,
+};
