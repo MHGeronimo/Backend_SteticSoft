@@ -62,8 +62,35 @@ const idRolValidator = [
   handleValidationErrors,
 ];
 
+const gestionarPermisosRolValidators = [
+  param('idRol')
+    .isInt({ gt: 0 }).withMessage('El ID del rol debe ser un entero positivo.'),
+  body('idPermisos') // Asumimos que el cuerpo enviará un array de IDs de permisos
+    .isArray({ min: 1 }).withMessage('Se requiere un array de idPermisos con al menos un elemento.')
+    .custom((idPermisos) => {
+      if (!idPermisos.every(id => Number.isInteger(id) && id > 0)) {
+        throw new Error('Cada idPermiso en el array debe ser un entero positivo.');
+      }
+      return true;
+    }),
+  handleValidationErrors
+];
+
+// Validador para cuando solo se necesita el idRol y un idPermiso en el path (para quitar uno específico)
+const gestionarUnPermisoRolValidators = [
+  param('idRol')
+    .isInt({ gt: 0 }).withMessage('El ID del rol debe ser un entero positivo.'),
+  param('idPermiso')
+    .isInt({ gt: 0 }).withMessage('El ID del permiso debe ser un entero positivo.'),
+  handleValidationErrors
+];
+
+
 module.exports = {
   crearRolValidators,
   actualizarRolValidators,
   idRolValidator,
+  gestionarPermisosRolValidators, 
+  gestionarUnPermisoRolValidators, 
 };
+
