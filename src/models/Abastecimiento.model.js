@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "producto_idproducto",
         references: { model: "producto", key: "idproducto" },
-        onDelete: "RESTRICT", // Reflejando DDL
+        onDelete: "RESTRICT",
         onUpdate: "CASCADE",
       },
       fechaIngreso: {
@@ -43,11 +43,22 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
         allowNull: false,
         field: "esta_agotado",
-      }, // Ajustado
-      razonAgotamiento: { type: DataTypes.TEXT, field: "razon_agotamiento" },
+      },
+      razonAgotamiento: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: "razon_agotamiento",
+      },
       fechaAgotamiento: {
         type: DataTypes.DATEONLY,
+        allowNull: true,
         field: "fecha_agotamiento",
+      },
+      estado: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false,
+        field: "estado",
       },
     },
     {
