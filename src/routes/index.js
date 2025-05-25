@@ -4,14 +4,14 @@ const router = express.Router();
 
 // Importar las rutas de las entidades
 const rolRoutes = require("./rol.routes.js");
-const permisoRoutes = require("./permiso.routes.js"); // <--- NUEVA LÍNEA
-// const usuarioRoutes = require('./usuario.routes.js');
+const permisoRoutes = require("./permiso.routes.js");
+const usuarioRoutes = require("./usuario.routes.js"); // <--- NUEVA LÍNEA
 // ... y así para otras entidades
 
 // Montar las rutas de las entidades en el router principal
 router.use("/roles", rolRoutes);
-router.use("/permisos", permisoRoutes); // <--- NUEVA LÍNEA
-// router.use('/usuarios', usuarioRoutes);
+router.use("/permisos", permisoRoutes);
+router.use("/usuarios", usuarioRoutes); // <--- NUEVA LÍNEA
 // ...
 
 router.get("/", (req, res) => {
