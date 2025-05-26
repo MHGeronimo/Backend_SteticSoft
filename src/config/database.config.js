@@ -1,15 +1,13 @@
 // src/config/database.config.js
 const { Pool } = require("pg");
 const {
-  DATABASE_URL, // Preferido para producción
+  DATABASE_URL,
   DB_USER,
   DB_HOST,
   DB_NAME,
   DB_PASS,
   DB_PORT,
   IS_PRODUCTION,
-  DB_SSL_REQUIRED,
-  DB_REJECT_UNAUTHORIZED,
 } = require("./env.config");
 
 let pgPoolConfig;
@@ -19,16 +17,13 @@ if (IS_PRODUCTION && DATABASE_URL) {
   pgPoolConfig = {
     connectionString: DATABASE_URL,
     ssl: {
-      // Para Render, rejectUnauthorized: false es comúnmente necesario
-      rejectUnauthorized:
-        DB_REJECT_UNAUTHORIZED !== undefined ? DB_REJECT_UNAUTHORIZED : false,
+      rejectUnauthorized: false, // <-- ESTABLECER EXPLÍCITAMENTE PARA RENDER
     },
-    max: 10,
+    max: 10, // Ajusta según los límites de tu plan de Render
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 5000, // Aumentado un poco para conexiones de producción
   };
 } else {
-  // Para desarrollo o si DATABASE_URL no está en producción
   console.log(
     `🟢 pg.Pool configurado para ${
       IS_PRODUCTION ? "producción (variables individuales)" : "desarrollo"
@@ -44,11 +39,10 @@ if (IS_PRODUCTION && DATABASE_URL) {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
   };
-  if (IS_PRODUCTION && DB_SSL_REQUIRED) {
-    // Si es producción pero sin DATABASE_URL, y SSL es requerido
+  if (IS_PRODUCTION) {
+    // Si es producción pero sin DATABASE_URL (fallback)
     pgPoolConfig.ssl = {
-      rejectUnauthorized:
-        DB_REJECT_UNAUTHORIZED !== undefined ? DB_REJECT_UNAUTHORIZED : false,
+      rejectUnauthorized: false, // <-- ESTABLECER EXPLÍCITAMENTE PARA RENDER
     };
   }
 }

@@ -1,24 +1,20 @@
 // src/config/sequelize.config.js
 const { Sequelize } = require("sequelize");
 const {
-  // Variables individuales (fallback o para pg.Pool si no usa DATABASE_URL)
   DB_NAME,
   DB_USER,
   DB_PASS,
   DB_HOST,
   DB_PORT,
   DB_DIALECT,
-  // Variables de entorno y para producción
   IS_PRODUCTION,
-  DATABASE_URL, 
-  DB_SSL_REQUIRED,
-  DB_REJECT_UNAUTHORIZED,
-  NODE_ENV,
+  DATABASE_URL,
+  NODE_ENV, // Añadido para el log
 } = require("./env.config");
 
 const commonOptions = {
   dialect: DB_DIALECT || "postgres",
-  logging: IS_PRODUCTION ? false : console.log,
+  logging: IS_PRODUCTION ? false : console.log, // No loguear SQL en producción
   define: {
     timestamps: false,
     freezeTableName: true,
@@ -33,16 +29,11 @@ if (IS_PRODUCTION && DATABASE_URL) {
     "🟢 Configurando Sequelize para PostgreSQL (Producción con DATABASE_URL) desde sequelize.config.js"
   );
   sequelize = new Sequelize(DATABASE_URL, {
-    // Usar DATABASE_URL directamente
     ...commonOptions,
     dialectOptions: {
       ssl: {
-        // Render requiere SSL
         require: true,
-        // Para Render, rejectUnauthorized: false es comúnmente necesario
-        // si no estás proporcionando el certificado CA de Render.
-        rejectUnauthorized:
-          DB_REJECT_UNAUTHORIZED !== undefined ? DB_REJECT_UNAUTHORIZED : false,
+        rejectUnauthorized: false, // <-- ESTABLECER EXPLÍCITAMENTE PARA RENDER
       },
     },
   });
@@ -63,9 +54,8 @@ if (IS_PRODUCTION && DATABASE_URL) {
     ...commonOptions,
     dialectOptions: {
       ssl: {
-        require: DB_SSL_REQUIRED !== undefined ? DB_SSL_REQUIRED : true,
-        rejectUnauthorized:
-          DB_REJECT_UNAUTHORIZED !== undefined ? DB_REJECT_UNAUTHORIZED : false,
+        require: true,
+        rejectUnauthorized: false, // <-- ESTABLECER EXPLÍCITAMENTE PARA RENDER
       },
     },
   });
@@ -88,7 +78,6 @@ if (IS_PRODUCTION && DATABASE_URL) {
     host: DB_HOST,
     port: DB_PORT,
     ...commonOptions,
-    // No se necesita SSL para localhost usualmente
   });
 }
 
