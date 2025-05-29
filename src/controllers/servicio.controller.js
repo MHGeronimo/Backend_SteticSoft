@@ -1,12 +1,11 @@
 // src/controllers/servicio.controller.js
-const servicioService = require("../services/servicio.service.js"); // Ajusta la ruta si es necesario
+const servicioService = require("../services/servicio.service.js");
 
 /**
  * Crea un nuevo servicio.
  */
 const crearServicio = async (req, res, next) => {
   try {
-    // Asumimos que req.body viene con claves camelCase: nombre, descripcion, categoriaServicioId, etc.
     const nuevoServicio = await servicioService.crearServicio(req.body);
     res.status(201).json({
       success: true,
@@ -14,13 +13,12 @@ const crearServicio = async (req, res, next) => {
       data: nuevoServicio,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todos los servicios.
- * Permite filtrar por query params, ej. ?estado=true&categoriaServicioId=1&especialidadId=1
  */
 const listarServicios = async (req, res, next) => {
   try {
@@ -33,17 +31,15 @@ const listarServicios = async (req, res, next) => {
     if (req.query.categoriaServicioId) {
       const idCategoria = Number(req.query.categoriaServicioId);
       if (!isNaN(idCategoria) && idCategoria > 0) {
-        opcionesDeFiltro.categoriaServicioId = idCategoria; // El servicio espera camelCase
+        opcionesDeFiltro.categoriaServicioId = idCategoria;
       }
     }
     if (req.query.especialidadId) {
       const idEspecialidad = Number(req.query.especialidadId);
       if (!isNaN(idEspecialidad) && idEspecialidad > 0) {
-        opcionesDeFiltro.especialidadId = idEspecialidad; // El servicio espera camelCase
+        opcionesDeFiltro.especialidadId = idEspecialidad;
       }
     }
-    // Podrías añadir más filtros aquí (ej. por nombre)
-
     const servicios = await servicioService.obtenerTodosLosServicios(
       opcionesDeFiltro
     );
@@ -65,7 +61,6 @@ const obtenerServicioPorId = async (req, res, next) => {
     const servicio = await servicioService.obtenerServicioPorId(
       Number(idServicio)
     );
-    // El servicio ya lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: servicio,
@@ -85,10 +80,31 @@ const actualizarServicio = async (req, res, next) => {
       Number(idServicio),
       req.body
     );
-    // El servicio ya lanza errores específicos (NotFoundError, ConflictError, BadRequestError)
     res.status(200).json({
       success: true,
       message: "Servicio actualizado exitosamente.",
+      data: servicioActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de un servicio.
+ */
+const cambiarEstadoServicio = async (req, res, next) => {
+  try {
+    const { idServicio } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const servicioActualizado = await servicioService.cambiarEstadoServicio(
+      Number(idServicio),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado del servicio ID ${idServicio} cambiado a ${estado} exitosamente.`,
       data: servicioActualizado,
     });
   } catch (error) {
@@ -141,8 +157,7 @@ const eliminarServicioFisico = async (req, res, next) => {
   try {
     const { idServicio } = req.params;
     await servicioService.eliminarServicioFisico(Number(idServicio));
-    // El servicio lanza NotFoundError o ConflictError
-    res.status(204).send(); // 204 No Content para eliminaciones físicas exitosas
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -156,4 +171,5 @@ module.exports = {
   anularServicio,
   habilitarServicio,
   eliminarServicioFisico,
+  cambiarEstadoServicio, // <-- Nueva función exportada
 };

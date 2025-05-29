@@ -1,13 +1,11 @@
 // src/controllers/venta.controller.js
-const ventaService = require("../services/venta.service.js"); // Ajusta la ruta si es necesario
+const ventaService = require("../services/venta.service.js");
 
 /**
  * Crea una nueva venta.
  */
 const crearVenta = async (req, res, next) => {
   try {
-    // req.body debería contener:
-    // { clienteId, estadoVentaId, productos: [{ productoId, cantidad, valorUnitario }], servicios: [{ servicioId, valorServicio, citaId? }], fecha?, dashboardId?, estado?, total?, iva? }
     const nuevaVenta = await ventaService.crearVenta(req.body);
     res.status(201).json({
       success: true,
@@ -15,19 +13,17 @@ const crearVenta = async (req, res, next) => {
       data: nuevaVenta,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todas las ventas.
- * Permite filtrar por query params, ej. ?estado=true&clienteId=1&estadoVentaId=3
  */
 const listarVentas = async (req, res, next) => {
   try {
     const opcionesDeFiltro = {};
     if (req.query.estado === "true") {
-      // Estado booleano del registro Venta
       opcionesDeFiltro.estado = true;
     } else if (req.query.estado === "false") {
       opcionesDeFiltro.estado = false;
@@ -45,14 +41,11 @@ const listarVentas = async (req, res, next) => {
       }
     }
     if (req.query.estadoVentaId) {
-      // Estado del proceso de la venta
       const idEstadoVenta = Number(req.query.estadoVentaId);
       if (!isNaN(idEstadoVenta) && idEstadoVenta > 0) {
         opcionesDeFiltro.estadoVentaId = idEstadoVenta;
       }
     }
-    // Podrías añadir más filtros (ej. rango de fechas)
-
     const ventas = await ventaService.obtenerTodasLasVentas(opcionesDeFiltro);
     res.status(200).json({
       success: true,
@@ -70,7 +63,6 @@ const obtenerVentaPorId = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
     const venta = await ventaService.obtenerVentaPorId(Number(idVenta));
-    // El servicio ya lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: venta,
@@ -82,20 +74,42 @@ const obtenerVentaPorId = async (req, res, next) => {
 
 /**
  * Actualiza el estado del PROCESO de una venta y/o su estado booleano (activo/inactivo).
- * No modifica los productos/servicios de la venta.
  */
 const actualizarEstadoVenta = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
-    // req.body podría ser { estadoVentaId: <nuevo_id_estado_proceso>, estado: <nuevo_estado_booleano> }
     const ventaActualizada = await ventaService.actualizarEstadoProcesoVenta(
       Number(idVenta),
-      req.body
+      req.body // Puede contener estadoVentaId y/o estado (booleano)
     );
-    // El servicio ya lanza errores específicos (NotFoundError, BadRequestError)
     res.status(200).json({
       success: true,
       message: "Estado de la venta actualizado exitosamente.",
+      data: ventaActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado booleano general (activo/inactivo) de una venta.
+ * Esta función llamará a la lógica de servicio que también maneja el inventario.
+ */
+const cambiarEstadoGeneralVenta = async (req, res, next) => {
+  try {
+    const { idVenta } = req.params;
+    const { estado } = req.body; // Se espera un booleano para el estado general
+
+    // Se usa actualizarEstadoProcesoVenta, ya que maneja ambos tipos de estado y el inventario.
+    // Aquí solo nos interesa cambiar el estado booleano general.
+    const ventaActualizada = await ventaService.actualizarEstadoProcesoVenta(
+      Number(idVenta),
+      { estado } // Solo pasamos el campo 'estado' booleano
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado general de la venta ID ${idVenta} cambiado a ${estado} exitosamente. Inventario ajustado si aplica.`,
       data: ventaActualizada,
     });
   } catch (error) {
@@ -109,7 +123,7 @@ const actualizarEstadoVenta = async (req, res, next) => {
 const anularVenta = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
-    const ventaAnulada = await ventaService.anularVenta(Number(idVenta));
+    const ventaAnulada = await ventaService.anularVenta(Number(idVenta)); // Llama a la función de servicio específica
     res.status(200).json({
       success: true,
       message:
@@ -127,7 +141,7 @@ const anularVenta = async (req, res, next) => {
 const habilitarVenta = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
-    const ventaHabilitada = await ventaService.habilitarVenta(Number(idVenta));
+    const ventaHabilitada = await ventaService.habilitarVenta(Number(idVenta)); // Llama a la función de servicio específica
     res.status(200).json({
       success: true,
       message:
@@ -141,14 +155,12 @@ const habilitarVenta = async (req, res, next) => {
 
 /**
  * Elimina físicamente una venta por su ID.
- * ¡ADVERTENCIA: Esto también ajusta el inventario si la venta estaba activa!
  */
 const eliminarVentaFisica = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
     await ventaService.eliminarVentaFisica(Number(idVenta));
-    // El servicio lanza NotFoundError o ConflictError
-    res.status(204).send(); // 204 No Content para eliminaciones físicas exitosas
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -158,8 +170,9 @@ module.exports = {
   crearVenta,
   listarVentas,
   obtenerVentaPorId,
-  actualizarEstadoVenta, 
+  actualizarEstadoVenta, // Para actualizar estado de proceso y/o general
   anularVenta,
   habilitarVenta,
   eliminarVentaFisica,
+  cambiarEstadoGeneralVenta, // <-- Nueva función exportada para cambiar solo el estado booleano
 };

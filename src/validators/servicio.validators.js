@@ -31,16 +31,16 @@ const crearServicioValidators = [
     .notEmpty()
     .withMessage("El precio es obligatorio.")
     .isFloat({ gt: -0.01 })
-    .withMessage("El precio debe ser un número no negativo.") // gt: -0.01 permite 0.00
+    .withMessage("El precio debe ser un número no negativo.")
     .toFloat(),
-  body("duracionEstimada") // camelCase para el body
+  body("duracionEstimada")
     .optional({ nullable: true })
     .isInt({ min: 0 })
     .withMessage(
       "La duración estimada debe ser un número entero no negativo (en minutos)."
     )
     .toInt(),
-  body("categoriaServicioId") // camelCase para el body
+  body("categoriaServicioId")
     .notEmpty()
     .withMessage("El ID de la categoría de servicio es obligatorio.")
     .isInt({ gt: 0 })
@@ -57,7 +57,7 @@ const crearServicioValidators = [
         );
       }
     }),
-  body("especialidadId") // camelCase para el body
+  body("especialidadId")
     .optional({ nullable: true })
     .isInt({ gt: 0 })
     .withMessage(
@@ -149,10 +149,9 @@ const actualizarServicioValidators = [
       }
     }),
   body("especialidadId")
-    .optional({ nullable: true }) // Permite enviar null para desasociar
+    .optional({ nullable: true })
     .custom(async (value) => {
       if (value !== null && value !== undefined) {
-        // Solo validar si no es null o undefined
         if (!(Number.isInteger(value) && value > 0)) {
           throw new Error(
             "El ID de la especialidad debe ser un entero positivo o null."
@@ -183,8 +182,24 @@ const idServicioValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoServicioValidators = [
+  param("idServicio")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del servicio debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearServicioValidators,
   actualizarServicioValidators,
   idServicioValidator,
+  cambiarEstadoServicioValidators, // <-- Exportar nuevo validador
 };

@@ -53,7 +53,6 @@ const crearEmpleadoValidators = [
     .withMessage("El celular debe ser una cadena de texto.")
     .isLength({ min: 7, max: 45 })
     .withMessage("El celular debe tener entre 7 y 45 caracteres."),
-  // Podrías añadir .isNumeric() o un regex si quieres un formato específico
   body("estado")
     .optional()
     .isBoolean()
@@ -140,7 +139,7 @@ const gestionarEspecialidadesEmpleadoValidators = [
   param("idEmpleado")
     .isInt({ gt: 0 })
     .withMessage("El ID del empleado debe ser un entero positivo."),
-  body("idEspecialidades") // Asumimos que el cuerpo enviará un array de IDs de especialidades
+  body("idEspecialidades")
     .isArray({ min: 1 })
     .withMessage(
       "Se requiere un array de idEspecialidades con al menos un elemento."
@@ -156,19 +155,25 @@ const gestionarEspecialidadesEmpleadoValidators = [
   handleValidationErrors,
 ];
 
-// Validador para cuando solo se necesita el idEmpleado y un idEspecialidad en el path (para quitar una específica si se opta por esa ruta)
-// const gestionarUnaEspecialidadEmpleadoValidators = [
-//   param('idEmpleado')
-//     .isInt({ gt: 0 }).withMessage('El ID del empleado debe ser un entero positivo.'),
-//   param('idEspecialidad')
-//     .isInt({ gt: 0 }).withMessage('El ID de la especialidad debe ser un entero positivo.'),
-//   handleValidationErrors
-// ];
+// Nuevo validador para cambiar el estado
+const cambiarEstadoEmpleadoValidators = [
+  param("idEmpleado")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del empleado debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
 
 module.exports = {
   crearEmpleadoValidators,
   actualizarEmpleadoValidators,
   idEmpleadoValidator,
-  gestionarEspecialidadesEmpleadoValidators, // Nuevo validador
-  // gestionarUnaEspecialidadEmpleadoValidators, // Si decides usarlo
+  gestionarEspecialidadesEmpleadoValidators,
+  cambiarEstadoEmpleadoValidators, // <-- Exportar nuevo validador
 };

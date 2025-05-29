@@ -35,14 +35,14 @@ const crearCategoriaProductoValidators = [
     .withMessage("La descripción debe ser texto.")
     .isLength({ max: 45 })
     .withMessage("La descripción no debe exceder los 45 caracteres."),
-  body("vidaUtilDias") // Asumiendo que el frontend envía camelCase: vidaUtilDias
+  body("vidaUtilDias")
     .optional({ nullable: true })
     .isInt({ gt: -1 })
     .withMessage(
       "La vida útil en días debe ser un número entero no negativo (0 o más)."
-    ) // gt: -1 permite 0
-    .toInt(), // Convierte a entero
-  body("tipoUso") // Asumiendo que el frontend envía camelCase: tipoUso
+    )
+    .toInt(),
+  body("tipoUso")
     .trim()
     .notEmpty()
     .withMessage("El tipo de uso es obligatorio.")
@@ -131,8 +131,26 @@ const idCategoriaProductoValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoCategoriaProductoValidators = [
+  param("idCategoria")
+    .isInt({ gt: 0 })
+    .withMessage(
+      "El ID de la categoría de producto debe ser un entero positivo."
+    ),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearCategoriaProductoValidators,
   actualizarCategoriaProductoValidators,
   idCategoriaProductoValidator,
+  cambiarEstadoCategoriaProductoValidators, // <-- Exportar nuevo validador
 };

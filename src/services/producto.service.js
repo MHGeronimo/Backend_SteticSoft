@@ -6,12 +6,29 @@ const {
   ConflictError,
   CustomError,
   BadRequestError,
-} = require("../errors"); // Ajusta la ruta si es necesario
+} = require("../errors");
+// No se necesita stockAlertHelper aquí, ya que el estado del producto no afecta directamente el stock.
+
+/**
+ * Helper interno para cambiar el estado de un producto.
+ * @param {number} idProducto - ID del producto.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} El producto con el estado cambiado.
+ */
+const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
+  const producto = await db.Producto.findByPk(idProducto);
+  if (!producto) {
+    throw new NotFoundError("Producto no encontrado para cambiar estado.");
+  }
+  if (producto.estado === nuevoEstado) {
+    return producto; // Ya está en el estado deseado
+  }
+  await producto.update({ estado: nuevoEstado });
+  return producto;
+};
 
 /**
  * Crear un nuevo producto.
- * @param {object} datosProducto - Datos del producto.
- * @returns {Promise<object>} El producto creado.
  */
 const crearProducto = async (datosProducto) => {
   const {
@@ -23,10 +40,9 @@ const crearProducto = async (datosProducto) => {
     stockMaximo,
     imagen,
     estado,
-    categoriaProductoId, // Esperando camelCase: categoriaProductoId
+    categoriaProductoId,
   } = datosProducto;
 
-  // Validación de stockMaximo vs stockMinimo (si ambos se proveen)
   if (
     stockMinimo !== undefined &&
     stockMaximo !== undefined &&
@@ -37,7 +53,6 @@ const crearProducto = async (datosProducto) => {
     );
   }
 
-  // Verificar si la categoría de producto existe y está activa (si se proporciona)
   if (categoriaProductoId) {
     const categoria = await db.CategoriaProducto.findOne({
       where: { idCategoria: categoriaProductoId, estado: true },
@@ -59,12 +74,10 @@ const crearProducto = async (datosProducto) => {
       stockMaximo: stockMaximo !== undefined ? Number(stockMaximo) : 0,
       imagen: imagen || null,
       estado: typeof estado === "boolean" ? estado : true,
-      categoriaProductoId: categoriaProductoId || null, // Se usa el atributo camelCase del modelo
+      categoriaProductoId: categoriaProductoId || null,
     });
     return nuevoProducto;
   } catch (error) {
-    // Un nombre de producto podría no ser único, depende de tus reglas de negocio.
-    // Si necesitas unicidad de nombre, añade la restricción al modelo y maneja SequelizeUniqueConstraintError.
     console.error(
       "Error al crear el producto en el servicio:",
       error.message,
@@ -76,24 +89,17 @@ const crearProducto = async (datosProducto) => {
 
 /**
  * Obtener todos los productos.
- * @param {object} [opcionesDeFiltro={}] - Opciones para filtrar (ej. { estado: true, categoriaProductoId: 1 }).
- * @returns {Promise<Array<object>>} Lista de productos.
  */
 const obtenerTodosLosProductos = async (opcionesDeFiltro = {}) => {
   const whereClause = { ...opcionesDeFiltro };
-
-  // Si se quiere filtrar por un campo que en el modelo es categoriaProductoId
-  // pero en la BD es categoria_producto_idcategoria
-  // Sequelize lo maneja si el 'where' usa el nombre del atributo del modelo.
-
   try {
     return await db.Producto.findAll({
       where: whereClause,
       include: [
         {
           model: db.CategoriaProducto,
-          as: "categoriaProducto", // Asegúrate que este alias coincida con tu asociación
-          attributes: ["idCategoria", "nombre"], // Solo los atributos necesarios
+          as: "categoriaProducto",
+          attributes: ["idCategoria", "nombre"],
         },
       ],
       order: [["nombre", "ASC"]],
@@ -109,8 +115,6 @@ const obtenerTodosLosProductos = async (opcionesDeFiltro = {}) => {
 
 /**
  * Obtener un producto por su ID.
- * @param {number} idProducto - ID del producto.
- * @returns {Promise<object|null>} El producto encontrado o null si no existe.
  */
 const obtenerProductoPorId = async (idProducto) => {
   try {
@@ -142,9 +146,6 @@ const obtenerProductoPorId = async (idProducto) => {
 
 /**
  * Actualizar un producto existente.
- * @param {number} idProducto - ID del producto a actualizar.
- * @param {object} datosActualizar - Datos para actualizar.
- * @returns {Promise<object>} El producto actualizado.
  */
 const actualizarProducto = async (idProducto, datosActualizar) => {
   try {
@@ -155,7 +156,6 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
 
     const { stockMinimo, stockMaximo, categoriaProductoId } = datosActualizar;
 
-    // Validación de stockMaximo vs stockMinimo
     const valStockMinimo =
       stockMinimo !== undefined ? Number(stockMinimo) : producto.stockMinimo;
     const valStockMaximo =
@@ -167,13 +167,11 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
       );
     }
 
-    // Verificar si la categoría de producto existe y está activa (si se proporciona y cambia)
     if (
       categoriaProductoId !== undefined &&
       categoriaProductoId !== producto.categoriaProductoId
     ) {
       if (categoriaProductoId === null) {
-        // Permitir desasociar
         datosActualizar.categoriaProductoId = null;
       } else {
         const categoria = await db.CategoriaProducto.findOne({
@@ -187,8 +185,7 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
       }
     }
 
-    await producto.update(datosActualizar); // Sequelize mapea atributos camelCase del modelo
-    // Recargar para obtener la categoría actualizada si cambió
+    await producto.update(datosActualizar);
     return obtenerProductoPorId(producto.idProducto);
   } catch (error) {
     if (
@@ -214,15 +211,7 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
  */
 const anularProducto = async (idProducto) => {
   try {
-    const producto = await db.Producto.findByPk(idProducto);
-    if (!producto) {
-      throw new NotFoundError("Producto no encontrado para anular.");
-    }
-    if (!producto.estado) {
-      return producto; // Ya está anulado
-    }
-    await producto.update({ estado: false });
-    return producto;
+    return await cambiarEstadoProducto(idProducto, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -238,15 +227,7 @@ const anularProducto = async (idProducto) => {
  */
 const habilitarProducto = async (idProducto) => {
   try {
-    const producto = await db.Producto.findByPk(idProducto);
-    if (!producto) {
-      throw new NotFoundError("Producto no encontrado para habilitar.");
-    }
-    if (producto.estado) {
-      return producto; // Ya está habilitado
-    }
-    await producto.update({ estado: true });
-    return producto;
+    return await cambiarEstadoProducto(idProducto, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -262,10 +243,6 @@ const habilitarProducto = async (idProducto) => {
 
 /**
  * Eliminar un producto físicamente.
- * DDL: Categoria_producto_idCategoria ON DELETE SET NULL
- * DDL: Abastecimiento.Producto_idProducto ON DELETE RESTRICT
- * DDL: CompraXProducto.Producto_idProducto ON DELETE RESTRICT
- * DDL: ProductoXVenta.Producto_idProducto ON DELETE RESTRICT
  */
 const eliminarProductoFisico = async (idProducto) => {
   try {
@@ -275,10 +252,6 @@ const eliminarProductoFisico = async (idProducto) => {
         "Producto no encontrado para eliminar físicamente."
       );
     }
-
-    // La BD tiene ON DELETE RESTRICT en Abastecimiento, CompraXProducto, ProductoXVenta.
-    // Si hay registros asociados en estas tablas, la eliminación fallará a nivel de BD.
-    // El servicio lo capturará como SequelizeForeignKeyConstraintError.
 
     const filasEliminadas = await db.Producto.destroy({
       where: { idProducto },
@@ -310,4 +283,5 @@ module.exports = {
   anularProducto,
   habilitarProducto,
   eliminarProductoFisico,
+  cambiarEstadoProducto, // Exportar la nueva función
 };

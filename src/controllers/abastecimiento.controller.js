@@ -1,5 +1,5 @@
 // src/controllers/abastecimiento.controller.js
-const abastecimientoService = require("../services/abastecimiento.service.js"); // Ajusta la ruta si es necesario
+const abastecimientoService = require("../services/abastecimiento.service.js");
 
 /**
  * Crea un nuevo registro de abastecimiento.
@@ -22,7 +22,6 @@ const crearAbastecimiento = async (req, res, next) => {
 
 /**
  * Obtiene una lista de todos los registros de abastecimiento.
- * Permite filtrar por query params, ej. ?productoId=1&estado=true
  */
 const listarAbastecimientos = async (req, res, next) => {
   try {
@@ -40,13 +39,10 @@ const listarAbastecimientos = async (req, res, next) => {
       }
     }
     if (req.query.estado === "true") {
-      // Filtro para el nuevo campo estado
       opcionesDeFiltro.estado = true;
     } else if (req.query.estado === "false") {
       opcionesDeFiltro.estado = false;
     }
-    // Podrías añadir filtro por estaAgotado, rango de fechas, etc.
-
     const abastecimientos =
       await abastecimientoService.obtenerTodosLosAbastecimientos(
         opcionesDeFiltro
@@ -81,7 +77,6 @@ const obtenerAbastecimientoPorId = async (req, res, next) => {
 
 /**
  * Actualiza un registro de abastecimiento existente por su ID.
- * (Principalmente para campos como empleadoAsignado, estaAgotado, etc.)
  */
 const actualizarAbastecimiento = async (req, res, next) => {
   try {
@@ -102,6 +97,31 @@ const actualizarAbastecimiento = async (req, res, next) => {
 };
 
 /**
+ * Cambia el estado (activo/inactivo) de un registro de abastecimiento.
+ * Esta función llamará a la lógica de servicio que también maneja el inventario.
+ */
+const cambiarEstadoAbastecimiento = async (req, res, next) => {
+  try {
+    const { idAbastecimiento } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    // El servicio actualizarAbastecimiento maneja la lógica de cambio de estado e inventario
+    const abastecimientoActualizado =
+      await abastecimientoService.actualizarAbastecimiento(
+        Number(idAbastecimiento),
+        { estado } // Solo pasamos el campo estado para esta operación específica
+      );
+    res.status(200).json({
+      success: true,
+      message: `Estado del abastecimiento ID ${idAbastecimiento} cambiado a ${estado} exitosamente. Inventario ajustado si aplica.`,
+      data: abastecimientoActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Anula un registro de abastecimiento (estado booleano = false y ajusta inventario).
  */
 const anularAbastecimiento = async (req, res, next) => {
@@ -109,6 +129,7 @@ const anularAbastecimiento = async (req, res, next) => {
     const { idAbastecimiento } = req.params;
     const abastecimientoAnulado =
       await abastecimientoService.anularAbastecimiento(
+        // Llama a la función de servicio específica
         Number(idAbastecimiento)
       );
     res.status(200).json({
@@ -130,6 +151,7 @@ const habilitarAbastecimiento = async (req, res, next) => {
     const { idAbastecimiento } = req.params;
     const abastecimientoHabilitado =
       await abastecimientoService.habilitarAbastecimiento(
+        // Llama a la función de servicio específica
         Number(idAbastecimiento)
       );
     res.status(200).json({
@@ -145,7 +167,6 @@ const habilitarAbastecimiento = async (req, res, next) => {
 
 /**
  * Elimina físicamente un registro de abastecimiento por su ID.
- * ¡ADVERTENCIA: Esto también ajusta el inventario si el registro estaba activo!
  */
 const eliminarAbastecimientoFisico = async (req, res, next) => {
   try {
@@ -164,7 +185,8 @@ module.exports = {
   listarAbastecimientos,
   obtenerAbastecimientoPorId,
   actualizarAbastecimiento,
-  anularAbastecimiento, // NUEVA FUNCIÓN
-  habilitarAbastecimiento, // NUEVA FUNCIÓN
+  anularAbastecimiento,
+  habilitarAbastecimiento,
   eliminarAbastecimientoFisico,
+  cambiarEstadoAbastecimiento, // <-- Nueva función exportada
 };

@@ -85,7 +85,6 @@ const crearVentaValidators = [
               `La cantidad para el producto ID ${p.productoId} debe ser un entero positivo.`
             );
           }
-          // No se valida valorUnitario aquí, se toma del backend
         }
       }
       return true;
@@ -115,7 +114,6 @@ const crearVentaValidators = [
               'Cada servicio vendido debe tener un "servicioId" (entero positivo) válido.'
             );
           }
-          // No se valida valorServicio aquí, se toma del backend
           if (
             s.citaId !== undefined &&
             s.citaId !== null &&
@@ -127,14 +125,13 @@ const crearVentaValidators = [
           }
         }
       } else if (!req.body.productos || req.body.productos.length === 0) {
-        // Si no hay servicios Y no hay productos
         throw new Error(
           "Una venta debe tener al menos un producto o un servicio."
         );
       }
       return true;
     }),
-  body("estado") // Estado booleano del registro Venta (activo/inactivo)
+  body("estado")
     .optional()
     .isBoolean()
     .withMessage(
@@ -147,27 +144,38 @@ const actualizarEstadoProcesoVentaValidators = [
   param("idVenta")
     .isInt({ gt: 0 })
     .withMessage("El ID de la venta debe ser un entero positivo."),
-  body("estadoVentaId")
-    .notEmpty()
-    .withMessage("El nuevo ID del estado de la venta es obligatorio.")
+  body("estadoVentaId") // Valida el estado del PROCESO de la venta
+    .optional() // Hacer opcional para que se pueda actualizar solo el estado booleano general
     .isInt({ gt: 0 })
     .withMessage(
-      "El nuevo ID del estado de la venta debe ser un entero positivo."
+      "El nuevo ID del estado de la venta debe ser un entero positivo si se proporciona."
     )
     .custom(async (value) => {
-      const estado = await db.Estado.findByPk(value);
-      if (!estado) {
-        return Promise.reject(
-          "El nuevo estado de venta especificado no existe."
-        );
+      if (value) {
+        // Solo si se provee
+        const estado = await db.Estado.findByPk(value);
+        if (!estado) {
+          return Promise.reject(
+            "El nuevo estado de venta especificado no existe."
+          );
+        }
       }
     }),
-  body("estado") // estado booleano general de la Venta
+  body("estado") // Valida el estado BOOLEANO general de la Venta (activo/inactivo)
     .optional()
     .isBoolean()
     .withMessage(
       "El estado (activo/inactivo) de la venta debe ser un valor booleano si se proporciona."
     ),
+  // Asegurarse que al menos uno de los dos (estadoVentaId o estado booleano) se envíe
+  body().custom((value, { req }) => {
+    if (req.body.estadoVentaId === undefined && req.body.estado === undefined) {
+      throw new Error(
+        "Debe proporcionar 'estadoVentaId' o 'estado' para actualizar."
+      );
+    }
+    return true;
+  }),
   handleValidationErrors,
 ];
 
@@ -178,8 +186,27 @@ const idVentaValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para la ruta PATCH /:idVenta/estado
+// Esta ruta se enfocará en cambiar el estado BOOLEANO general de la venta.
+// La lógica de cambiar el estado del PROCESO de la venta (estadoVentaId)
+// ya está en actualizarEstadoProcesoVentaValidators y su ruta PUT.
+const cambiarEstadoVentaValidators = [
+  param("idVenta")
+    .isInt({ gt: 0 })
+    .withMessage("El ID de la venta debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearVentaValidators,
-  actualizarEstadoProcesoVentaValidators,
+  actualizarEstadoProcesoVentaValidators, // Para la ruta PUT /:idVenta/estado-proceso
   idVentaValidator,
+  cambiarEstadoVentaValidators, // Para la nueva ruta PATCH /:idVenta/estado
 };

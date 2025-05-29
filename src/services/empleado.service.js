@@ -1,26 +1,41 @@
 // src/services/empleado.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
-const { NotFoundError, ConflictError, CustomError } = require("../errors"); // Ajusta la ruta
+const { NotFoundError, ConflictError, CustomError } = require("../errors");
+
+/**
+ * Helper interno para cambiar el estado de un empleado.
+ * @param {number} idEmpleado - ID del empleado.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} El empleado con el estado cambiado.
+ */
+const cambiarEstadoEmpleado = async (idEmpleado, nuevoEstado) => {
+  const empleado = await db.Empleado.findByPk(idEmpleado);
+  if (!empleado) {
+    throw new NotFoundError("Empleado no encontrado para cambiar estado.");
+  }
+  if (empleado.estado === nuevoEstado) {
+    return empleado; // Ya está en el estado deseado
+  }
+  await empleado.update({ estado: nuevoEstado });
+  return empleado;
+};
 
 /**
  * Crear un nuevo empleado.
- * @param {object} datosEmpleado - Datos del empleado.
- * @returns {Promise<object>} El empleado creado.
  */
 const crearEmpleado = async (datosDelBody) => {
   const {
     nombre,
-    tipodocumento, // Valor del body (minúsculas)
-    numerodocumento, // Valor del body (minúsculas)
-    fechanacimiento, // Valor del body (minúsculas)
+    tipodocumento,
+    numerodocumento,
+    fechanacimiento,
     celular,
     estado,
   } = datosDelBody;
 
-  // Validación de unicidad de numeroDocumento
   const empleadoExistente = await db.Empleado.findOne({
-    where: { numerodocumento: numerodocumento }, // La búsqueda WHERE usa el 'field' o el nombre de columna, así que 'numerodocumento' está bien aquí
+    where: { numerodocumento: numerodocumento },
   });
   if (empleadoExistente) {
     throw new ConflictError(
@@ -31,9 +46,9 @@ const crearEmpleado = async (datosDelBody) => {
   try {
     const nuevoEmpleado = await db.Empleado.create({
       nombre: nombre,
-      tipoDocumento: tipodocumento, // Atributo del Modelo (camelCase) : valor del body
-      numeroDocumento: numerodocumento, // Atributo del Modelo (camelCase) : valor del body
-      fechaNacimiento: fechanacimiento, // Atributo del Modelo (camelCase) : valor del body
+      tipoDocumento: tipodocumento,
+      numeroDocumento: numerodocumento,
+      fechaNacimiento: fechanacimiento,
       celular: celular || null,
       estado: typeof estado === "boolean" ? estado : true,
     });
@@ -55,20 +70,11 @@ const crearEmpleado = async (datosDelBody) => {
 
 /**
  * Obtener todos los empleados.
- * @param {object} [opcionesDeFiltro={}] - Opciones para filtrar (ej. { estado: true }).
- * @returns {Promise<Array<object>>} Lista de empleados.
  */
 const obtenerTodosLosEmpleados = async (opcionesDeFiltro = {}) => {
   try {
     const empleados = await db.Empleado.findAll({
       where: opcionesDeFiltro,
-      // Si quisieras incluir especialidades aquí más adelante:
-      // include: [{
-      //   model: db.Especialidad,
-      //   as: 'especialidades', // Asegúrate que este alias coincida con tu asociación
-      //   attributes: ['idEspecialidad', 'nombre'],
-      //   through: { attributes: [] } // No traer atributos de EmpleadoEspecialidad
-      // }],
       order: [["nombre", "ASC"]],
     });
     return empleados;
@@ -83,19 +89,10 @@ const obtenerTodosLosEmpleados = async (opcionesDeFiltro = {}) => {
 
 /**
  * Obtener un empleado por su ID.
- * @param {number} idEmpleado - ID del empleado.
- * @returns {Promise<object|null>} El empleado encontrado o null si no existe.
  */
 const obtenerEmpleadoPorId = async (idEmpleado) => {
   try {
-    const empleado = await db.Empleado.findByPk(idEmpleado, {
-      // Si quisieras incluir especialidades aquí más adelante:
-      // include: [{
-      //   model: db.Especialidad,
-      //   as: 'especialidades',
-      //   attributes: ['idEspecialidad', 'nombre']
-      // }]
-    });
+    const empleado = await db.Empleado.findByPk(idEmpleado);
     if (!empleado) {
       throw new NotFoundError("Empleado no encontrado.");
     }
@@ -115,9 +112,6 @@ const obtenerEmpleadoPorId = async (idEmpleado) => {
 
 /**
  * Actualizar un empleado existente.
- * @param {number} idEmpleado - ID del empleado a actualizar.
- * @param {object} datosActualizar - Datos para actualizar.
- * @returns {Promise<object>} El empleado actualizado.
  */
 const actualizarEmpleado = async (idEmpleado, datosActualizarDelBody) => {
   try {
@@ -126,7 +120,6 @@ const actualizarEmpleado = async (idEmpleado, datosActualizarDelBody) => {
       throw new NotFoundError("Empleado no encontrado para actualizar.");
     }
 
-    // Mapear los campos del body a los atributos del modelo si hay diferencia de case
     const datosParaModelo = {};
     if (datosActualizarDelBody.hasOwnProperty("nombre"))
       datosParaModelo.nombre = datosActualizarDelBody.nombre;
@@ -145,10 +138,9 @@ const actualizarEmpleado = async (idEmpleado, datosActualizarDelBody) => {
       datosParaModelo.numeroDocumento &&
       datosParaModelo.numeroDocumento !== empleado.numeroDocumento
     ) {
-      // Compara con el atributo del modelo
       const otroEmpleadoConDocumento = await db.Empleado.findOne({
         where: {
-          numerodocumento: datosParaModelo.numeroDocumento, // Búsqueda por columna de BD
+          numerodocumento: datosParaModelo.numeroDocumento,
           idEmpleado: { [Op.ne]: idEmpleado },
         },
       });
@@ -159,14 +151,13 @@ const actualizarEmpleado = async (idEmpleado, datosActualizarDelBody) => {
       }
     }
 
-    await empleado.update(datosParaModelo); // Pasar el objeto mapeado
+    await empleado.update(datosParaModelo);
     return empleado;
   } catch (error) {
     if (error instanceof NotFoundError || error instanceof ConflictError)
       throw error;
     if (error.name === "SequelizeUniqueConstraintError") {
       throw new ConflictError(
-        // Usar el valor que se intentó guardar y causó el conflicto
         `El número de documento '${
           datosActualizarDelBody.numerodocumento || empleado.numerodocumento
         }' ya está registrado.`
@@ -189,15 +180,7 @@ const actualizarEmpleado = async (idEmpleado, datosActualizarDelBody) => {
  */
 const anularEmpleado = async (idEmpleado) => {
   try {
-    const empleado = await db.Empleado.findByPk(idEmpleado);
-    if (!empleado) {
-      throw new NotFoundError("Empleado no encontrado para anular.");
-    }
-    if (!empleado.estado) {
-      return empleado; // Ya está anulado
-    }
-    await empleado.update({ estado: false });
-    return empleado;
+    return await cambiarEstadoEmpleado(idEmpleado, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -213,15 +196,7 @@ const anularEmpleado = async (idEmpleado) => {
  */
 const habilitarEmpleado = async (idEmpleado) => {
   try {
-    const empleado = await db.Empleado.findByPk(idEmpleado);
-    if (!empleado) {
-      throw new NotFoundError("Empleado no encontrado para habilitar.");
-    }
-    if (empleado.estado) {
-      return empleado; // Ya está habilitado
-    }
-    await empleado.update({ estado: true });
-    return empleado;
+    return await cambiarEstadoEmpleado(idEmpleado, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -237,10 +212,6 @@ const habilitarEmpleado = async (idEmpleado) => {
 
 /**
  * Eliminar un empleado físicamente de la base de datos.
- * ¡ADVERTENCIA: Esta acción es destructiva!
- * Considerar las implicaciones con Citas, Abastecimientos, Novedades y EmpleadoEspecialidad.
- * (DDL: Cita.Empleado_idEmpleado ON DELETE SET NULL, Abastecimiento.empleado_asignado ON DELETE SET NULL,
- * Novedades.Empleado_idEmpleado ON DELETE CASCADE, EmpleadoEspecialidad.idEmpleado ON DELETE CASCADE)
  */
 const eliminarEmpleadoFisico = async (idEmpleado) => {
   try {
@@ -251,18 +222,12 @@ const eliminarEmpleadoFisico = async (idEmpleado) => {
       );
     }
 
-    // La BD manejará las acciones ON DELETE CASCADE y ON DELETE SET NULL.
-    // EmpleadoEspecialidad y Novedades se borrarán en cascada.
-    // Cita.Empleado_idEmpleado y Abastecimiento.empleado_asignado se pondrán a NULL.
-
     const filasEliminadas = await db.Empleado.destroy({
       where: { idEmpleado },
     });
     return filasEliminadas;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    // Un SequelizeForeignKeyConstraintError podría ocurrir si alguna otra tabla no contemplada
-    // tiene una referencia a Empleado con ON DELETE RESTRICT.
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new ConflictError(
         "No se puede eliminar el empleado porque está siendo referenciado de una manera que impide su borrado y no tiene configurado ON DELETE CASCADE o SET NULL."
@@ -287,4 +252,5 @@ module.exports = {
   anularEmpleado,
   habilitarEmpleado,
   eliminarEmpleadoFisico,
+  cambiarEstadoEmpleado, // Exportar la nueva función
 };

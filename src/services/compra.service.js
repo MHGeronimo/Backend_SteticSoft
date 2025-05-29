@@ -1,16 +1,15 @@
 // src/services/compra.service.js
-// src/services/compra.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
+const {
+  NotFoundError,
+  ConflictError,
+  CustomError,
+  BadRequestError,
+} = require("../errors");
+const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // Import stock alert helper
 
-const CustomError = require('../errors/CustomError');
-const NotFoundError = require('../errors/NotFoundError');
-const ConflictError = require('../errors/ConflictError');
-const BadRequestError = require('../errors/BadRequestError');
-
-// ... resto de tu código de servicio ...
-
-const TASA_IVA = 0.19; // Ejemplo, ¡haz esto configurable!
+const TASA_IVA = 0.19; 
 
 /**
  * Crear una nueva compra y sus detalles.
@@ -21,7 +20,7 @@ const crearCompra = async (datosCompra) => {
     proveedorId,
     dashboardId,
     productos,
-    estado, // Puede venir o usar default
+    estado, 
   } = datosCompra;
   let { total, iva } = datosCompra;
 
@@ -54,7 +53,7 @@ const crearCompra = async (datosCompra) => {
       throw new BadRequestError(
         `Producto '${productoDB.nombre}' (ID: ${item.productoId}) no está activo.`
       );
-    productosValidados.push({ ...item, nombre: productoDB.nombre });
+    productosValidados.push({ ...item, nombre: productoDB.nombre, stockMinimo: productoDB.stockMinimo, existenciaOriginal: productoDB.existencia }); // Guardar stockMinimo
     subtotalCalculado += item.cantidad * item.valorUnitario;
   }
 
@@ -65,21 +64,25 @@ const crearCompra = async (datosCompra) => {
     iva = (total / (1 + TASA_IVA)) * TASA_IVA;
   }
 
+  const estadoCompra = typeof estado === "boolean" ? estado : true;
   const transaction = await db.sequelize.transaction();
+  let nuevaCompra;
   try {
-    const nuevaCompra = await db.Compra.create(
+    nuevaCompra = await db.Compra.create(
       {
         fecha: fecha || new Date(),
         proveedorId,
         dashboardId: dashboardId || null,
         total: parseFloat(total).toFixed(2),
         iva: parseFloat(iva).toFixed(2),
-        estado: typeof estado === "boolean" ? estado : true, // Manejo del nuevo campo
+        estado: estadoCompra,
       },
       { transaction }
     );
 
     const detallesCompra = [];
+    const productosAfectadosParaAlerta = [];
+
     for (const item of productosValidados) {
       const detalle = await db.CompraXProducto.create(
         {
@@ -92,19 +95,28 @@ const crearCompra = async (datosCompra) => {
       );
       detallesCompra.push(detalle);
 
-      const productoDB = await db.Producto.findByPk(item.productoId, {
-        transaction,
-      });
-      // Solo incrementar existencia si la compra se crea en estado activo (o según tu lógica)
-      if (nuevaCompra.estado) {
+      if (estadoCompra) { // Solo afectar inventario si la compra está activa
+        const productoDB = await db.Producto.findByPk(item.productoId, {
+          transaction,
+        });
         await productoDB.increment("existencia", {
           by: item.cantidad,
           transaction,
         });
+        productosAfectadosParaAlerta.push(productoDB.idProducto);
       }
     }
 
     await transaction.commit();
+
+    // Enviar alertas de stock después de confirmar la transacción
+    for (const productoIdAfectado of productosAfectadosParaAlerta) {
+        const productoActualizado = await db.Producto.findByPk(productoIdAfectado);
+        if (productoActualizado) {
+            await checkAndSendStockAlert(productoActualizado, `tras compra ID ${nuevaCompra.idCompra}`);
+        }
+    }
+
     const compraCreadaJSON = nuevaCompra.toJSON();
     compraCreadaJSON.detalles = detallesCompra.map((d) => d.toJSON());
     return compraCreadaJSON;
@@ -119,13 +131,11 @@ const crearCompra = async (datosCompra) => {
   }
 };
 
-/**
- * Obtener todas las compras.
- */
+
 const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
   try {
     return await db.Compra.findAll({
-      where: opcionesDeFiltro, // Ahora puedes filtrar por el nuevo campo 'estado'
+      where: opcionesDeFiltro,
       include: [
         {
           model: db.Proveedor,
@@ -140,7 +150,7 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
         {
           model: db.Producto,
           as: "productosComprados",
-          attributes: ["idProducto", "nombre", "precio"],
+          attributes: ["idProducto", "nombre", "precio", "stockMinimo", "existencia"],
           through: {
             model: db.CompraXProducto,
             as: "detalleCompra",
@@ -159,9 +169,7 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
   }
 };
 
-/**
- * Obtener una compra por su ID.
- */
+
 const obtenerCompraPorId = async (idCompra) => {
   try {
     const compra = await db.Compra.findByPk(idCompra, {
@@ -171,6 +179,7 @@ const obtenerCompraPorId = async (idCompra) => {
         {
           model: db.Producto,
           as: "productosComprados",
+          attributes: ["idProducto", "nombre", "precio", "stockMinimo", "existencia"],
           through: {
             as: "detalleCompra",
             attributes: ["cantidad", "valorUnitario"],
@@ -194,6 +203,7 @@ const obtenerCompraPorId = async (idCompra) => {
 
 /**
  * Actualizar una compra existente (cabecera y estado).
+ * Esta función actúa como la "cambiarEstado" combinada para la entidad Compra.
  */
 const actualizarCompra = async (idCompra, datosActualizar) => {
   const { fecha, proveedorId, dashboardId, total, iva, estado } =
@@ -204,14 +214,14 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
   if (total !== undefined)
     camposParaActualizar.total = parseFloat(total).toFixed(2);
   if (iva !== undefined) camposParaActualizar.iva = parseFloat(iva).toFixed(2);
-  if (estado !== undefined) camposParaActualizar.estado = estado; // Para actualizar el estado
+  if (estado !== undefined) camposParaActualizar.estado = estado;
 
   const transaction = await db.sequelize.transaction();
+  const productosAfectadosParaAlerta = new Set();
   try {
     const compra = await db.Compra.findByPk(idCompra, {
       include: [
         {
-          // Incluir productos para ajustar inventario si el estado cambia
           model: db.Producto,
           as: "productosComprados",
           through: {
@@ -258,15 +268,20 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
         camposParaActualizar.dashboardId = dashboardId;
       }
     }
-
+    
     if (Object.keys(camposParaActualizar).length > 0) {
-      await compra.update(camposParaActualizar, { transaction });
+        await compra.update(camposParaActualizar, { transaction });
+        // Es importante recargar 'compra' si el estado cambió para usar el valor actualizado
+        // en la lógica de inventario. O simplemente usar 'nuevoEstado' si se pasó.
+        if(camposParaActualizar.estado !== undefined) {
+            compra.estado = camposParaActualizar.estado; // Actualizar el estado en la instancia local
+        }
     }
 
-    // Lógica de ajuste de inventario si el estado de la compra cambia
+
     if (
       datosActualizar.hasOwnProperty("estado") &&
-      estadoOriginal !== compra.estado
+      estadoOriginal !== compra.estado // Usa el estado actualizado de 'compra'
     ) {
       for (const productoComprado of compra.productosComprados) {
         const productoDB = await db.Producto.findByPk(
@@ -274,23 +289,23 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
           { transaction }
         );
         const cantidadComprada = productoComprado.CompraXProducto.cantidad;
-        if (compra.estado) {
-          // Si la compra se está activando/reactivando
-          await productoDB.increment("existencia", {
-            by: cantidadComprada,
-            transaction,
-          });
-        } else {
-          // Si la compra se está anulando
-          await productoDB.decrement("existencia", {
-            by: cantidadComprada,
-            transaction,
-          });
+        if (compra.estado) { // Si la compra se está activando/reactivando
+          await productoDB.increment("existencia", { by: cantidadComprada, transaction });
+        } else { // Si la compra se está anulando
+          await productoDB.decrement("existencia", { by: cantidadComprada, transaction });
         }
+        productosAfectadosParaAlerta.add(productoDB.idProducto);
       }
     }
 
     await transaction.commit();
+
+    for (const productoId of productosAfectadosParaAlerta) {
+        const productoActualizado = await db.Producto.findByPk(productoId);
+        if (productoActualizado) {
+            await checkAndSendStockAlert(productoActualizado, `tras actualizar estado de compra ID ${idCompra}`);
+        }
+    }
     return obtenerCompraPorId(idCompra);
   } catch (error) {
     await transaction.rollback();
@@ -307,151 +322,22 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
   }
 };
 
-/**
- * Anular una compra (establece estado = false y ajusta inventario).
- * @param {number} idCompra - ID de la compra a anular.
- * @returns {Promise<object>} La compra anulada.
- */
+
 const anularCompra = async (idCompra) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    const compra = await db.Compra.findByPk(idCompra, {
-      include: [
-        {
-          model: db.Producto,
-          as: "productosComprados", // Alias para los productos
-          through: {
-            model: db.CompraXProducto,
-            as: "detalleCompra", // Alias para la tabla de unión y sus atributos
-            attributes: ["cantidad"], // Atributos que quieres de CompraXProducto
-          },
-        },
-      ],
-      transaction,
-    });
-
-    if (!compra) {
-      await transaction.rollback();
-      throw new NotFoundError("Compra no encontrada para anular.");
-    }
-    if (!compra.estado) {
-      await transaction.rollback();
-      return compra;
-    }
-
-    if (compra.productosComprados && compra.productosComprados.length > 0) {
-      for (const productoComprado of compra.productosComprados) {
-        const productoDB = await db.Producto.findByPk(
-          productoComprado.idProducto,
-          { transaction }
-        );
-        const cantidadComprada = productoComprado.detalleCompra
-          ? productoComprado.detalleCompra.cantidad
-          : 0;
-        if (productoDB && cantidadComprada > 0) {
-          await productoDB.decrement("existencia", {
-            by: cantidadComprada,
-            transaction,
-          });
-        }
-      }
-    }
-
-    await compra.update({ estado: false }, { transaction });
-    await transaction.commit();
-    // Devolver la compra con los detalles actualizados (aunque los detalles en sí no cambian, el estado sí)
-    return obtenerCompraPorId(idCompra); // Llama a la función que ya incluye los detalles bien
-  } catch (error) {
-    await transaction.rollback();
-    if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al anular la compra con ID ${idCompra}:`,
-      error.message,
-      error.stack // Añadir stack para más info en desarrollo
-    );
-    throw new CustomError(`Error al anular la compra: ${error.message}`, 500);
-  }
+  return actualizarCompra(idCompra, { estado: false });
 };
-  
 
-/**
- * Habilitar una compra (establece estado = true y ajusta inventario).
- * Esto es menos común para compras, usualmente una compra anulada no se "rehabilita" así.
- * Considera si esta lógica es necesaria o si una compra anulada es final.
- * Si se habilita, se asume que los productos vuelven a ingresar al inventario.
- * @param {number} idCompra - ID de la compra a habilitar.
- * @returns {Promise<object>} La compra habilitada.
- */
 const habilitarCompra = async (idCompra) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    const compra = await db.Compra.findByPk(idCompra, {
-      include: [
-        {
-          model: db.Producto,
-          as: "productosComprados",
-          through: {
-            model: db.CompraXProducto,
-            as: "detalleCompra",
-            attributes: ["cantidad"],
-          },
-        },
-      ],
-      transaction,
-    });
-
-    if (!compra) {
-      await transaction.rollback();
-      throw new NotFoundError("Compra no encontrada para habilitar.");
-    }
-    if (compra.estado) {
-      await transaction.rollback();
-      return compra;
-    }
-
-    if (compra.productosComprados && compra.productosComprados.length > 0) {
-      for (const productoComprado of compra.productosComprados) {
-        const productoDB = await db.Producto.findByPk(
-          productoComprado.idProducto,
-          { transaction }
-        );
-        const cantidadComprada = productoComprado.detalleCompra
-          ? productoComprado.detalleCompra.cantidad
-          : 0;
-        if (productoDB && cantidadComprada > 0) {
-          await productoDB.increment("existencia", {
-            by: cantidadComprada,
-            transaction,
-          });
-        }
-      }
-    }
-
-    await compra.update({ estado: true }, { transaction });
-    await transaction.commit();
-    return obtenerCompraPorId(idCompra);
-  } catch (error) {
-    await transaction.rollback();
-    if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al habilitar la compra con ID ${idCompra}:`,
-      error.message,
-      error.stack
-    );
-    throw new CustomError(
-      `Error al habilitar la compra: ${error.message}`,
-      500
-    );
-  }
+  return actualizarCompra(idCompra, { estado: true });
 };
-  
 
-/**
- * Eliminar una compra físicamente.
- * (Mantiene la lógica de reversión de inventario de la versión anterior).
- */
+
 const eliminarCompraFisica = async (idCompra) => {
   const transaction = await db.sequelize.transaction();
+  const productosAfectadosParaAlerta = new Set();
+  let compraOriginalEstado = null;
+  let productosOriginales = [];
+
   try {
     const compra = await db.Compra.findByPk(idCompra, {
       include: [
@@ -472,29 +358,34 @@ const eliminarCompraFisica = async (idCompra) => {
       await transaction.rollback();
       throw new NotFoundError("Compra no encontrada para eliminar.");
     }
+    compraOriginalEstado = compra.estado;
+    productosOriginales = compra.productosComprados.map(p => ({idProducto: p.idProducto, cantidad: p.CompraXProducto.cantidad}));
+
 
     if (
-      compra.estado &&
-      compra.productosComprados &&
-      compra.productosComprados.length > 0
+      compraOriginalEstado && // Solo revertir si estaba activa
+      productosOriginales &&
+      productosOriginales.length > 0
     ) {
-      // Solo revertir si estaba activa
-      for (const productoComprado of compra.productosComprados) {
+      for (const productoComprado of productosOriginales) {
         const productoDB = await db.Producto.findByPk(
           productoComprado.idProducto,
           { transaction }
         );
-        const cantidadComprada = productoComprado.detalleCompra
-          ? productoComprado.detalleCompra.cantidad
-          : 0;
+        const cantidadComprada = productoComprado.cantidad;
         if (productoDB && cantidadComprada > 0) {
           await productoDB.decrement("existencia", {
             by: cantidadComprada,
             transaction,
           });
+          productosAfectadosParaAlerta.add(productoDB.idProducto);
         }
       }
     }
+
+    // Eliminar detalles de CompraXProducto primero si no hay CASCADE ON DELETE en la FK de Compra
+    // O si prefieres ser explícito. La DDL para CompraXProducto.compra_idcompra tiene ON DELETE CASCADE.
+    // await db.CompraXProducto.destroy({ where: { compraId: idCompra }, transaction });
 
     const filasEliminadas = await db.Compra.destroy({
       where: { idCompra },
@@ -502,6 +393,15 @@ const eliminarCompraFisica = async (idCompra) => {
     });
 
     await transaction.commit();
+    
+    if(compraOriginalEstado){ // Solo enviar alerta si la compra estaba activa y afectó el inventario
+        for (const productoId of productosAfectadosParaAlerta) {
+            const productoActualizado = await db.Producto.findByPk(productoId);
+            if (productoActualizado) {
+                await checkAndSendStockAlert(productoActualizado, `tras eliminar compra ID ${idCompra} (stock revertido)`);
+            }
+        }
+    }
     return filasEliminadas;
   } catch (error) {
     await transaction.rollback();
@@ -523,7 +423,7 @@ module.exports = {
   obtenerTodasLasCompras,
   obtenerCompraPorId,
   actualizarCompra,
-  anularCompra, // NUEVA FUNCIÓN
-  habilitarCompra, // NUEVA FUNCIÓN
+  anularCompra,
+  habilitarCompra,
   eliminarCompraFisica,
 };

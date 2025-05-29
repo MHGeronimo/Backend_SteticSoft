@@ -1,5 +1,5 @@
 // src/controllers/cliente.controller.js
-const clienteService = require("../services/cliente.service.js"); // Ajusta la ruta si es necesario
+const clienteService = require("../services/cliente.service.js");
 
 /**
  * Crea un nuevo cliente.
@@ -13,13 +13,12 @@ const crearCliente = async (req, res, next) => {
       data: nuevoCliente,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todos los clientes.
- * Permite filtrar por query params, ej. ?estado=true
  */
 const listarClientes = async (req, res, next) => {
   try {
@@ -29,8 +28,6 @@ const listarClientes = async (req, res, next) => {
     } else if (req.query.estado === "false") {
       opcionesDeFiltro.estado = false;
     }
-    // Podrías añadir más filtros aquí si son necesarios (ej. por nombre, documento)
-
     const clientes = await clienteService.obtenerTodosLosClientes(
       opcionesDeFiltro
     );
@@ -50,7 +47,6 @@ const obtenerClientePorId = async (req, res, next) => {
   try {
     const { idCliente } = req.params;
     const cliente = await clienteService.obtenerClientePorId(Number(idCliente));
-    // El servicio ya lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: cliente,
@@ -70,10 +66,31 @@ const actualizarCliente = async (req, res, next) => {
       Number(idCliente),
       req.body
     );
-    // El servicio ya lanza errores específicos (NotFoundError, ConflictError, BadRequestError)
     res.status(200).json({
       success: true,
       message: "Cliente actualizado exitosamente.",
+      data: clienteActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de un cliente.
+ */
+const cambiarEstadoCliente = async (req, res, next) => {
+  try {
+    const { idCliente } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const clienteActualizado = await clienteService.cambiarEstadoCliente(
+      Number(idCliente),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado del cliente ID ${idCliente} cambiado a ${estado} exitosamente.`,
       data: clienteActualizado,
     });
   } catch (error) {
@@ -126,7 +143,7 @@ const eliminarClienteFisico = async (req, res, next) => {
   try {
     const { idCliente } = req.params;
     await clienteService.eliminarClienteFisico(Number(idCliente));
-    res.status(204).send(); // 204 No Content para eliminaciones físicas exitosas
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -140,4 +157,5 @@ module.exports = {
   anularCliente,
   habilitarCliente,
   eliminarClienteFisico,
+  cambiarEstadoCliente, // <-- Nueva función exportada
 };

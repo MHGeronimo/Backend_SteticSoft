@@ -2,7 +2,7 @@
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
-} = require("../middlewares/validation.middleware.js"); // Ajusta la ruta si es necesario
+} = require("../middlewares/validation.middleware.js");
 
 const crearPermisoValidators = [
   body("nombre")
@@ -11,7 +11,6 @@ const crearPermisoValidators = [
     .withMessage("El nombre del permiso es obligatorio.")
     .isString()
     .withMessage("El nombre del permiso debe ser una cadena de texto.")
-    // Considerando que los nombres de permiso pueden ser tipo MODULO_ENTIDAD_ACCION, podrían ser más largos.
     .isLength({ min: 3, max: 150 })
     .withMessage("El nombre del permiso debe tener entre 3 y 150 caracteres."),
   body("descripcion")
@@ -64,8 +63,24 @@ const idPermisoValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoPermisoValidators = [
+  param("idPermiso")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del permiso debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearPermisoValidators,
   actualizarPermisoValidators,
   idPermisoValidator,
+  cambiarEstadoPermisoValidators, // <-- Exportar nuevo validador
 };

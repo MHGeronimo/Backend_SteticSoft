@@ -85,12 +85,27 @@ const gestionarUnPermisoRolValidators = [
   handleValidationErrors
 ];
 
+const cambiarEstadoRolValidators = [
+  param("idRol")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del rol debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false }) // Asegura que el campo 'estado' exista, incluso si es false
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 
 module.exports = {
   crearRolValidators,
   actualizarRolValidators,
   idRolValidator,
-  gestionarPermisosRolValidators, 
-  gestionarUnPermisoRolValidators, 
+  gestionarPermisosRolValidators,
+  gestionarUnPermisoRolValidators,
+  cambiarEstadoRolValidators,
 };
 

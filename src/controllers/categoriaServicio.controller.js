@@ -70,6 +70,29 @@ const actualizarCategoriaServicio = async (req, res, next) => {
   }
 };
 
+/**
+ * Cambia el estado (activo/inactivo) de una categoría de servicio.
+ */
+const cambiarEstadoCategoriaServicio = async (req, res, next) => {
+  try {
+    const { idCategoriaServicio } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const categoriaActualizada =
+      await categoriaServicioService.cambiarEstadoCategoriaServicio(
+        Number(idCategoriaServicio),
+        estado
+      );
+    res.status(200).json({
+      success: true,
+      message: `Estado de la categoría de servicio ID ${idCategoriaServicio} cambiado a ${estado} exitosamente.`,
+      data: categoriaActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const anularCategoriaServicio = async (req, res, next) => {
   try {
     const { idCategoriaServicio } = req.params;
@@ -124,4 +147,5 @@ module.exports = {
   anularCategoriaServicio,
   habilitarCategoriaServicio,
   eliminarCategoriaServicioFisica,
+  cambiarEstadoCategoriaServicio, // <-- Nueva función exportada
 };

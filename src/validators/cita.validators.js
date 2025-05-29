@@ -100,6 +100,7 @@ const actualizarCitaValidators = [
     )
     .custom((value) => {
       if (moment(value).isBefore(moment().subtract(1, "hour"))) {
+        // Permite un pequeño margen para ajustes
         throw new Error(
           "La nueva fecha y hora de la cita no pueden ser en el pasado."
         );
@@ -158,7 +159,7 @@ const actualizarCitaValidators = [
           );
       }
     }),
-  body("estado")
+  body("estado") // Validador para el estado booleano general de la Cita
     .optional()
     .isBoolean()
     .withMessage(
@@ -174,7 +175,6 @@ const idCitaValidator = [
   handleValidationErrors,
 ];
 
-// --- NUEVO VALIDADOR ---
 const gestionarServiciosCitaValidator = [
   param("idCita")
     .isInt({ gt: 0 })
@@ -195,9 +195,25 @@ const gestionarServiciosCitaValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado booleano general
+const cambiarEstadoCitaValidators = [
+  param("idCita")
+    .isInt({ gt: 0 })
+    .withMessage("El ID de la cita debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearCitaValidators,
   actualizarCitaValidators,
   idCitaValidator,
-  gestionarServiciosCitaValidator, 
+  gestionarServiciosCitaValidator,
+  cambiarEstadoCitaValidators, // <-- Exportar nuevo validador
 };

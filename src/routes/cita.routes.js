@@ -1,12 +1,9 @@
 // src/routes/cita.routes.js
 const express = require("express");
 const router = express.Router();
-// const { body } = require('express-validator'); // Ya no se necesita 'body' aquí directamente para estas rutas
 const citaController = require("../controllers/cita.controller.js");
-const citaValidators = require("../validators/cita.validators.js"); // Ahora incluye gestionarServiciosCitaValidator
-// const { handleValidationErrors } = require('../middlewares/validation.middleware.js'); // Ya no se necesita aquí directamente
+const citaValidators = require("../validators/cita.validators.js");
 
-// Middlewares de seguridad
 const authMiddleware = require("../middlewares/auth.middleware.js");
 const {
   checkPermission,
@@ -14,7 +11,6 @@ const {
 
 const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR";
 
-// --- Rutas CRUD para Citas (sin cambios) ---
 router.post(
   "/",
   authMiddleware,
@@ -22,12 +18,14 @@ router.post(
   citaValidators.crearCitaValidators,
   citaController.crearCita
 );
+
 router.get(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
   citaController.listarCitas
 );
+
 router.get(
   "/:idCita",
   authMiddleware,
@@ -35,6 +33,7 @@ router.get(
   citaValidators.idCitaValidator,
   citaController.obtenerCitaPorId
 );
+
 router.put(
   "/:idCita",
   authMiddleware,
@@ -42,6 +41,16 @@ router.put(
   citaValidators.actualizarCitaValidators,
   citaController.actualizarCita
 );
+
+// NUEVA RUTA: Cambiar el estado general de una cita
+router.patch(
+  "/:idCita/estado",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.cambiarEstadoCitaValidators, // Usa el validador específico para el booleano 'estado'
+  citaController.cambiarEstadoCita // Llama a la función del controlador
+);
+
 router.patch(
   "/:idCita/anular",
   authMiddleware,
@@ -49,6 +58,7 @@ router.patch(
   citaValidators.idCitaValidator,
   citaController.anularCita
 );
+
 router.patch(
   "/:idCita/habilitar",
   authMiddleware,
@@ -56,6 +66,7 @@ router.patch(
   citaValidators.idCitaValidator,
   citaController.habilitarCita
 );
+
 router.delete(
   "/:idCita",
   authMiddleware,
@@ -64,23 +75,19 @@ router.delete(
   citaController.eliminarCitaFisica
 );
 
-// --- RUTAS PARA GESTIONAR SERVICIOS DE UNA CITA (ACTUALIZADAS) ---
-
-// POST /api/citas/:idCita/servicios - Agregar servicios a una cita existente
 router.post(
   "/:idCita/servicios",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS), // O un permiso específico
-  citaValidators.gestionarServiciosCitaValidator, // <-- USANDO EL NUEVO VALIDADOR
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.gestionarServiciosCitaValidator,
   citaController.agregarServiciosACita
 );
 
-// DELETE /api/citas/:idCita/servicios - Quitar servicios de una cita existente
 router.delete(
   "/:idCita/servicios",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS), // O un permiso específico
-  citaValidators.gestionarServiciosCitaValidator, // <-- USANDO EL NUEVO VALIDADOR
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.gestionarServiciosCitaValidator,
   citaController.quitarServiciosDeCita
 );
 

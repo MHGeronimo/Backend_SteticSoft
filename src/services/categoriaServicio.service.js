@@ -4,6 +4,26 @@ const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
 /**
+ * Helper interno para cambiar el estado de una categoría de servicio.
+ * @param {number} idCategoriaServicio - ID de la categoría.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} La categoría con el estado cambiado.
+ */
+const cambiarEstadoCategoriaServicio = async (idCategoriaServicio, nuevoEstado) => {
+  const categoria = await db.CategoriaServicio.findByPk(idCategoriaServicio);
+  if (!categoria) {
+    throw new NotFoundError(
+      "Categoría de servicio no encontrada para cambiar estado."
+    );
+  }
+  if (categoria.estado === nuevoEstado) {
+    return categoria; // Ya está en el estado deseado
+  }
+  await categoria.update({ estado: nuevoEstado });
+  return categoria;
+};
+
+/**
  * Crear una nueva categoría de servicio.
  */
 const crearCategoriaServicio = async (datosCategoria) => {
@@ -139,17 +159,7 @@ const actualizarCategoriaServicio = async (
  */
 const anularCategoriaServicio = async (idCategoriaServicio) => {
   try {
-    const categoria = await db.CategoriaServicio.findByPk(idCategoriaServicio);
-    if (!categoria) {
-      throw new NotFoundError(
-        "Categoría de servicio no encontrada para anular."
-      );
-    }
-    if (!categoria.estado) {
-      return categoria; // Ya está anulada
-    }
-    await categoria.update({ estado: false });
-    return categoria;
+    return await cambiarEstadoCategoriaServicio(idCategoriaServicio, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -168,17 +178,7 @@ const anularCategoriaServicio = async (idCategoriaServicio) => {
  */
 const habilitarCategoriaServicio = async (idCategoriaServicio) => {
   try {
-    const categoria = await db.CategoriaServicio.findByPk(idCategoriaServicio);
-    if (!categoria) {
-      throw new NotFoundError(
-        "Categoría de servicio no encontrada para habilitar."
-      );
-    }
-    if (categoria.estado) {
-      return categoria; // Ya está habilitada
-    }
-    await categoria.update({ estado: true });
-    return categoria;
+    return await cambiarEstadoCategoriaServicio(idCategoriaServicio, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -194,7 +194,6 @@ const habilitarCategoriaServicio = async (idCategoriaServicio) => {
 
 /**
  * Eliminar una categoría de servicio físicamente.
- * Considerar las implicaciones con Servicios (DDL: Categoria_servicio_idCategoriaServicio INT NOT NULL REFERENCES Categoria_servicio(idCategoriaServicio) ON DELETE RESTRICT).
  */
 const eliminarCategoriaServicioFisica = async (idCategoriaServicio) => {
   try {
@@ -205,8 +204,6 @@ const eliminarCategoriaServicioFisica = async (idCategoriaServicio) => {
       );
     }
 
-    // La BD tiene ON DELETE RESTRICT en la FK de la tabla Servicio.
-    // Si hay servicios asociados, la eliminación fallará.
     const serviciosAsociados = await db.Servicio.count({
       where: { categoriaServicioId: idCategoriaServicio },
     });
@@ -224,7 +221,6 @@ const eliminarCategoriaServicioFisica = async (idCategoriaServicio) => {
     if (error instanceof NotFoundError || error instanceof ConflictError)
       throw error;
     if (error.name === "SequelizeForeignKeyConstraintError") {
-      // Por si la verificación anterior falló o hay otra FK
       throw new ConflictError(
         "No se puede eliminar la categoría de servicio porque está siendo referenciada."
       );
@@ -248,4 +244,5 @@ module.exports = {
   anularCategoriaServicio,
   habilitarCategoriaServicio,
   eliminarCategoriaServicioFisica,
+  cambiarEstadoCategoriaServicio, 
 };

@@ -27,14 +27,14 @@ const crearProductoValidators = [
   body("precio")
     .optional({ nullable: true })
     .isFloat({ gt: -0.01 })
-    .withMessage("El precio debe ser un número no negativo.") // gt: -0.01 permite 0.00
+    .withMessage("El precio debe ser un número no negativo.")
     .toFloat(),
-  body("stockMinimo") // camelCase para el body
+  body("stockMinimo")
     .optional({ nullable: true })
     .isInt({ min: 0 })
     .withMessage("El stock mínimo debe ser un número entero no negativo.")
     .toInt(),
-  body("stockMaximo") // camelCase para el body
+  body("stockMaximo")
     .optional({ nullable: true })
     .isInt({ min: 0 })
     .withMessage("El stock máximo debe ser un número entero no negativo.")
@@ -55,12 +55,12 @@ const crearProductoValidators = [
     .isURL()
     .withMessage(
       "Debe proporcionar una URL válida para la imagen del producto (si se incluye)."
-    ), // Opcional: validar si es URL
+    ),
   body("estado")
     .optional()
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
-  body("categoriaProductoId") // camelCase para el body, FK a CategoriaProducto
+  body("categoriaProductoId")
     .optional({ nullable: true })
     .isInt({ gt: 0 })
     .withMessage(
@@ -122,11 +122,7 @@ const actualizarProductoValidators = [
     .withMessage("El stock máximo debe ser un número entero no negativo.")
     .toInt()
     .custom((value, { req }) => {
-      // Para esta validación, necesitamos el valor actual o el nuevo de stockMinimo
       const stockMinimoBody = req.body.stockMinimo;
-      // Si no se actualiza stockMinimo, necesitaríamos obtener el actual de la BD para comparar,
-      // lo cual es más complejo para un validador. El servicio podría manejar esta lógica.
-      // Por ahora, solo validamos si ambos se envían en la misma solicitud.
       if (stockMinimoBody !== undefined && value < stockMinimoBody) {
         throw new Error(
           "El stock máximo no puede ser menor que el stock mínimo proporcionado."
@@ -148,9 +144,8 @@ const actualizarProductoValidators = [
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
   body("categoriaProductoId")
-    .optional({ nullable: true }) // Permite enviar null para desasociar
+    .optional({ nullable: true })
     .custom(async (value) => {
-      // Validador custom para permitir null o un ID válido
       if (value !== null && value !== undefined) {
         if (!(Number.isInteger(value) && value > 0)) {
           throw new Error(
@@ -178,8 +173,24 @@ const idProductoValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoProductoValidators = [
+  param("idProducto")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del producto debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearProductoValidators,
   actualizarProductoValidators,
   idProductoValidator,
+  cambiarEstadoProductoValidators, // <-- Exportar nuevo validador
 };

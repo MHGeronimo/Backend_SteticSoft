@@ -68,6 +68,29 @@ const actualizarEspecialidad = async (req, res, next) => {
   }
 };
 
+/**
+ * Cambia el estado (activo/inactivo) de una especialidad.
+ */
+const cambiarEstadoEspecialidad = async (req, res, next) => {
+  try {
+    const { idEspecialidad } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const especialidadActualizada =
+      await especialidadService.cambiarEstadoEspecialidad(
+        Number(idEspecialidad),
+        estado
+      );
+    res.status(200).json({
+      success: true,
+      message: `Estado de la especialidad ID ${idEspecialidad} cambiado a ${estado} exitosamente.`,
+      data: especialidadActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const anularEspecialidad = async (req, res, next) => {
   try {
     const { idEspecialidad } = req.params;
@@ -119,4 +142,5 @@ module.exports = {
   anularEspecialidad,
   habilitarEspecialidad,
   eliminarEspecialidadFisica,
+  cambiarEstadoEspecialidad, // <-- Nueva función exportada
 };

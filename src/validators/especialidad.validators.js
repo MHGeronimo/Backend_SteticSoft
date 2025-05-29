@@ -92,8 +92,24 @@ const idEspecialidadValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoEspecialidadValidators = [
+  param("idEspecialidad")
+    .isInt({ gt: 0 })
+    .withMessage("El ID de la especialidad debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearEspecialidadValidators,
   actualizarEspecialidadValidators,
   idEspecialidadValidator,
+  cambiarEstadoEspecialidadValidators, // <-- Exportar nuevo validador
 };

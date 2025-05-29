@@ -225,8 +225,24 @@ const idProveedorValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoProveedorValidators = [
+  param("idProveedor")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del proveedor debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearProveedorValidators,
   actualizarProveedorValidators,
   idProveedorValidator,
+  cambiarEstadoProveedorValidators, // <-- Exportar nuevo validador
 };

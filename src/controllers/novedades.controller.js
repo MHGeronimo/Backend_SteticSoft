@@ -1,13 +1,11 @@
 // src/controllers/novedades.controller.js
-const novedadesService = require("../services/novedades.service.js"); // Ajusta la ruta si es necesario
+const novedadesService = require("../services/novedades.service.js");
 
 /**
  * Crea una nueva novedad para un empleado.
  */
 const crearNovedad = async (req, res, next) => {
   try {
-    // El cuerpo de la solicitud (req.body) debería contener:
-    // { empleadoId, diaSemana, horaInicio, horaFin, estado? }
     const nuevaNovedad = await novedadesService.crearNovedad(req.body);
     res.status(201).json({
       success: true,
@@ -15,13 +13,12 @@ const crearNovedad = async (req, res, next) => {
       data: nuevaNovedad,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todas las novedades.
- * Permite filtrar por query params, ej. ?estado=true&empleadoId=1&diaSemana=1
  */
 const listarNovedades = async (req, res, next) => {
   try {
@@ -38,14 +35,11 @@ const listarNovedades = async (req, res, next) => {
       }
     }
     if (req.query.diaSemana !== undefined) {
-      // diaSemana puede ser 0
       const dia = Number(req.query.diaSemana);
       if (!isNaN(dia) && dia >= 0 && dia <= 6) {
         opcionesDeFiltro.diaSemana = dia;
       }
     }
-    // Podrías añadir más filtros aquí si son necesarios
-
     const novedades = await novedadesService.obtenerTodasLasNovedades(
       opcionesDeFiltro
     );
@@ -67,7 +61,6 @@ const obtenerNovedadPorId = async (req, res, next) => {
     const novedad = await novedadesService.obtenerNovedadPorId(
       Number(idNovedades)
     );
-    // El servicio ya lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: novedad,
@@ -79,17 +72,13 @@ const obtenerNovedadPorId = async (req, res, next) => {
 
 /**
  * Actualiza una novedad existente por su ID.
- * (Principalmente para horaInicio, horaFin, estado).
  */
 const actualizarNovedad = async (req, res, next) => {
   try {
     const { idNovedades } = req.params;
-    // No se permite actualizar empleadoId ni diaSemana aquí para mantener la unicidad.
-    // Si se necesita cambiar eso, se debería borrar y crear una nueva.
     const { horaInicio, horaFin, estado } = req.body;
     const datosActualizar = { horaInicio, horaFin, estado };
 
-    // Filtrar propiedades undefined para que no se intenten actualizar a null innecesariamente
     Object.keys(datosActualizar).forEach(
       (key) => datosActualizar[key] === undefined && delete datosActualizar[key]
     );
@@ -98,10 +87,34 @@ const actualizarNovedad = async (req, res, next) => {
       Number(idNovedades),
       datosActualizar
     );
-    // El servicio ya lanza errores específicos (NotFoundError, BadRequestError)
     res.status(200).json({
       success: true,
       message: "Novedad actualizada exitosamente.",
+      data: novedadActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de una novedad.
+ */
+const cambiarEstadoNovedad = async (req, res, next) => {
+  try {
+    const { idNovedades } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    // La función actualizarNovedad del servicio puede manejar el cambio de estado booleano
+    // si se le pasa solo el campo estado.
+    // O podemos usar la función cambiarEstadoNovedad que creamos en el servicio.
+    const novedadActualizada = await novedadesService.cambiarEstadoNovedad(
+      Number(idNovedades),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado de la novedad ID ${idNovedades} cambiado a ${estado} exitosamente.`,
       data: novedadActualizada,
     });
   } catch (error) {
@@ -154,8 +167,7 @@ const eliminarNovedadFisica = async (req, res, next) => {
   try {
     const { idNovedades } = req.params;
     await novedadesService.eliminarNovedadFisica(Number(idNovedades));
-    // El servicio lanza NotFoundError
-    res.status(204).send(); // 204 No Content para eliminaciones físicas exitosas
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -169,4 +181,5 @@ module.exports = {
   anularNovedad,
   habilitarNovedad,
   eliminarNovedadFisica,
+  cambiarEstadoNovedad, // <-- Nueva función exportada
 };

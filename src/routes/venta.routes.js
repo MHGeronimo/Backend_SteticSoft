@@ -4,16 +4,13 @@ const router = express.Router();
 const ventaController = require("../controllers/venta.controller.js");
 const ventaValidators = require("../validators/venta.validators.js");
 
-// Middlewares de seguridad
 const authMiddleware = require("../middlewares/auth.middleware.js");
 const {
   checkPermission,
 } = require("../middlewares/authorization.middleware.js");
 
-// Nombre del permiso de módulo para gestionar ventas
 const PERMISO_MODULO_VENTAS = "MODULO_VENTAS_GESTIONAR";
 
-// POST /api/ventas - Crear una nueva venta
 router.post(
   "/",
   authMiddleware,
@@ -22,60 +19,59 @@ router.post(
   ventaController.crearVenta
 );
 
-// GET /api/ventas - Obtener todas las ventas
-// Permite filtrar por query params, ej. ?estado=true&clienteId=1&estadoVentaId=3
 router.get(
   "/",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_VENTAS), // O un permiso más general de lectura si aplica
+  checkPermission(PERMISO_MODULO_VENTAS),
   ventaController.listarVentas
 );
 
-// GET /api/ventas/:idVenta - Obtener una venta por ID
 router.get(
   "/:idVenta",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_VENTAS), // O un permiso más específico de solo lectura
+  checkPermission(PERMISO_MODULO_VENTAS),
   ventaValidators.idVentaValidator,
   ventaController.obtenerVentaPorId
 );
 
-// PUT /api/ventas/:idVenta/estado-proceso - Actualizar el estado del PROCESO de una venta
-// (Ej. de 'En proceso' a 'Completado' o 'Cancelado')
-// También puede actualizar el estado booleano general de la Venta (activo/inactivo)
-// Cuerpo: { "estadoVentaId": 3 } o { "estado": false } o ambos
+// Ruta para actualizar estado del proceso y/o estado booleano general
 router.put(
-  "/:idVenta/estado-proceso", // Ruta más específica para esta acción
+  "/:idVenta/estado-proceso",
   authMiddleware,
   checkPermission(PERMISO_MODULO_VENTAS),
-  ventaValidators.actualizarEstadoProcesoVentaValidators, // Validador específico
-  ventaController.actualizarEstadoVenta // Controlador que llama a actualizarEstadoProcesoVenta del servicio
+  ventaValidators.actualizarEstadoProcesoVentaValidators,
+  ventaController.actualizarEstadoVenta
 );
 
-// PATCH /api/ventas/:idVenta/anular - Anular una venta (estado booleano = false y ajusta inventario)
+// NUEVA RUTA: Cambiar solo el estado booleano general de una venta
+router.patch(
+  "/:idVenta/estado",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_VENTAS),
+  ventaValidators.cambiarEstadoVentaValidators, // Validador específico para el body {"estado": boolean}
+  ventaController.cambiarEstadoGeneralVenta // Controlador que llama a actualizarEstadoProcesoVenta con solo el estado booleano
+);
+
 router.patch(
   "/:idVenta/anular",
   authMiddleware,
   checkPermission(PERMISO_MODULO_VENTAS),
-  ventaValidators.idVentaValidator, // Solo se necesita el ID para esta acción
+  ventaValidators.idVentaValidator,
   ventaController.anularVenta
 );
 
-// PATCH /api/ventas/:idVenta/habilitar - Habilitar una venta (estado booleano = true y ajusta inventario)
 router.patch(
   "/:idVenta/habilitar",
   authMiddleware,
   checkPermission(PERMISO_MODULO_VENTAS),
-  ventaValidators.idVentaValidator, // Solo se necesita el ID para esta acción
+  ventaValidators.idVentaValidator,
   ventaController.habilitarVenta
 );
 
-// DELETE /api/ventas/:idVenta - Eliminar FÍSICAMENTE una venta por ID
-// ¡Esta acción es destructiva y ajusta inventario si la venta estaba activa y en estado procesable!
 router.delete(
   "/:idVenta",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_VENTAS), // O un permiso aún más restrictivo
+  checkPermission(PERMISO_MODULO_VENTAS),
   ventaValidators.idVentaValidator,
   ventaController.eliminarVentaFisica
 );

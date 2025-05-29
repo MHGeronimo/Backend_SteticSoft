@@ -6,31 +6,45 @@ const {
   ConflictError,
   CustomError,
   BadRequestError,
-} = require("../errors"); // Ajusta la ruta
+} = require("../errors");
+
+/**
+ * Helper interno para cambiar el estado de un servicio.
+ * @param {number} idServicio - ID del servicio.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} El servicio con el estado cambiado.
+ */
+const cambiarEstadoServicio = async (idServicio, nuevoEstado) => {
+  const servicio = await db.Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado para cambiar estado.");
+  }
+  if (servicio.estado === nuevoEstado) {
+    return servicio; // Ya está en el estado deseado
+  }
+  await servicio.update({ estado: nuevoEstado });
+  return servicio;
+};
 
 /**
  * Crear un nuevo servicio.
- * @param {object} datosServicio - Datos del servicio.
- * @returns {Promise<object>} El servicio creado.
  */
 const crearServicio = async (datosServicio) => {
   const {
     nombre,
     descripcion,
     precio,
-    duracionEstimada, // Esperando camelCase
+    duracionEstimada,
     estado,
-    categoriaServicioId, // Esperando camelCase
-    especialidadId, // Esperando camelCase
+    categoriaServicioId,
+    especialidadId,
   } = datosServicio;
 
-  // Validación de unicidad de nombre (el validador ya lo hace, pero es bueno como doble check)
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
 
-  // Verificar que la categoría de servicio exista y esté activa
   const categoriaServicio = await db.CategoriaServicio.findOne({
     where: { idCategoriaServicio: categoriaServicioId, estado: true },
   });
@@ -40,7 +54,6 @@ const crearServicio = async (datosServicio) => {
     );
   }
 
-  // Verificar que la especialidad exista y esté activa (si se proporciona)
   if (especialidadId) {
     const especialidad = await db.Especialidad.findOne({
       where: { idEspecialidad: especialidadId, estado: true },
@@ -56,12 +69,12 @@ const crearServicio = async (datosServicio) => {
     const nuevoServicio = await db.Servicio.create({
       nombre,
       descripcion: descripcion || null,
-      precio: parseFloat(precio).toFixed(2), // Asegurar formato decimal
+      precio: parseFloat(precio).toFixed(2),
       duracionEstimada:
-        duracionEstimada !== undefined ? Number(duracionEstimada) : null, // Guardar null si no se provee
+        duracionEstimada !== undefined ? Number(duracionEstimada) : null,
       estado: typeof estado === "boolean" ? estado : true,
-      categoriaServicioId, // Atributo camelCase del modelo
-      especialidadId: especialidadId || null, // Atributo camelCase del modelo
+      categoriaServicioId,
+      especialidadId: especialidadId || null,
     });
     return nuevoServicio;
   } catch (error) {
@@ -86,27 +99,23 @@ const crearServicio = async (datosServicio) => {
 
 /**
  * Obtener todos los servicios.
- * @param {object} [opcionesDeFiltro={}] - Opciones para filtrar (ej. { estado: true, categoriaServicioId: 1 }).
- * @returns {Promise<Array<object>>} Lista de servicios.
  */
 const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   const whereClause = { ...opcionesDeFiltro };
-  // El filtro por categoriaServicioId y especialidadId se pasa directamente en opcionesDeFiltro
-
   try {
     return await db.Servicio.findAll({
       where: whereClause,
       include: [
         {
           model: db.CategoriaServicio,
-          as: "categoriaServicio", // Asegúrate que este alias coincida con tu asociación
+          as: "categoriaServicio",
           attributes: ["idCategoriaServicio", "nombre"],
         },
         {
           model: db.Especialidad,
-          as: "especialidadRequerida", // Asegúrate que este alias coincida con tu asociación
+          as: "especialidadRequerida",
           attributes: ["idEspecialidad", "nombre"],
-          required: false, // Un servicio puede no tener especialidad (LEFT JOIN)
+          required: false,
         },
       ],
       order: [["nombre", "ASC"]],
@@ -122,8 +131,6 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
 
 /**
  * Obtener un servicio por su ID.
- * @param {number} idServicio - ID del servicio.
- * @returns {Promise<object|null>} El servicio encontrado o null si no existe.
  */
 const obtenerServicioPorId = async (idServicio) => {
   try {
@@ -156,9 +163,6 @@ const obtenerServicioPorId = async (idServicio) => {
 
 /**
  * Actualizar un servicio existente.
- * @param {number} idServicio - ID del servicio a actualizar.
- * @param {object} datosActualizar - Datos para actualizar.
- * @returns {Promise<object>} El servicio actualizado.
  */
 const actualizarServicio = async (idServicio, datosActualizar) => {
   try {
@@ -198,7 +202,6 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
     }
 
     if (datosActualizar.hasOwnProperty("especialidadId")) {
-      // Permite desasociar enviando null
       if (
         datosActualizar.especialidadId !== null &&
         datosActualizar.especialidadId !== undefined
@@ -217,7 +220,6 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
       }
     }
 
-    // Si se envía precio o duracionEstimada, asegurar que sean números
     if (
       datosActualizar.hasOwnProperty("precio") &&
       datosActualizar.precio !== null
@@ -234,7 +236,7 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
     }
 
     await servicio.update(datosActualizar);
-    return obtenerServicioPorId(servicio.idServicio); // Recargar para obtener las asociaciones actualizadas
+    return obtenerServicioPorId(servicio.idServicio);
   } catch (error) {
     if (
       error instanceof NotFoundError ||
@@ -269,15 +271,7 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
  */
 const anularServicio = async (idServicio) => {
   try {
-    const servicio = await db.Servicio.findByPk(idServicio);
-    if (!servicio) {
-      throw new NotFoundError("Servicio no encontrado para anular.");
-    }
-    if (!servicio.estado) {
-      return servicio; // Ya está anulado
-    }
-    await servicio.update({ estado: false });
-    return servicio;
+    return await cambiarEstadoServicio(idServicio, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -293,15 +287,7 @@ const anularServicio = async (idServicio) => {
  */
 const habilitarServicio = async (idServicio) => {
   try {
-    const servicio = await db.Servicio.findByPk(idServicio);
-    if (!servicio) {
-      throw new NotFoundError("Servicio no encontrado para habilitar.");
-    }
-    if (servicio.estado) {
-      return servicio; // Ya está habilitado
-    }
-    await servicio.update({ estado: true });
-    return servicio;
+    return await cambiarEstadoServicio(idServicio, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -317,10 +303,6 @@ const habilitarServicio = async (idServicio) => {
 
 /**
  * Eliminar un servicio físicamente.
- * DDL: Categoria_servicio_idCategoriaServicio ON DELETE RESTRICT
- * DDL: Especialidad_idEspecialidad ON DELETE SET NULL
- * DDL: ServicioXCita.Servicio_idServicio ON DELETE CASCADE
- * DDL: VentaXServicio.Servicio_idServicio ON DELETE RESTRICT
  */
 const eliminarServicioFisico = async (idServicio) => {
   const transaction = await db.sequelize.transaction();
@@ -333,7 +315,6 @@ const eliminarServicioFisico = async (idServicio) => {
       );
     }
 
-    // Verificar si está en VentaXServicio antes de borrar (debido a ON DELETE RESTRICT)
     const ventasConEsteServicio = await db.VentaXServicio.count({
       where: { servicioId: idServicio },
       transaction,
@@ -344,12 +325,6 @@ const eliminarServicioFisico = async (idServicio) => {
         `No se puede eliminar el servicio '${servicio.nombre}' porque está asociado a ${ventasConEsteServicio} venta(s).`
       );
     }
-
-    // Los registros en ServicioXCita se eliminarán en cascada por la BD.
-    // La FK a CategoriaServicio tiene ON DELETE RESTRICT, la BD lo impedirá si hay un servicio asociado.
-    // Esta verificación es una capa adicional, pero la BD es la última palabra.
-    // Sin embargo, al eliminar el servicio, la FK de CategoriaServicio no es problema, es al revés:
-    // no se puede borrar una CategoriaServicio si tiene Servicios.
 
     const filasEliminadas = await db.Servicio.destroy({
       where: { idServicio },
@@ -362,8 +337,6 @@ const eliminarServicioFisico = async (idServicio) => {
     if (error instanceof NotFoundError || error instanceof ConflictError)
       throw error;
     if (error.name === "SequelizeForeignKeyConstraintError") {
-      // Este error podría surgir por la FK de CategoriaServicio si intentáramos borrar la categoría
-      // o por VentaXServicio si la verificación previa falló.
       throw new ConflictError(
         "No se puede eliminar el servicio porque está siendo referenciado y protegido por una restricción de clave foránea."
       );
@@ -387,4 +360,5 @@ module.exports = {
   anularServicio,
   habilitarServicio,
   eliminarServicioFisico,
+  cambiarEstadoServicio, // Exportar la nueva función
 };

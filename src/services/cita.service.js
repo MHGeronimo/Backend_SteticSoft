@@ -8,48 +8,33 @@ const {
   ConflictError,
   CustomError,
   BadRequestError,
-} = require("../errors"); // Ajusta la ruta si es necesario
+} = require("../errors");
 const moment = require("moment-timezone");
 const { enviarCorreoCita } = require('../utils/CitaEmailTemplate.js');
 const { formatDateTime } = require('../utils/dateHelpers.js');
 
-/**
- * Calcula la duración total estimada de los servicios de una cita.
- * @param {Array<object>} serviciosProgramados - Array de objetos de servicio con 'duracion_estimada'.
- * @returns {number} Duración total en minutos.
- */
-// src/services/cita.service.js
 
 const calcularDuracionTotalParaCorreo = (serviciosProgramados) => {
   let duracionTotal = 0;
   if (serviciosProgramados && serviciosProgramados.length > 0) {
-    // console.log("[calcularDuracionTotalParaCorreo] DEBUG: serviciosProgramados recibidos:", JSON.stringify(serviciosProgramados, null, 2));
-// Dentro de calcularDuracionTotalParaCorreo en cita.service.js
-duracionTotal = serviciosProgramados.reduce(
-  (sum, s) => {
-    // Intenta acceder a través de dataValues
-    const duracion = s.dataValues ? s.dataValues.duracion_estimada : s.duracion_estimada;
-    // console.log(`[calcularDuracionTotalParaCorreo] DEBUG: Servicio: ${s.nombre}, s.dataValues.duracion_estimada: ${s.dataValues ? s.dataValues.duracion_estimada : 'N/A'}, s.duracion_estimada: ${s.duracion_estimada}`);
-    return sum + (Number(duracion) || 0);
-  },
-  0
-);
+    duracionTotal = serviciosProgramados.reduce(
+      (sum, s) => {
+        const duracion = s.dataValues ? s.dataValues.duracion_estimada : s.duracion_estimada;
+        return sum + (Number(duracion) || 0);
+      },
+      0
+    );
   }
-  // console.log("[calcularDuracionTotalParaCorreo] DEBUG: duracionTotal calculada:", duracionTotal);
   return duracionTotal;
 };
 
-/**
- * Obtener una cita por su ID con todos los detalles necesarios para notificaciones y lógica interna.
- * Esta es una función helper interna.
- */
 const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
   return db.Cita.findByPk(idCita, {
     include: [
       {
         model: db.Cliente,
         as: "cliente",
-        attributes: ["idCliente", "nombre", "correo", "estado"], // Asegúrate de incluir 'apellido' si lo necesitas para 'nombreCliente'
+        attributes: ["idCliente", "nombre", "apellido", "correo", "estado"],
       },
       {
         model: db.Empleado,
@@ -80,8 +65,83 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
 };
 
 /**
- * Crear una nueva cita y asociar sus servicios.
+ * Helper interno para cambiar el estado booleano de una cita.
+ * @param {number} idCita - ID de la cita.
+ * @param {boolean} nuevoEstadoBooleano - El nuevo estado (true para habilitar, false para anular).
+ * @param {string} accionCorreo - Descripción de la acción para el correo.
+ * @returns {Promise<object>} La cita con el estado cambiado.
  */
+const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const cita = await db.Cita.findByPk(idCita, {
+            include: [
+                { model: db.Cliente, as: 'cliente', attributes: ['nombre', 'correo'] },
+                { model: db.Empleado, as: 'empleado', attributes: ['nombre'], required: false },
+                { model: db.Estado, as: 'estadoDetalle' },
+                { model: db.Servicio, as: 'serviciosProgramados', attributes: ["idServicio", "nombre", "precio", "descripcion", "duracion_estimada"], through: { attributes: [] } }
+            ],
+            transaction
+        });
+
+        if (!cita) {
+            await transaction.rollback();
+            throw new NotFoundError(`Cita no encontrada para ${accionCorreo}.`);
+        }
+
+        if (cita.estado === nuevoEstadoBooleano) {
+            await transaction.rollback();
+            return cita; // Ya está en el estado deseado
+        }
+
+        const updates = { estado: nuevoEstadoBooleano };
+        if (!nuevoEstadoBooleano) { // Si se está anulando
+            const estadoCancelado = await db.Estado.findOne({ where: { nombreEstado: 'Cancelado' }, transaction });
+            if (estadoCancelado) {
+                updates.estadoCitaId = estadoCancelado.idEstado;
+            }
+        } else { // Si se está habilitando/reactivando
+            const estadoPendiente = await db.Estado.findOne({ where: { nombreEstado: 'Pendiente' }, transaction }); // o 'Agendada'
+            if (estadoPendiente) {
+                updates.estadoCitaId = estadoPendiente.idEstado;
+            }
+        }
+
+        await cita.update(updates, { transaction });
+        await transaction.commit();
+
+        const citaActualizadaConDetalles = await obtenerCitaCompletaPorIdInterno(idCita);
+
+        if (citaActualizadaConDetalles && cita.cliente && cita.cliente.correo) {
+            try {
+                const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
+                await enviarCorreoCita({
+                    correo: cita.cliente.correo,
+                    nombreCliente: cita.cliente.nombre || 'Cliente',
+                    citaInfo: {
+                        accion: accionCorreo,
+                        fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
+                        empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
+                        estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : (nuevoEstadoBooleano ? 'Pendiente' : 'Cancelada'),
+                        servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
+                        total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
+                        duracionTotalEstimada: duracionTotalParaCorreo,
+                    }
+                });
+            } catch (emailError) {
+                console.error(`Error al enviar correo de ${accionCorreo} de cita ${idCita}:`, emailError);
+            }
+        }
+        return citaActualizadaConDetalles;
+    } catch (error) {
+        await transaction.rollback();
+        if (error instanceof NotFoundError) throw error;
+        console.error(`Error al ${accionCorreo} la cita con ID ${idCita} en el servicio:`, error.message);
+        throw new CustomError(`Error al ${accionCorreo} la cita: ${error.message}`, 500);
+    }
+};
+
+
 const crearCita = async (datosCita) => {
   const {
     fechaHora,
@@ -92,7 +152,6 @@ const crearCita = async (datosCita) => {
     estado,
   } = datosCita;
 
-  // Validación de IDs y existencia de entidades relacionadas (como lo tenías)
   const cliente = await db.Cliente.findOne({
     where: { idCliente: clienteId, estado: true },
   });
@@ -137,7 +196,6 @@ const crearCita = async (datosCita) => {
     serviciosConsultados.push(...serviciosDB);
   }
 
-  // Lógica de validación de disponibilidad de horario (como la tenías)
   if (empleado && serviciosConsultados.length > 0) {
     const fechaHoraInicioMoment = moment(fechaHora);
     let duracionTotalCitaMinutos = 0;
@@ -151,12 +209,20 @@ const crearCita = async (datosCita) => {
     const citasSuperpuestas = await db.Cita.findOne({
       where: {
         empleadoId: empleado.idEmpleado,
-        estado: true,
-        idCita: { [Op.ne]: null }, // Para evitar auto-colisión en una actualización futura
-        fechaHora: { // Lógica simplificada de superposición
-          [Op.lt]: fechaHoraFinMoment.toDate(),
-          [Op.gte]: fechaHoraInicioMoment.toDate(),
-        }
+        estado: true, 
+        idCita: { [Op.ne]: null }, 
+        [Op.or]: [
+            { // Cita existente comienza durante la nueva cita
+                fechaHora: {
+                    [Op.lt]: fechaHoraFinMoment.toDate(),
+                    [Op.gte]: fechaHoraInicioMoment.toDate(),
+                }
+            },
+            // Para una validación completa, también necesitarías verificar si la nueva cita comienza
+            // durante una cita existente. Esto se complica.
+            // Una forma más robusta es verificar si:
+            // (startA < endB) and (endA > startB)
+        ]
       },
     });
     if (citasSuperpuestas) {
@@ -186,20 +252,16 @@ const crearCita = async (datosCita) => {
     }
 
     await transaction.commit();
-
-    // Obtener la cita completa con todos los detalles para la respuesta Y el correo
     const citaCreadaConDetalles = await obtenerCitaCompletaPorIdInterno(
       nuevaCita.idCita
     );
 
-    // --- ENVÍO DE CORREO AL CREAR CITA ---
     if (
       citaCreadaConDetalles &&
       citaCreadaConDetalles.cliente &&
       citaCreadaConDetalles.cliente.correo &&
-      citaCreadaConDetalles.estado // Estado booleano de la Cita (activa/inactiva)
+      citaCreadaConDetalles.estado 
     ) {
-      // Preparar información para el correo
       const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(
         citaCreadaConDetalles.serviciosProgramados
       );
@@ -218,26 +280,20 @@ const crearCita = async (datosCita) => {
         duracionTotalEstimada: duracionTotalParaCorreo,
       };
       
-      // OPCIONAL: Log de depuración antes de enviar el correo
-      // console.log("DEBUG: citaInfo que se pasa a enviarCorreoCita:", JSON.stringify(citaInfoParaCorreo, null, 2));
-
       try {
         await enviarCorreoCita({
           correo: citaCreadaConDetalles.cliente.correo,
-          nombreCliente: citaCreadaConDetalles.cliente.nombre || 'Cliente', // Ajusta el nombre del cliente si es necesario
+          nombreCliente: citaCreadaConDetalles.cliente.nombre || 'Cliente',
           citaInfo: citaInfoParaCorreo
         });
       } catch (emailError) {
         console.error(
-          // Corregido para usar el correo del cliente correcto en el log
           `Error al enviar correo de notificación de nueva cita ${nuevaCita.idCita} a ${citaCreadaConDetalles.cliente.correo}:`,
           emailError
         );
       }
     }
-    // --- FIN ENVÍO DE CORREO ---
-
-    return citaCreadaConDetalles; // Devolver la cita completa
+    return citaCreadaConDetalles;
   } catch (error) {
     await transaction.rollback();
     if (
@@ -256,7 +312,6 @@ const crearCita = async (datosCita) => {
 };
 
 const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
-  // ... (sin cambios, ya incluye los servicios y sus duraciones si están en el modelo)
   const whereClause = {};
   if (opcionesDeFiltro.hasOwnProperty('estado')) whereClause.estado = opcionesDeFiltro.estado;
   if (opcionesDeFiltro.clienteId) whereClause.clienteId = opcionesDeFiltro.clienteId;
@@ -293,7 +348,8 @@ const obtenerCitaPorId = async (idCita) => {
 };
 
 const actualizarCita = async (idCita, datosActualizar) => {
-  const { fechaHora, clienteId, empleadoId, estadoCitaId, estado } = datosActualizar;
+  // Esta función actualiza campos generales, no el estado booleano directamente con la lógica de anular/habilitar.
+  // Si se incluye `estado` en datosActualizar, se actualizará el booleano, pero sin la lógica de correo específica de anular/habilitar.
   const transaction = await db.sequelize.transaction();
   try {
     const cita = await db.Cita.findByPk(idCita, { transaction });
@@ -301,37 +357,48 @@ const actualizarCita = async (idCita, datosActualizar) => {
 
     let clienteParaCorreo = cita.clienteId ? await db.Cliente.findByPk(cita.clienteId, {attributes: ['nombre', 'correo'], transaction}) : null;
 
-    if (clienteId && clienteId !== cita.clienteId) {
-      const clienteNuevo = await db.Cliente.findOne({ where: { idCliente: clienteId, estado: true }, transaction });
-      if (!clienteNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo cliente con ID ${clienteId} no encontrado o inactivo.`); }
+    if (datosActualizar.clienteId && datosActualizar.clienteId !== cita.clienteId) {
+      const clienteNuevo = await db.Cliente.findOne({ where: { idCliente: datosActualizar.clienteId, estado: true }, transaction });
+      if (!clienteNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo cliente con ID ${datosActualizar.clienteId} no encontrado o inactivo.`); }
       clienteParaCorreo = clienteNuevo;
     }
-    // ... (otras validaciones para empleadoId, estadoCitaId como las tenías)
+     if (datosActualizar.empleadoId && datosActualizar.empleadoId !== cita.empleadoId) {
+        const empleadoNuevo = await db.Empleado.findOne({ where: {idEmpleado: datosActualizar.empleadoId, estado: true}, transaction});
+        if(!empleadoNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo empleado con ID ${datosActualizar.empleadoId} no encontrado o inactivo.`);}
+    }
+    if (datosActualizar.estadoCitaId && datosActualizar.estadoCitaId !== cita.estadoCitaId) {
+        const estadoNuevo = await db.Estado.findByPk(datosActualizar.estadoCitaId, {transaction});
+        if(!estadoNuevo) {await transaction.rollback(); throw new BadRequestError(`Nuevo estado de cita con ID ${datosActualizar.estadoCitaId} no encontrado.`);}
+    }
+
 
     await cita.update(datosActualizar, { transaction });
-    await transaction.commit(); // Commit antes de obtener datos para el correo
+    await transaction.commit(); 
 
     const citaActualizadaConDetalles = await obtenerCitaCompletaPorIdInterno(cita.idCita);
 
     if (citaActualizadaConDetalles && clienteParaCorreo && clienteParaCorreo.correo && citaActualizadaConDetalles.estado) {
-      try {
-        const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
-        await enviarCorreoCita({
-          correo: clienteParaCorreo.correo,
-          nombreCliente: clienteParaCorreo.nombre || 'Cliente',
-          citaInfo: {
-            accion: 'actualizada',
-            fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
-            empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
-            estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-            servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
-            total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-            duracionTotalEstimada: duracionTotalParaCorreo,
-            mensajeAdicional: 'Los detalles de tu cita han sido actualizados.'
-          }
-        });
-      } catch (emailError) {
-        console.error(`Error al enviar correo de actualización de cita ${cita.idCita}:`, emailError);
+      // Solo enviar correo si la cita sigue activa y hay cambios significativos (ej. fecha, empleado, estado del proceso)
+      if (datosActualizar.fechaHora || datosActualizar.empleadoId || datosActualizar.estadoCitaId) {
+        try {
+          const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
+          await enviarCorreoCita({
+            correo: clienteParaCorreo.correo,
+            nombreCliente: clienteParaCorreo.nombre || 'Cliente',
+            citaInfo: {
+              accion: 'actualizada',
+              fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
+              empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
+              estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
+              servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
+              total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
+              duracionTotalEstimada: duracionTotalParaCorreo,
+              mensajeAdicional: 'Los detalles de tu cita han sido actualizados.'
+            }
+          });
+        } catch (emailError) {
+          console.error(`Error al enviar correo de actualización de cita ${cita.idCita}:`, emailError);
+        }
       }
     }
     return citaActualizadaConDetalles;
@@ -344,107 +411,23 @@ const actualizarCita = async (idCita, datosActualizar) => {
 };
 
 const anularCita = async (idCita) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    const cita = await db.Cita.findByPk(idCita, { 
-        include: [{model: db.Cliente, as: 'cliente', attributes: ['nombre', 'correo']}], // Para el correo
-        transaction 
-    });
-    if (!cita) { await transaction.rollback(); throw new NotFoundError("Cita no encontrada para anular."); }
-    if (!cita.estado) { await transaction.rollback(); return cita; }
-
-    const estadoCancelado = await db.Estado.findOne({ where: { nombreEstado: 'Cancelado' }, transaction });
-    await cita.update({ 
-        estado: false, 
-        estadoCitaId: estadoCancelado ? estadoCancelado.idEstado : cita.estadoCitaId 
-    }, { transaction });
-    await transaction.commit();
-    
-    const citaAnuladaConDetalles = await obtenerCitaCompletaPorIdInterno(cita.idCita);
-
-    if (citaAnuladaConDetalles && cita.cliente && cita.cliente.correo) {
-        try {
-            const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaAnuladaConDetalles.serviciosProgramados);
-            await enviarCorreoCita({
-                correo: cita.cliente.correo,
-                nombreCliente: cita.cliente.nombre || 'Cliente',
-                citaInfo: {
-                    accion: 'cancelada',
-                    fechaHora: formatDateTime(citaAnuladaConDetalles.fechaHora),
-                    empleado: citaAnuladaConDetalles.empleado ? citaAnuladaConDetalles.empleado.nombre : 'No asignado',
-                    estado: citaAnuladaConDetalles.estadoDetalle ? citaAnuladaConDetalles.estadoDetalle.nombreEstado : 'Cancelada',
-                    servicios: citaAnuladaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
-                    total: citaAnuladaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-                    duracionTotalEstimada: duracionTotalParaCorreo,
-                }
-            });
-        } catch (emailError) {
-            console.error(`Error al enviar correo de anulación de cita ${cita.idCita}:`, emailError);
-        }
-    }
-    return citaAnuladaConDetalles;
-  } catch (error) {
-    await transaction.rollback();
-    if (error instanceof NotFoundError) throw error;
-    console.error(`Error al anular la cita con ID ${idCita} en el servicio:`, error.message);
-    throw new CustomError(`Error al anular la cita: ${error.message}`, 500);
-  }
+  return cambiarEstadoCita(idCita, false, 'cancelada');
 };
 
 const habilitarCita = async (idCita) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    const cita = await db.Cita.findByPk(idCita, { 
-        include: [{model: db.Cliente, as: 'cliente', attributes: ['nombre', 'correo']}],
-        transaction 
-    });
-    if (!cita) { await transaction.rollback(); throw new NotFoundError("Cita no encontrada para habilitar."); }
-    if (cita.estado) { await transaction.rollback(); return cita; }
-
-    const estadoPendiente = await db.Estado.findOne({ where: { nombreEstado: 'Pendiente' }, transaction }); // O 'Agendada'
-    await cita.update({ 
-        estado: true, 
-        estadoCitaId: estadoPendiente ? estadoPendiente.idEstado : cita.estadoCitaId 
-    }, { transaction });
-    await transaction.commit();
-
-    const citaHabilitadaConDetalles = await obtenerCitaCompletaPorIdInterno(cita.idCita);
-
-    if (citaHabilitadaConDetalles && cita.cliente && cita.cliente.correo) {
-        try {
-            const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaHabilitadaConDetalles.serviciosProgramados);
-            await enviarCorreoCita({
-                correo: cita.cliente.correo,
-                nombreCliente: cita.cliente.nombre || 'Cliente',
-                citaInfo: {
-                    accion: 'reactivada',
-                    fechaHora: formatDateTime(citaHabilitadaConDetalles.fechaHora),
-                    empleado: citaHabilitadaConDetalles.empleado ? citaHabilitadaConDetalles.empleado.nombre : 'No asignado',
-                    estado: citaHabilitadaConDetalles.estadoDetalle ? citaHabilitadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-                    servicios: citaHabilitadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
-                    total: citaHabilitadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-                    duracionTotalEstimada: duracionTotalParaCorreo,
-                }
-            });
-        } catch (emailError) {
-            console.error(`Error al enviar correo de habilitación de cita ${cita.idCita}:`, emailError);
-        }
-    }
-    return citaHabilitadaConDetalles;
-  } catch (error) {
-    await transaction.rollback();
-    if (error instanceof NotFoundError) throw error;
-    console.error(`Error al habilitar la cita con ID ${idCita} en el servicio:`, error.message);
-    throw new CustomError(`Error al habilitar la cita: ${error.message}`, 500);
-  }
+  return cambiarEstadoCita(idCita, true, 'reactivada');
 };
 
 const eliminarCitaFisica = async (idCita) => {
-  // ... (sin cambios, el correo no suele enviarse al eliminar físicamente)
   const transaction = await db.sequelize.transaction();
   try {
     const cita = await db.Cita.findByPk(idCita, { transaction });
     if (!cita) { await transaction.rollback(); throw new NotFoundError("Cita no encontrada para eliminar físicamente.");}
+    
+    // Antes de eliminar, se podrían quitar asociaciones many-to-many explícitamente si no hay CASCADE bien configurado.
+    // await cita.setServiciosProgramados([], { transaction }); // Si la tabla de unión no tiene ON DELETE CASCADE en Cita_idCita.
+    // Sin embargo, la DDL para ServicioXCita tiene ON DELETE CASCADE en ambas FKs, por lo que se borrarán automáticamente.
+
     const filasEliminadas = await db.Cita.destroy({ where: { idCita }, transaction});
     await transaction.commit();
     return filasEliminadas;
@@ -474,7 +457,7 @@ const agregarServiciosACita = async (idCita, idServicios) => {
       throw new NotFoundError(`Uno o más servicios no existen o están inactivos: IDs ${idsNoEncontrados.join(", ")}`);
     }
     
-    await cita.addServiciosProgramados(serviciosDB, { transaction }); // Usa el alias 'serviciosProgramados'
+    await cita.addServiciosProgramados(serviciosDB, { transaction });
     await transaction.commit();
     
     const citaActualizadaConDetalles = await obtenerCitaCompletaPorIdInterno(idCita);
@@ -519,7 +502,7 @@ const quitarServiciosDeCita = async (idCita, idServicios) => {
     if (!cita) { await transaction.rollback(); throw new NotFoundError("Cita no encontrada para quitar servicios.");}
     if (!cita.estado) { await transaction.rollback(); throw new BadRequestError("No se pueden quitar servicios de una cita anulada.");}
     
-    await cita.removeServiciosProgramados(idServicios, { transaction }); // Usa el alias 'serviciosProgramados'
+    await cita.removeServiciosProgramados(idServicios, { transaction });
     await transaction.commit();
     
     const citaActualizadaConDetalles = await obtenerCitaCompletaPorIdInterno(idCita);
@@ -564,4 +547,5 @@ module.exports = {
   eliminarCitaFisica,
   agregarServiciosACita,
   quitarServiciosDeCita,
+  cambiarEstadoCita, 
 };

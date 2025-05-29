@@ -50,11 +50,10 @@ const crearAbastecimientoValidators = [
         }
       }
     }),
-  body("estado") // <-- VALIDACIÓN PARA EL NUEVO CAMPO ESTADO
+  body("estado")
     .optional()
     .isBoolean()
     .withMessage("El estado del abastecimiento debe ser un valor booleano."),
-  // Los campos estaAgotado, razonAgotamiento, fechaAgotamiento no suelen enviarse al crear un abastecimiento.
   handleValidationErrors,
 ];
 
@@ -111,7 +110,7 @@ const actualizarAbastecimientoValidators = [
       "La fecha de agotamiento debe ser una fecha válida (YYYY-MM-DD)."
     )
     .toDate(),
-  body("estado") // <-- VALIDACIÓN PARA EL NUEVO CAMPO ESTADO
+  body("estado")
     .optional()
     .isBoolean()
     .withMessage(
@@ -127,8 +126,24 @@ const idAbastecimientoValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoAbastecimientoValidators = [
+  param("idAbastecimiento")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del abastecimiento debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearAbastecimientoValidators,
   actualizarAbastecimientoValidators,
   idAbastecimientoValidator,
+  cambiarEstadoAbastecimientoValidators, // <-- Exportar nuevo validador
 };

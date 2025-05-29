@@ -3,7 +3,7 @@ const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
-const db = require("../models"); // Para validaciones personalizadas
+const db = require("../models");
 
 const crearClienteValidators = [
   body("nombre")
@@ -23,7 +23,7 @@ const crearClienteValidators = [
     .isLength({ min: 2, max: 45 })
     .withMessage("El apellido debe tener entre 2 y 45 caracteres."),
   body("correo")
-    .optional({ nullable: true, checkFalsy: true }) // Opcional, pero si se envía, se valida
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isEmail()
     .withMessage(
@@ -34,7 +34,6 @@ const crearClienteValidators = [
     .normalizeEmail()
     .custom(async (value) => {
       if (value) {
-        // Solo validar si se proporciona un correo
         const clienteExistente = await db.Cliente.findOne({
           where: { correo: value },
         });
@@ -52,7 +51,6 @@ const crearClienteValidators = [
     .withMessage("El teléfono debe ser una cadena de texto.")
     .isLength({ min: 7, max: 45 })
     .withMessage("El teléfono debe tener entre 7 y 45 caracteres."),
-  // Podrías añadir .isNumeric() o un regex si quieres un formato específico
   body("tipoDocumento")
     .trim()
     .notEmpty()
@@ -84,9 +82,9 @@ const crearClienteValidators = [
     .withMessage(
       "La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD)."
     )
-    .toDate(), // Convierte a objeto Date de JavaScript
+    .toDate(),
   body("idUsuario")
-    .optional({ nullable: true }) // Un cliente puede o no estar asociado a un usuario al crearse
+    .optional({ nullable: true })
     .isInt({ gt: 0 })
     .withMessage(
       "El ID de usuario debe ser un entero positivo si se proporciona."
@@ -216,7 +214,6 @@ const actualizarClienteValidators = [
     )
     .custom(async (value, { req }) => {
       if (value) {
-        // Si se proporciona un idUsuario para actualizar
         const idCliente = Number(req.params.idCliente);
         const usuario = await db.Usuario.findByPk(value);
         if (!usuario) {
@@ -251,8 +248,24 @@ const idClienteValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoClienteValidators = [
+  param("idCliente")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del cliente debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearClienteValidators,
   actualizarClienteValidators,
   idClienteValidator,
+  cambiarEstadoClienteValidators, // <-- Exportar nuevo validador
 };

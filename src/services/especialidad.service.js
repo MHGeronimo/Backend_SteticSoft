@@ -4,6 +4,24 @@ const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
 /**
+ * Helper interno para cambiar el estado de una especialidad.
+ * @param {number} idEspecialidad - ID de la especialidad.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} La especialidad con el estado cambiado.
+ */
+const cambiarEstadoEspecialidad = async (idEspecialidad, nuevoEstado) => {
+  const especialidad = await db.Especialidad.findByPk(idEspecialidad);
+  if (!especialidad) {
+    throw new NotFoundError("Especialidad no encontrada para cambiar estado.");
+  }
+  if (especialidad.estado === nuevoEstado) {
+    return especialidad; // Ya está en el estado deseado
+  }
+  await especialidad.update({ estado: nuevoEstado });
+  return especialidad;
+};
+
+/**
  * Crear una nueva especialidad.
  */
 const crearEspecialidad = async (datosEspecialidad) => {
@@ -111,14 +129,13 @@ const actualizarEspecialidad = async (idEspecialidad, datosActualizar) => {
       }
     }
 
-    // Construir objeto con solo los campos que se quieren actualizar
     const camposAActualizar = {};
     if (nombre !== undefined) camposAActualizar.nombre = nombre;
     if (descripcion !== undefined) camposAActualizar.descripcion = descripcion;
     if (estado !== undefined) camposAActualizar.estado = estado;
 
     if (Object.keys(camposAActualizar).length === 0) {
-      return especialidad; // No hay nada que actualizar
+      return especialidad;
     }
 
     await especialidad.update(camposAActualizar);
@@ -147,15 +164,7 @@ const actualizarEspecialidad = async (idEspecialidad, datosActualizar) => {
  */
 const anularEspecialidad = async (idEspecialidad) => {
   try {
-    const especialidad = await db.Especialidad.findByPk(idEspecialidad);
-    if (!especialidad) {
-      throw new NotFoundError("Especialidad no encontrada para anular.");
-    }
-    if (!especialidad.estado) {
-      return especialidad; // Ya está anulada
-    }
-    await especialidad.update({ estado: false });
-    return especialidad;
+    return await cambiarEstadoEspecialidad(idEspecialidad, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -174,15 +183,7 @@ const anularEspecialidad = async (idEspecialidad) => {
  */
 const habilitarEspecialidad = async (idEspecialidad) => {
   try {
-    const especialidad = await db.Especialidad.findByPk(idEspecialidad);
-    if (!especialidad) {
-      throw new NotFoundError("Especialidad no encontrada para habilitar.");
-    }
-    if (especialidad.estado) {
-      return especialidad; // Ya está habilitada
-    }
-    await especialidad.update({ estado: true });
-    return especialidad;
+    return await cambiarEstadoEspecialidad(idEspecialidad, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -198,7 +199,6 @@ const habilitarEspecialidad = async (idEspecialidad) => {
 
 /**
  * Eliminar una especialidad físicamente.
- * Considerar las implicaciones en EmpleadoEspecialidad (ON DELETE CASCADE) y Servicio (ON DELETE SET NULL).
  */
 const eliminarEspecialidadFisica = async (idEspecialidad) => {
   try {
@@ -209,18 +209,12 @@ const eliminarEspecialidadFisica = async (idEspecialidad) => {
       );
     }
 
-    // La BD manejará ON DELETE CASCADE para EmpleadoEspecialidad.
-    // Y ON DELETE SET NULL para Servicio.Especialidad_idEspecialidad.
-    // Podrías añadir verificaciones previas si lo deseas, por ejemplo,
-    // advertir si hay muchos empleados o servicios asociados antes de borrar.
-
     const filasEliminadas = await db.Especialidad.destroy({
       where: { idEspecialidad },
     });
     return filasEliminadas;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    // Si alguna FK tuviera RESTRICT y no CASCADE o SET NULL, aquí podría haber un SequelizeForeignKeyConstraintError
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new ConflictError(
         "No se puede eliminar la especialidad porque está siendo referenciada de una manera que impide su borrado."
@@ -245,4 +239,5 @@ module.exports = {
   anularEspecialidad,
   habilitarEspecialidad,
   eliminarEspecialidadFisica,
+  cambiarEstadoEspecialidad,
 };

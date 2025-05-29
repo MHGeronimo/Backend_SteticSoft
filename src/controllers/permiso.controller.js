@@ -1,5 +1,5 @@
 // src/controllers/permiso.controller.js
-const permisoService = require("../services/permiso.service.js"); // Ajusta la ruta si es necesario
+const permisoService = require("../services/permiso.service.js");
 
 /**
  * Crea un nuevo permiso.
@@ -13,13 +13,12 @@ const crearPermiso = async (req, res, next) => {
       data: nuevoPermiso,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todos los permisos.
- * Se puede extender para aceptar query params de filtrado (ej. ?estado=true)
  */
 const listarPermisos = async (req, res, next) => {
   try {
@@ -29,8 +28,6 @@ const listarPermisos = async (req, res, next) => {
     } else if (req.query.estado === "false") {
       opcionesDeFiltro.estado = false;
     }
-    // Si no se pasa el query param 'estado', se listan todos
-
     const permisos = await permisoService.obtenerTodosLosPermisos(
       opcionesDeFiltro
     );
@@ -50,7 +47,6 @@ const obtenerPermisoPorId = async (req, res, next) => {
   try {
     const { idPermiso } = req.params;
     const permiso = await permisoService.obtenerPermisoPorId(Number(idPermiso));
-    // El servicio ahora lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: permiso,
@@ -70,10 +66,31 @@ const actualizarPermiso = async (req, res, next) => {
       Number(idPermiso),
       req.body
     );
-    // El servicio ahora lanza NotFoundError o ConflictError
     res.status(200).json({
       success: true,
       message: "Permiso actualizado exitosamente.",
+      data: permisoActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de un permiso.
+ */
+const cambiarEstadoPermiso = async (req, res, next) => {
+  try {
+    const { idPermiso } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const permisoActualizado = await permisoService.cambiarEstadoPermiso(
+      Number(idPermiso),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado del permiso ID ${idPermiso} cambiado a ${estado} exitosamente.`,
       data: permisoActualizado,
     });
   } catch (error) {
@@ -90,7 +107,6 @@ const anularPermiso = async (req, res, next) => {
     const permisoAnulado = await permisoService.anularPermiso(
       Number(idPermiso)
     );
-    // El servicio lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       message: "Permiso anulado (deshabilitado) exitosamente.",
@@ -110,7 +126,6 @@ const habilitarPermiso = async (req, res, next) => {
     const permisoHabilitado = await permisoService.habilitarPermiso(
       Number(idPermiso)
     );
-    // El servicio lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       message: "Permiso habilitado exitosamente.",
@@ -128,8 +143,7 @@ const eliminarPermisoFisico = async (req, res, next) => {
   try {
     const { idPermiso } = req.params;
     await permisoService.eliminarPermisoFisico(Number(idPermiso));
-    // El servicio lanza NotFoundError o ConflictError (si estuviera referenciado y no hay ON DELETE CASCADE)
-    res.status(204).send(); // 204 No Content para eliminaciones exitosas sin cuerpo de respuesta
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -143,4 +157,5 @@ module.exports = {
   anularPermiso,
   habilitarPermiso,
   eliminarPermisoFisico,
+  cambiarEstadoPermiso, // <-- Nueva función exportada
 };

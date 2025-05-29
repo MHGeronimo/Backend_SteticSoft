@@ -1,9 +1,26 @@
 // src/services/rol.service.js
 const db = require("../models");
-const { Op } = db.Sequelize; // Para operadores como Op.ne (not equal)
-const CustomError = require("../errors/CustomError");
-const NotFoundError = require("../errors/NotFoundError");
-const ConflictError = require("../errors/ConflictError");
+const { Op } = db.Sequelize;
+const { NotFoundError, ConflictError, CustomError } = require("../errors");
+
+/**
+ * Helper interno para cambiar el estado de un rol.
+ * @param {number} idRol - ID del rol.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} El rol con el estado cambiado.
+ */
+const cambiarEstadoRol = async (idRol, nuevoEstado) => {
+  const rol = await db.Rol.findByPk(idRol);
+  if (!rol) {
+    throw new NotFoundError("Rol no encontrado para cambiar estado.");
+  }
+  if (rol.estado === nuevoEstado) {
+    return rol; // Ya está en el estado deseado
+  }
+  await rol.update({ estado: nuevoEstado });
+  return rol;
+};
+
 /**
  * Crear un nuevo rol.
  */
@@ -105,15 +122,7 @@ const actualizarRol = async (idRol, datosActualizar) => {
  */
 const anularRol = async (idRol) => {
   try {
-    const rol = await db.Rol.findByPk(idRol);
-    if (!rol) {
-      throw new NotFoundError("Rol no encontrado para anular.");
-    }
-    if (!rol.estado) {
-      return rol; // Ya está anulado, no hacer cambios, devolver estado actual.
-    }
-    await rol.update({ estado: false });
-    return rol;
+    return await cambiarEstadoRol(idRol, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -129,15 +138,7 @@ const anularRol = async (idRol) => {
  */
 const habilitarRol = async (idRol) => {
   try {
-    const rol = await db.Rol.findByPk(idRol);
-    if (!rol) {
-      throw new NotFoundError("Rol no encontrado para habilitar.");
-    }
-    if (rol.estado) {
-      return rol; // Ya está habilitado
-    }
-    await rol.update({ estado: true });
-    return rol;
+    return await cambiarEstadoRol(idRol, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -161,7 +162,7 @@ const eliminarRolFisico = async (idRol) => {
     const filasEliminadas = await db.Rol.destroy({
       where: { idRol },
     });
-    return filasEliminadas; // Debería ser 1 si se eliminó
+    return filasEliminadas;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     if (error.name === "SequelizeForeignKeyConstraintError") {
@@ -188,4 +189,5 @@ module.exports = {
   anularRol,
   habilitarRol,
   eliminarRolFisico,
+  cambiarEstadoRol, // Exportar la nueva función
 };

@@ -4,6 +4,24 @@ const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
 /**
+ * Helper interno para cambiar el estado de un proveedor.
+ * @param {number} idProveedor - ID del proveedor.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} El proveedor con el estado cambiado.
+ */
+const cambiarEstadoProveedor = async (idProveedor, nuevoEstado) => {
+  const proveedor = await db.Proveedor.findByPk(idProveedor);
+  if (!proveedor) {
+    throw new NotFoundError("Proveedor no encontrado para cambiar estado.");
+  }
+  if (proveedor.estado === nuevoEstado) {
+    return proveedor; // Ya está en el estado deseado
+  }
+  await proveedor.update({ estado: nuevoEstado });
+  return proveedor;
+};
+
+/**
  * Crear un nuevo proveedor.
  */
 const crearProveedor = async (datosProveedor) => {
@@ -22,7 +40,6 @@ const crearProveedor = async (datosProveedor) => {
     estado,
   } = datosProveedor;
 
-  // Validaciones de unicidad (los validadores de ruta ya hacen esto, pero una doble capa es segura)
   if (nitEmpresa) {
     const proveedorConNit = await db.Proveedor.findOne({
       where: { nitEmpresa },
@@ -196,9 +213,6 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
         );
       }
     }
-    // Los campos que pueden ser null si no se envían o se envían como null explícitamente
-    // Sequelize maneja bien `update` con `undefined` (no actualiza el campo)
-    // Para poner un campo a null explícitamente, datosActualizar debe contener { miCampo: null }
     const camposAActualizar = { ...datosActualizar };
     if (
       datosActualizar.hasOwnProperty("tipoDocumento") &&
@@ -268,15 +282,7 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
  */
 const anularProveedor = async (idProveedor) => {
   try {
-    const proveedor = await db.Proveedor.findByPk(idProveedor);
-    if (!proveedor) {
-      throw new NotFoundError("Proveedor no encontrado para anular.");
-    }
-    if (!proveedor.estado) {
-      return proveedor;
-    }
-    await proveedor.update({ estado: false });
-    return proveedor;
+    return await cambiarEstadoProveedor(idProveedor, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -295,15 +301,7 @@ const anularProveedor = async (idProveedor) => {
  */
 const habilitarProveedor = async (idProveedor) => {
   try {
-    const proveedor = await db.Proveedor.findByPk(idProveedor);
-    if (!proveedor) {
-      throw new NotFoundError("Proveedor no encontrado para habilitar.");
-    }
-    if (proveedor.estado) {
-      return proveedor;
-    }
-    await proveedor.update({ estado: true });
-    return proveedor;
+    return await cambiarEstadoProveedor(idProveedor, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -358,4 +356,5 @@ module.exports = {
   anularProveedor,
   habilitarProveedor,
   eliminarProveedorFisico,
+  cambiarEstadoProveedor, // Exportar la nueva función
 };

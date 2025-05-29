@@ -7,6 +7,7 @@ const {
   CustomError,
   BadRequestError,
 } = require("../errors");
+const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // Import stock alert helper
 
 /**
  * Crear un nuevo registro de abastecimiento (salida de producto para empleado)
@@ -19,12 +20,12 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   const {
     productoId,
     cantidad,
-    fechaIngreso, // Podría renombrarse a fechaSalida o fechaAsignacion si es más claro
+    fechaIngreso,
     empleadoAsignado,
     estado,
   } = datosAbastecimiento;
 
-  const producto = await db.Producto.findByPk(productoId);
+  let producto = await db.Producto.findByPk(productoId);
   if (!producto)
     throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
   if (!producto.estado)
@@ -32,7 +33,6 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
       `Producto '${producto.nombre}' (ID: ${productoId}) no está activo.`
     );
 
-  // Verificar si hay suficiente existencia ANTES de disminuir
   if (producto.existencia < cantidad) {
     throw new ConflictError(
       `No hay suficiente existencia para el producto '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`
@@ -52,20 +52,20 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   const estadoAbastecimiento = typeof estado === "boolean" ? estado : true;
 
   const transaction = await db.sequelize.transaction();
+  let nuevoAbastecimiento;
   try {
-    const nuevoAbastecimiento = await db.Abastecimiento.create(
+    nuevoAbastecimiento = await db.Abastecimiento.create(
       {
         productoId,
         cantidad: Number(cantidad),
-        fechaIngreso: fechaIngreso || new Date(), // O fechaSalida
+        fechaIngreso: fechaIngreso || new Date(),
         empleadoAsignado: empleadoAsignado || null,
-        estaAgotado: false, // Esto se refiere al estado del producto DESPUÉS de este movimiento, no al abastecimiento en sí.
+        estaAgotado: false,
         estado: estadoAbastecimiento,
       },
       { transaction }
     );
 
-    // DISMINUIR la existencia del producto SI el abastecimiento está activo
     if (estadoAbastecimiento) {
       await producto.decrement("existencia", {
         by: Number(cantidad),
@@ -74,7 +74,16 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     }
 
     await transaction.commit();
+
+    // Check stock after commit
+    if (estadoAbastecimiento) {
+        const productoActualizado = await db.Producto.findByPk(productoId);
+        if (productoActualizado) {
+            await checkAndSendStockAlert(productoActualizado, `tras abastecimiento ID ${nuevoAbastecimiento.idAbastecimiento}`);
+        }
+    }
     return nuevoAbastecimiento;
+
   } catch (error) {
     await transaction.rollback();
     console.error(
@@ -100,7 +109,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
         {
           model: db.Producto,
           as: "productoAbastecido",
-          attributes: ["idProducto", "nombre"],
+          attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
         },
         {
           model: db.Empleado,
@@ -112,7 +121,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       order: [
         ["fechaIngreso", "DESC"],
         ["idAbastecimiento", "DESC"],
-      ], // 'fechaIngreso' podría ser 'fechaSalida'
+      ],
     });
   } catch (error) {
     console.error("Error al obtener todos los abastecimientos:", error.message);
@@ -130,7 +139,7 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   try {
     const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento, {
       include: [
-        { model: db.Producto, as: "productoAbastecido" },
+        { model: db.Producto, as: "productoAbastecido", attributes: ["idProducto", "nombre", "stockMinimo", "existencia"] },
         { model: db.Empleado, as: "empleadoResponsable", required: false },
       ],
     });
@@ -151,7 +160,7 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
 };
 
 /**
- * Actualizar un registro de abastecimiento.
+ * Actualizar un registro de abastecimiento. (Esta es la función "cambiarEstado" combinada para 'estado' y 'cantidad')
  * La actualización de 'cantidad' es delicada y debe ajustar el inventario.
  */
 const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
@@ -160,11 +169,12 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
     estaAgotado,
     razonAgotamiento,
     fechaAgotamiento,
-    estado,
-    cantidad,
+    estado, // Nuevo estado booleano del registro
+    cantidad, // Nueva cantidad
   } = datosActualizar;
 
   const transaction = await db.sequelize.transaction();
+  let productoIdAfectado;
   try {
     const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento, {
       transaction,
@@ -173,6 +183,7 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
       await transaction.rollback();
       throw new NotFoundError("Registro de abastecimiento no encontrado.");
     }
+    productoIdAfectado = abastecimiento.productoId; // Guardar para alerta
 
     const producto = await db.Producto.findByPk(abastecimiento.productoId, {
       transaction,
@@ -188,94 +199,66 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
     const cantidadOriginal = abastecimiento.cantidad;
     const camposAActualizar = {};
 
-    // Lógica para campos simples
     if (empleadoAsignado !== undefined) {
-      /* ... tu lógica de validación de empleado ... */ camposAActualizar.empleadoAsignado =
-        empleadoAsignado === null ? null : empleadoAsignado;
+      camposAActualizar.empleadoAsignado = empleadoAsignado === null ? null : empleadoAsignado;
     }
     if (estaAgotado !== undefined) camposAActualizar.estaAgotado = estaAgotado;
     if (estaAgotado === true) {
-      if (razonAgotamiento !== undefined)
-        camposAActualizar.razonAgotamiento = razonAgotamiento;
-      if (fechaAgotamiento !== undefined)
-        camposAActualizar.fechaAgotamiento = fechaAgotamiento;
+      if (razonAgotamiento !== undefined) camposAActualizar.razonAgotamiento = razonAgotamiento;
+      if (fechaAgotamiento !== undefined) camposAActualizar.fechaAgotamiento = fechaAgotamiento;
     } else if (estaAgotado === false) {
       camposAActualizar.razonAgotamiento = null;
       camposAActualizar.fechaAgotamiento = null;
     }
-    if (estado !== undefined) camposAActualizar.estado = estado;
-    if (cantidad !== undefined) camposAActualizar.cantidad = Number(cantidad);
+    
+    // Manejo de 'estado' y 'cantidad'
+    const nuevoEstado = datosActualizar.hasOwnProperty("estado") ? estado : abastecimiento.estado;
+    const nuevaCantidad = datosActualizar.hasOwnProperty("cantidad") ? Number(cantidad) : abastecimiento.cantidad;
 
-    // Aplicar actualizaciones a la instancia para poder acceder a los nuevos valores
+    camposAActualizar.estado = nuevoEstado;
+    camposAActualizar.cantidad = nuevaCantidad;
+
     if (Object.keys(camposAActualizar).length > 0) {
-      await abastecimiento.update(camposAActualizar, { transaction });
-      await abastecimiento.reload({ transaction }); // Asegurar que los datos estén frescos
+        await abastecimiento.update(camposAActualizar, { transaction });
+        // No es necesario reload si usamos los valores actualizados directamente.
     }
-
+    
     let diferenciaCantidadInventario = 0;
 
-    // 1. Ajuste por cambio de cantidad (si el registro estaba y sigue activo)
-    if (
-      datosActualizar.hasOwnProperty("cantidad") &&
-      abastecimiento.cantidad !== cantidadOriginal
-    ) {
-      if (estadoOriginal && abastecimiento.estado) {
-        // Solo si el abastecimiento estaba activo y sigue activo
-        diferenciaCantidadInventario +=
-          cantidadOriginal - abastecimiento.cantidad; // Si la nueva cantidad es menor, la diferencia es positiva (se devuelve al stock)
-        // Si la nueva cantidad es mayor, la diferencia es negativa (se saca más del stock)
-      } else if (!estadoOriginal && abastecimiento.estado) {
-        // Se activó Y cambió cantidad
-        diferenciaCantidadInventario -= abastecimiento.cantidad; // Se saca del stock la nueva cantidad
-      } else if (estadoOriginal && !abastecimiento.estado) {
-        // Se anuló Y cambió cantidad
-        diferenciaCantidadInventario += cantidadOriginal; // Se devuelve al stock la cantidad original
-      }
-      // No hacer nada si estaba y sigue anulado respecto al cambio de cantidad
+    // Lógica de ajuste de inventario basada en el estado y la cantidad
+    if (estadoOriginal === true && nuevoEstado === true) { // Sigue activo, cantidad pudo cambiar
+        diferenciaCantidadInventario = cantidadOriginal - nuevaCantidad; // Positivo si se devuelve, negativo si se saca más
+    } else if (estadoOriginal === false && nuevoEstado === true) { // Se está activando
+        diferenciaCantidadInventario = -nuevaCantidad; // Se saca del stock
+    } else if (estadoOriginal === true && nuevoEstado === false) { // Se está anulando
+        diferenciaCantidadInventario = cantidadOriginal; // Se devuelve al stock
     }
+    // Si estadoOriginal y nuevoEstado son false, no hay cambio de inventario.
 
-    // 2. Ajuste por cambio de estado (usando la cantidad MÁS RECIENTE del abastecimiento)
-    if (
-      datosActualizar.hasOwnProperty("estado") &&
-      estadoOriginal !== abastecimiento.estado
-    ) {
-      if (abastecimiento.estado) {
-        // Si se está HABILITANDO (antes estaba false, ahora true)
-        // El inventario DISMINUYE porque los productos salen para el empleado
-        diferenciaCantidadInventario -= abastecimiento.cantidad;
-      } else {
-        // Si se está ANULANDO (antes estaba true, ahora false)
-        // El inventario AUMENTA porque los productos se devuelven
-        diferenciaCantidadInventario += abastecimiento.cantidad;
-      }
+    if (diferenciaCantidadInventario !== 0) {
+        if (diferenciaCantidadInventario > 0) { // Aumentar stock
+            await producto.increment("existencia", { by: diferenciaCantidadInventario, transaction });
+        } else { // Disminuir stock (diferencia es negativa)
+            if (producto.existencia < Math.abs(diferenciaCantidadInventario)) {
+                await transaction.rollback();
+                throw new ConflictError(
+                    `No hay suficiente existencia para ajustar el producto '${producto.nombre}'. Requerido: ${Math.abs(diferenciaCantidadInventario)}, Disponible: ${producto.existencia}.`
+                );
+            }
+            await producto.decrement("existencia", { by: Math.abs(diferenciaCantidadInventario), transaction });
+        }
     }
-
-    // Aplicar el ajuste neto al inventario
-    if (diferenciaCantidadInventario > 0) {
-      await producto.increment("existencia", {
-        by: diferenciaCantidadInventario,
-        transaction,
-      });
-    } else if (diferenciaCantidadInventario < 0) {
-      // Verificar si hay suficiente stock antes de decrementar por una actualización
-      if (producto.existencia < Math.abs(diferenciaCantidadInventario)) {
-        await transaction.rollback();
-        throw new ConflictError(
-          `No hay suficiente existencia para ajustar el producto '${
-            producto.nombre
-          }'. Requerido: ${Math.abs(
-            diferenciaCantidadInventario
-          )}, Disponible: ${producto.existencia}.`
-        );
-      }
-      await producto.decrement("existencia", {
-        by: Math.abs(diferenciaCantidadInventario),
-        transaction,
-      });
-    }
-
+    
     await transaction.commit();
-    return obtenerAbastecimientoPorId(idAbastecimiento); // Devuelve con los datos actualizados
+
+    if (productoIdAfectado) {
+        const productoActualizadoPostCommit = await db.Producto.findByPk(productoIdAfectado);
+        if (productoActualizadoPostCommit) {
+           await checkAndSendStockAlert(productoActualizadoPostCommit, `tras actualizar abastecimiento ID ${idAbastecimiento}`);
+        }
+    }
+
+    return obtenerAbastecimientoPorId(idAbastecimiento);
   } catch (error) {
     await transaction.rollback();
     if (
@@ -298,28 +281,22 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
 
 /**
  * Anular un registro de abastecimiento (estado = false y AUMENTA inventario).
+ * Llama a actualizarAbastecimiento para manejar la lógica de estado e inventario.
  */
 const anularAbastecimiento = async (idAbastecimiento) => {
-  const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento);
-  if (!abastecimiento)
-    throw new NotFoundError("Abastecimiento no encontrado para anular.");
-  if (!abastecimiento.estado) return abastecimiento; // Ya está anulado
-
-  // Se pasa la cantidad actual para la lógica de reversión en actualizarAbastecimiento
+  // Para anular, solo necesitamos pasar el nuevo estado. La cantidad no cambia en este acto.
   return actualizarAbastecimiento(idAbastecimiento, { estado: false });
 };
 
 /**
  * Habilitar un registro de abastecimiento (estado = true y DISMINUYE inventario).
+ * Llama a actualizarAbastecimiento para manejar la lógica de estado e inventario.
  */
 const habilitarAbastecimiento = async (idAbastecimiento) => {
-  const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento);
-  if (!abastecimiento)
-    throw new NotFoundError("Abastecimiento no encontrado para habilitar.");
-  if (abastecimiento.estado) return abastecimiento; // Ya está habilitado
-
+  // Para habilitar, solo necesitamos pasar el nuevo estado. La cantidad no cambia en este acto.
   return actualizarAbastecimiento(idAbastecimiento, { estado: true });
 };
+
 
 /**
  * Eliminar un registro de abastecimiento físicamente.
@@ -327,6 +304,8 @@ const habilitarAbastecimiento = async (idAbastecimiento) => {
  */
 const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
   const transaction = await db.sequelize.transaction();
+  let productoIdAfectado;
+  let productoOriginal;
   try {
     const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento, {
       transaction,
@@ -335,14 +314,15 @@ const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
       await transaction.rollback();
       throw new NotFoundError("Abastecimiento no encontrado.");
     }
+    productoIdAfectado = abastecimiento.productoId;
 
-    // Si el abastecimiento estaba activo, AUMENTAR el inventario porque se revierte la salida
-    if (abastecimiento.estado) {
-      const producto = await db.Producto.findByPk(abastecimiento.productoId, {
+
+    if (abastecimiento.estado) { // Si estaba activo, se revierte el stock
+      productoOriginal = await db.Producto.findByPk(abastecimiento.productoId, {
         transaction,
       });
-      if (producto) {
-        await producto.increment("existencia", {
+      if (productoOriginal) {
+        await productoOriginal.increment("existencia", {
           by: abastecimiento.cantidad,
           transaction,
         });
@@ -358,6 +338,18 @@ const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
       transaction,
     });
     await transaction.commit();
+
+    if (productoIdAfectado && abastecimiento.estado && productoOriginal) {
+        // Se revirtió stock, verificar si AÚN está bajo (menos probable, pero posible si estaba muy bajo antes de la reversión)
+        // O si la reversión lo sacó de un estado crítico. Para la solicitud de "cuando se agotan",
+        // una eliminación que AUMENTA stock no debería generar una alerta de "agotado".
+        // Sin embargo, si el stock era, por ejemplo, -5 (hipotético), y el abastecimiento era de 3,
+        // al eliminarlo y devolver 3, queda en -2. Sigue bajo.
+        const productoActualizadoPostCommit = await db.Producto.findByPk(productoIdAfectado);
+        if (productoActualizadoPostCommit) {
+           await checkAndSendStockAlert(productoActualizadoPostCommit, `tras eliminar abastecimiento ID ${idAbastecimiento} (stock revertido)`);
+        }
+    }
     return filasEliminadas;
   } catch (error) {
     await transaction.rollback();
@@ -377,8 +369,7 @@ module.exports = {
   crearAbastecimiento,
   obtenerTodosLosAbastecimientos,
   obtenerAbastecimientoPorId,
-  actualizarAbastecimiento,
-  anularAbastecimiento,
+  actualizarAbastecimiento, 
   habilitarAbastecimiento,
   eliminarAbastecimientoFisico,
 };

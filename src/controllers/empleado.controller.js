@@ -1,7 +1,6 @@
 // src/controllers/empleado.controller.js
 const empleadoService = require("../services/empleado.service.js");
-// Importamos el nuevo servicio para manejar la relación Empleado-Especialidad
-const empleadoEspecialidadService = require("../services/empleadoEspecialidad.service.js"); // Asegúrate que la ruta sea correcta
+const empleadoEspecialidadService = require("../services/empleadoEspecialidad.service.js");
 
 /**
  * Crea un nuevo empleado.
@@ -48,8 +47,6 @@ const listarEmpleados = async (req, res, next) => {
 const obtenerEmpleadoPorId = async (req, res, next) => {
   try {
     const { idEmpleado } = req.params;
-    // Podríamos decidir si las especialidades se incluyen siempre aquí
-    // o solo a través del endpoint específico /especialidades
     const empleado = await empleadoService.obtenerEmpleadoPorId(
       Number(idEmpleado)
     );
@@ -75,6 +72,28 @@ const actualizarEmpleado = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Empleado actualizado exitosamente.",
+      data: empleadoActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de un empleado.
+ */
+const cambiarEstadoEmpleado = async (req, res, next) => {
+  try {
+    const { idEmpleado } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const empleadoActualizado = await empleadoService.cambiarEstadoEmpleado(
+      Number(idEmpleado),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado del empleado ID ${idEmpleado} cambiado a ${estado} exitosamente.`,
       data: empleadoActualizado,
     });
   } catch (error) {
@@ -133,25 +152,17 @@ const eliminarEmpleadoFisico = async (req, res, next) => {
   }
 };
 
-// --- NUEVAS FUNCIONES PARA GESTIONAR ESPECIALIDADES DE UN EMPLEADO ---
-
-/**
- * Asigna especialidades a un empleado.
- * Espera un cuerpo de solicitud como: { "idEspecialidades": [1, 2, 3] }
- */
 const asignarEspecialidadesAEmpleado = async (req, res, next) => {
   try {
     const { idEmpleado } = req.params;
-    const { idEspecialidades } = req.body; // Array de IDs de especialidades
+    const { idEspecialidades } = req.body;
 
     if (!Array.isArray(idEspecialidades) || idEspecialidades.length === 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Se requiere un array 'idEspecialidades' con al menos un ID de especialidad.",
-        });
+      return res.status(400).json({
+        success: false,
+        message:
+          "Se requiere un array 'idEspecialidades' con al menos un ID de especialidad.",
+      });
     }
 
     const especialidadesActualizadas =
@@ -162,30 +173,24 @@ const asignarEspecialidadesAEmpleado = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Especialidades asignadas/actualizadas para el empleado ID ${idEmpleado}.`,
-      data: especialidadesActualizadas, // Devuelve las especialidades actuales del empleado
+      data: especialidadesActualizadas,
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Quita especialidades de un empleado.
- * Espera un cuerpo de solicitud como: { "idEspecialidades": [1, 2, 3] }
- */
 const quitarEspecialidadesDeEmpleado = async (req, res, next) => {
   try {
     const { idEmpleado } = req.params;
-    const { idEspecialidades } = req.body; // Array de IDs de especialidades a quitar
+    const { idEspecialidades } = req.body;
 
     if (!Array.isArray(idEspecialidades) || idEspecialidades.length === 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Se requiere un array 'idEspecialidades' con al menos un ID de especialidad.",
-        });
+      return res.status(400).json({
+        success: false,
+        message:
+          "Se requiere un array 'idEspecialidades' con al menos un ID de especialidad.",
+      });
     }
 
     const especialidadesRestantes =
@@ -196,16 +201,13 @@ const quitarEspecialidadesDeEmpleado = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Especialidades quitadas del empleado ID ${idEmpleado}.`,
-      data: especialidadesRestantes, // Devuelve las especialidades restantes del empleado
+      data: especialidadesRestantes,
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Lista las especialidades asignadas a un empleado específico.
- */
 const listarEspecialidadesDeEmpleado = async (req, res, next) => {
   try {
     const { idEmpleado } = req.params;
@@ -233,4 +235,5 @@ module.exports = {
   asignarEspecialidadesAEmpleado,
   quitarEspecialidadesDeEmpleado,
   listarEspecialidadesDeEmpleado,
+  cambiarEstadoEmpleado, // <-- Nueva función exportada
 };

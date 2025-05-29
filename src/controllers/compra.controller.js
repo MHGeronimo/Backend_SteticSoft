@@ -1,5 +1,5 @@
 // src/controllers/compra.controller.js
-const compraService = require("../services/compra.service.js"); // Ajusta la ruta si es necesario
+const compraService = require("../services/compra.service.js");
 
 /**
  * Crea una nueva compra.
@@ -19,7 +19,6 @@ const crearCompra = async (req, res, next) => {
 
 /**
  * Obtiene una lista de todas las compras.
- * Permite filtrar por query params, ej. ?estado=true&proveedorId=1
  */
 const listarCompras = async (req, res, next) => {
   try {
@@ -41,8 +40,6 @@ const listarCompras = async (req, res, next) => {
         opcionesDeFiltro.dashboardId = idDashboard;
       }
     }
-    // Podrías añadir más filtros (ej. rango de fechas)
-
     const compras = await compraService.obtenerTodasLasCompras(
       opcionesDeFiltro
     );
@@ -92,12 +89,36 @@ const actualizarCompra = async (req, res, next) => {
 };
 
 /**
+ * Cambia el estado (activo/inactivo) de una compra.
+ * Esta función llamará a la lógica de servicio que también maneja el inventario.
+ */
+const cambiarEstadoCompra = async (req, res, next) => {
+  try {
+    const { idCompra } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    // El servicio actualizarCompra maneja la lógica de cambio de estado e inventario
+    const compraActualizada = await compraService.actualizarCompra(
+      Number(idCompra),
+      { estado } // Solo pasamos el campo estado para esta operación específica
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado de la compra ID ${idCompra} cambiado a ${estado} exitosamente. Inventario ajustado si aplica.`,
+      data: compraActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Anula una compra (borrado lógico, estado = false y ajusta inventario).
  */
 const anularCompra = async (req, res, next) => {
   try {
     const { idCompra } = req.params;
-    const compraAnulada = await compraService.anularCompra(Number(idCompra));
+    const compraAnulada = await compraService.anularCompra(Number(idCompra)); // Llama a la función de servicio específica
     res.status(200).json({
       success: true,
       message: "Compra anulada exitosamente. El inventario ha sido ajustado.",
@@ -115,6 +136,7 @@ const habilitarCompra = async (req, res, next) => {
   try {
     const { idCompra } = req.params;
     const compraHabilitada = await compraService.habilitarCompra(
+      // Llama a la función de servicio específica
       Number(idCompra)
     );
     res.status(200).json({
@@ -130,7 +152,6 @@ const habilitarCompra = async (req, res, next) => {
 
 /**
  * Elimina físicamente una compra por su ID.
- * ¡ADVERTENCIA: Esto también ajusta el inventario si la compra estaba activa!
  */
 const eliminarCompraFisica = async (req, res, next) => {
   try {
@@ -147,7 +168,8 @@ module.exports = {
   listarCompras,
   obtenerCompraPorId,
   actualizarCompra,
-  anularCompra, 
-  habilitarCompra, 
+  anularCompra,
+  habilitarCompra,
   eliminarCompraFisica,
+  cambiarEstadoCompra, // <-- Nueva función exportada
 };

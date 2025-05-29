@@ -6,18 +6,32 @@ const {
   ConflictError,
   CustomError,
   BadRequestError,
-} = require("../errors"); // Ajusta la ruta
+} = require("../errors");
+
+/**
+ * Helper interno para cambiar el estado de una novedad.
+ * @param {number} idNovedades - ID de la novedad.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} La novedad con el estado cambiado.
+ */
+const cambiarEstadoNovedad = async (idNovedades, nuevoEstado) => {
+  const novedad = await db.Novedades.findByPk(idNovedades);
+  if (!novedad) {
+    throw new NotFoundError("Novedad no encontrada para cambiar estado.");
+  }
+  if (novedad.estado === nuevoEstado) {
+    return novedad; // Ya está en el estado deseado
+  }
+  await novedad.update({ estado: nuevoEstado });
+  return novedad;
+};
 
 /**
  * Crear una nueva novedad para un empleado.
- * @param {object} datosNovedad - Datos de la novedad.
- * Ej: { empleadoId, diaSemana, horaInicio, horaFin, estado? }
- * @returns {Promise<object>} La novedad creada.
  */
 const crearNovedad = async (datosNovedad) => {
   const { empleadoId, diaSemana, horaInicio, horaFin, estado } = datosNovedad;
 
-  // Validar que el empleado exista y esté activo
   const empleado = await db.Empleado.findOne({
     where: { idEmpleado: empleadoId, estado: true },
   });
@@ -27,10 +41,9 @@ const crearNovedad = async (datosNovedad) => {
     );
   }
 
-  // Validar unicidad de (empleadoId, diaSemana) - el validador de ruta también lo hace
   const novedadExistente = await db.Novedades.findOne({
     where: {
-      empleadoId: empleadoId, // Atributo del modelo
+      empleadoId: empleadoId,
       diaSemana: diaSemana,
     },
   });
@@ -40,8 +53,6 @@ const crearNovedad = async (datosNovedad) => {
     );
   }
 
-  // Validar que horaFin sea posterior a horaInicio (el validador también lo hace)
-  // Podrías usar moment.js aquí para una comparación más robusta si es necesario.
   if (horaFin <= horaInicio) {
     throw new BadRequestError(
       "La hora de fin debe ser posterior a la hora de inicio."
@@ -50,7 +61,7 @@ const crearNovedad = async (datosNovedad) => {
 
   try {
     const nuevaNovedad = await db.Novedades.create({
-      empleadoId, // Atributo del modelo
+      empleadoId,
       diaSemana,
       horaInicio,
       horaFin,
@@ -59,7 +70,6 @@ const crearNovedad = async (datosNovedad) => {
     return nuevaNovedad;
   } catch (error) {
     if (error.name === "SequelizeUniqueConstraintError") {
-      // Por la restricción UNIQUE(Empleado_idEmpleado, diaSemana) en BD
       throw new ConflictError(
         `El empleado ID ${empleadoId} ya tiene una novedad registrada para el día de la semana ${diaSemana}.`
       );
@@ -80,8 +90,6 @@ const crearNovedad = async (datosNovedad) => {
 
 /**
  * Obtener todas las novedades.
- * @param {object} [opcionesDeFiltro={}] - Opciones para filtrar (ej. { estado: true, empleadoId: 1 }).
- * @returns {Promise<Array<object>>} Lista de novedades.
  */
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   try {
@@ -90,7 +98,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.Empleado,
-          as: "empleadoConNovedad", // Asegúrate que este alias coincida con tu asociación
+          as: "empleadoConNovedad",
           attributes: ["idEmpleado", "nombre"],
         },
       ],
@@ -110,8 +118,6 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
 
 /**
  * Obtener una novedad por su ID.
- * @param {number} idNovedades - ID de la novedad.
- * @returns {Promise<object|null>} La novedad encontrada o null si no existe.
  */
 const obtenerNovedadPorId = async (idNovedades) => {
   try {
@@ -140,10 +146,6 @@ const obtenerNovedadPorId = async (idNovedades) => {
 
 /**
  * Actualizar una novedad existente.
- * Generalmente no se actualiza empleadoId ni diaSemana; se crea una nueva o se borra la antigua.
- * @param {number} idNovedades - ID de la novedad a actualizar.
- * @param {object} datosActualizar - Datos para actualizar ({ horaInicio?, horaFin?, estado? }).
- * @returns {Promise<object>} La novedad actualizada.
  */
 const actualizarNovedad = async (idNovedades, datosActualizar) => {
   const { horaInicio, horaFin, estado } = datosActualizar;
@@ -153,7 +155,6 @@ const actualizarNovedad = async (idNovedades, datosActualizar) => {
       throw new NotFoundError("Novedad no encontrada para actualizar.");
     }
 
-    // Validar que horaFin sea posterior a horaInicio si ambas se actualizan o una de ellas
     const nuevaHoraInicio =
       horaInicio !== undefined ? horaInicio : novedad.horaInicio;
     const nuevaHoraFin = horaFin !== undefined ? horaFin : novedad.horaFin;
@@ -164,14 +165,13 @@ const actualizarNovedad = async (idNovedades, datosActualizar) => {
       );
     }
 
-    // Crear un objeto solo con los campos que se van a actualizar
     const camposAActualizar = {};
     if (horaInicio !== undefined) camposAActualizar.horaInicio = horaInicio;
     if (horaFin !== undefined) camposAActualizar.horaFin = horaFin;
     if (estado !== undefined) camposAActualizar.estado = estado;
 
     if (Object.keys(camposAActualizar).length === 0) {
-      return novedad; // No hay nada que actualizar
+      return novedad;
     }
 
     await novedad.update(camposAActualizar);
@@ -196,15 +196,7 @@ const actualizarNovedad = async (idNovedades, datosActualizar) => {
  */
 const anularNovedad = async (idNovedades) => {
   try {
-    const novedad = await db.Novedades.findByPk(idNovedades);
-    if (!novedad) {
-      throw new NotFoundError("Novedad no encontrada para anular.");
-    }
-    if (!novedad.estado) {
-      return novedad; // Ya está anulada
-    }
-    await novedad.update({ estado: false });
-    return novedad;
+    return await cambiarEstadoNovedad(idNovedades, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -220,15 +212,7 @@ const anularNovedad = async (idNovedades) => {
  */
 const habilitarNovedad = async (idNovedades) => {
   try {
-    const novedad = await db.Novedades.findByPk(idNovedades);
-    if (!novedad) {
-      throw new NotFoundError("Novedad no encontrada para habilitar.");
-    }
-    if (novedad.estado) {
-      return novedad; // Ya está habilitada
-    }
-    await novedad.update({ estado: true });
-    return novedad;
+    return await cambiarEstadoNovedad(idNovedades, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -244,7 +228,6 @@ const habilitarNovedad = async (idNovedades) => {
 
 /**
  * Eliminar una novedad físicamente.
- * La FK a Empleado tiene ON DELETE CASCADE, la BD podría manejarlo, pero es bueno ser explícito.
  */
 const eliminarNovedadFisica = async (idNovedades) => {
   try {
@@ -261,7 +244,6 @@ const eliminarNovedadFisica = async (idNovedades) => {
     return filasEliminadas;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    // No se esperan errores de FK aquí si el empleado se borra y las novedades se borran en cascada.
     console.error(
       `Error al eliminar físicamente la novedad con ID ${idNovedades} en el servicio:`,
       error.message
@@ -281,4 +263,5 @@ module.exports = {
   anularNovedad,
   habilitarNovedad,
   eliminarNovedadFisica,
+  cambiarEstadoNovedad, 
 };

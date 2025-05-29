@@ -43,6 +43,15 @@ router.put(
   categoriaServicioController.actualizarCategoriaServicio
 );
 
+// NUEVA RUTA: Cambiar el estado de una categoría de servicio
+router.patch(
+  "/:idCategoriaServicio/estado",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CATEGORIAS_SERVICIOS),
+  categoriaServicioValidators.cambiarEstadoCategoriaServicioValidators,
+  categoriaServicioController.cambiarEstadoCategoriaServicio
+);
+
 router.patch(
   "/:idCategoriaServicio/anular",
   authMiddleware,

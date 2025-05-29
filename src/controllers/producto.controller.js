@@ -1,12 +1,11 @@
 // src/controllers/producto.controller.js
-const productoService = require("../services/producto.service.js"); // Ajusta la ruta si es necesario
+const productoService = require("../services/producto.service.js");
 
 /**
  * Crea un nuevo producto.
  */
 const crearProducto = async (req, res, next) => {
   try {
-    // Asumimos que req.body viene con claves camelCase: nombre, descripcion, categoriaProductoId, etc.
     const nuevoProducto = await productoService.crearProducto(req.body);
     res.status(201).json({
       success: true,
@@ -14,13 +13,12 @@ const crearProducto = async (req, res, next) => {
       data: nuevoProducto,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todos los productos.
- * Permite filtrar por query params, ej. ?estado=true&categoriaProductoId=1
  */
 const listarProductos = async (req, res, next) => {
   try {
@@ -33,11 +31,9 @@ const listarProductos = async (req, res, next) => {
     if (req.query.categoriaProductoId) {
       const idCategoria = Number(req.query.categoriaProductoId);
       if (!isNaN(idCategoria) && idCategoria > 0) {
-        opcionesDeFiltro.categoriaProductoId = idCategoria; // El servicio espera camelCase
+        opcionesDeFiltro.categoriaProductoId = idCategoria;
       }
     }
-    // Podrías añadir más filtros aquí (ej. por nombre, rango de precio)
-
     const productos = await productoService.obtenerTodosLosProductos(
       opcionesDeFiltro
     );
@@ -59,7 +55,6 @@ const obtenerProductoPorId = async (req, res, next) => {
     const producto = await productoService.obtenerProductoPorId(
       Number(idProducto)
     );
-    // El servicio ya lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: producto,
@@ -79,10 +74,31 @@ const actualizarProducto = async (req, res, next) => {
       Number(idProducto),
       req.body
     );
-    // El servicio ya lanza errores específicos (NotFoundError, ConflictError, BadRequestError)
     res.status(200).json({
       success: true,
       message: "Producto actualizado exitosamente.",
+      data: productoActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de un producto.
+ */
+const cambiarEstadoProducto = async (req, res, next) => {
+  try {
+    const { idProducto } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const productoActualizado = await productoService.cambiarEstadoProducto(
+      Number(idProducto),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado del producto ID ${idProducto} cambiado a ${estado} exitosamente.`,
       data: productoActualizado,
     });
   } catch (error) {
@@ -135,8 +151,7 @@ const eliminarProductoFisico = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
     await productoService.eliminarProductoFisico(Number(idProducto));
-    // El servicio lanza NotFoundError o ConflictError
-    res.status(204).send(); // 204 No Content para eliminaciones físicas exitosas
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -150,4 +165,5 @@ module.exports = {
   anularProducto,
   habilitarProducto,
   eliminarProductoFisico,
+  cambiarEstadoProducto, // <-- Nueva función exportada
 };

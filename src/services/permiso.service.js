@@ -1,13 +1,28 @@
 // src/services/permiso.service.js
-const db = require("../models"); // Ajusta la ruta a tu index.js de modelos
+const db = require("../models");
 const { Op } = db.Sequelize;
-const { NotFoundError, ConflictError, CustomError } = require("../errors"); // Ajusta la ruta si es necesario
+const { NotFoundError, ConflictError, CustomError } = require("../errors");
+
+/**
+ * Helper interno para cambiar el estado de un permiso.
+ * @param {number} idPermiso - ID del permiso.
+ * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
+ * @returns {Promise<object>} El permiso con el estado cambiado.
+ */
+const cambiarEstadoPermiso = async (idPermiso, nuevoEstado) => {
+  const permiso = await db.Permisos.findByPk(idPermiso);
+  if (!permiso) {
+    throw new NotFoundError("Permiso no encontrado para cambiar estado.");
+  }
+  if (permiso.estado === nuevoEstado) {
+    return permiso; // Ya está en el estado deseado
+  }
+  await permiso.update({ estado: nuevoEstado });
+  return permiso;
+};
 
 /**
  * Crear un nuevo permiso.
- * @param {object} datosPermiso - Datos del permiso a crear ({ nombre, descripcion, estado }).
- * @returns {Promise<object>} El permiso creado.
- * @throws {Error} Si el nombre del permiso ya existe o hay otros errores.
  */
 const crearPermiso = async (datosPermiso) => {
   const { nombre, descripcion, estado } = datosPermiso;
@@ -21,7 +36,7 @@ const crearPermiso = async (datosPermiso) => {
     const nuevoPermiso = await db.Permisos.create({
       nombre,
       descripcion,
-      estado: typeof estado === "boolean" ? estado : true, // Valor por defecto true si no se especifica
+      estado: typeof estado === "boolean" ? estado : true,
     });
     return nuevoPermiso;
   } catch (error) {
@@ -32,8 +47,6 @@ const crearPermiso = async (datosPermiso) => {
 
 /**
  * Obtener todos los permisos.
- * @param {object} [opcionesDeFiltro={}] - Opciones para filtrar (ej. { estado: true } para solo activos).
- * @returns {Promise<Array<object>>} Lista de permisos.
  */
 const obtenerTodosLosPermisos = async (opcionesDeFiltro = {}) => {
   try {
@@ -49,8 +62,6 @@ const obtenerTodosLosPermisos = async (opcionesDeFiltro = {}) => {
 
 /**
  * Obtener un permiso por su ID.
- * @param {number} idPermiso - ID del permiso.
- * @returns {Promise<object|null>} El permiso encontrado o null si no existe.
  */
 const obtenerPermisoPorId = async (idPermiso) => {
   try {
@@ -71,10 +82,6 @@ const obtenerPermisoPorId = async (idPermiso) => {
 
 /**
  * Actualizar (Editar) un permiso existente.
- * @param {number} idPermiso - ID del permiso a actualizar.
- * @param {object} datosActualizar - Datos para actualizar el permiso ({ nombre?, descripcion?, estado? }).
- * @returns {Promise<object>} El permiso actualizado.
- * @throws {Error} Si el permiso no se encuentra (404) o si el nuevo nombre de permiso ya existe para otro permiso (409).
  */
 const actualizarPermiso = async (idPermiso, datosActualizar) => {
   try {
@@ -115,21 +122,10 @@ const actualizarPermiso = async (idPermiso, datosActualizar) => {
 
 /**
  * Anular un permiso (borrado lógico, establece estado = false).
- * @param {number} idPermiso - ID del permiso a anular.
- * @returns {Promise<object>} El permiso anulado.
- * @throws {Error} Si el permiso no se encuentra (404).
  */
 const anularPermiso = async (idPermiso) => {
   try {
-    const permiso = await db.Permisos.findByPk(idPermiso);
-    if (!permiso) {
-      throw new NotFoundError("Permiso no encontrado para anular.");
-    }
-    if (!permiso.estado) {
-      return permiso; // Ya está anulado
-    }
-    await permiso.update({ estado: false });
-    return permiso;
+    return await cambiarEstadoPermiso(idPermiso, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -142,21 +138,10 @@ const anularPermiso = async (idPermiso) => {
 
 /**
  * Habilitar un permiso (cambia estado = true).
- * @param {number} idPermiso - ID del permiso a habilitar.
- * @returns {Promise<object>} El permiso habilitado.
- * @throws {Error} Si el permiso no se encuentra (404).
  */
 const habilitarPermiso = async (idPermiso) => {
   try {
-    const permiso = await db.Permisos.findByPk(idPermiso);
-    if (!permiso) {
-      throw new NotFoundError("Permiso no encontrado para habilitar.");
-    }
-    if (permiso.estado) {
-      return permiso; // Ya está habilitado
-    }
-    await permiso.update({ estado: true });
-    return permiso;
+    return await cambiarEstadoPermiso(idPermiso, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     console.error(
@@ -172,10 +157,6 @@ const habilitarPermiso = async (idPermiso) => {
 
 /**
  * Eliminar un permiso físicamente de la base de datos.
- * ¡ADVERTENCIA: Esta acción es destructiva! Considerar las implicaciones en la tabla PermisosXRol.
- * @param {number} idPermiso - ID del permiso a eliminar físicamente.
- * @returns {Promise<number>} El número de filas eliminadas (debería ser 1 o 0).
- * @throws {Error} Si el permiso no se encuentra (404) o si hay un error de restricción de clave foránea.
  */
 const eliminarPermisoFisico = async (idPermiso) => {
   try {
@@ -185,18 +166,12 @@ const eliminarPermisoFisico = async (idPermiso) => {
         "Permiso no encontrado para eliminar físicamente."
       );
     }
-
-    // ADVERTENCIA: La eliminación física en la tabla 'Permisos' provocará que las entradas
-    // correspondientes en 'PermisosXRol' se eliminen automáticamente debido al ON DELETE CASCADE.
-    // Esto es importante tenerlo en cuenta.
     const filasEliminadas = await db.Permisos.destroy({
       where: { idPermiso },
     });
     return filasEliminadas;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    // SequelizeForeignKeyConstraintError podría no ser el error directo aquí si PermisosXRol se borra en cascada.
-    // Pero si otra tabla referenciara Permisos sin ON DELETE CASCADE, podría ocurrir.
     console.error(
       `Error al eliminar físicamente el permiso con ID ${idPermiso} en el servicio:`,
       error.message
@@ -216,4 +191,5 @@ module.exports = {
   anularPermiso,
   habilitarPermiso,
   eliminarPermisoFisico,
+  cambiarEstadoPermiso, // Exportar la nueva función
 };

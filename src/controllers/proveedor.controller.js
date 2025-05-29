@@ -1,13 +1,11 @@
 // src/controllers/proveedor.controller.js
-const proveedorService = require("../services/proveedor.service.js"); // Ajusta la ruta si es necesario
+const proveedorService = require("../services/proveedor.service.js");
 
 /**
  * Crea un nuevo proveedor.
  */
 const crearProveedor = async (req, res, next) => {
   try {
-    // Asumimos que el req.body ya viene con claves en camelCase si es necesario
-    // ej. nitEmpresa, tipoDocumento, numeroDocumento
     const nuevoProveedor = await proveedorService.crearProveedor(req.body);
     res.status(201).json({
       success: true,
@@ -15,13 +13,12 @@ const crearProveedor = async (req, res, next) => {
       data: nuevoProveedor,
     });
   } catch (error) {
-    next(error); // Pasa el error al manejador global
+    next(error);
   }
 };
 
 /**
  * Obtiene una lista de todos los proveedores.
- * Permite filtrar por query params, ej. ?estado=true&tipo=Empresa
  */
 const listarProveedores = async (req, res, next) => {
   try {
@@ -34,8 +31,6 @@ const listarProveedores = async (req, res, next) => {
     if (req.query.tipo) {
       opcionesDeFiltro.tipo = req.query.tipo;
     }
-    // Podrías añadir más filtros aquí si son necesarios
-
     const proveedores = await proveedorService.obtenerTodosLosProveedores(
       opcionesDeFiltro
     );
@@ -57,7 +52,6 @@ const obtenerProveedorPorId = async (req, res, next) => {
     const proveedor = await proveedorService.obtenerProveedorPorId(
       Number(idProveedor)
     );
-    // El servicio ya lanza NotFoundError si no se encuentra
     res.status(200).json({
       success: true,
       data: proveedor,
@@ -77,10 +71,31 @@ const actualizarProveedor = async (req, res, next) => {
       Number(idProveedor),
       req.body
     );
-    // El servicio ya lanza errores específicos (NotFoundError, ConflictError)
     res.status(200).json({
       success: true,
       message: "Proveedor actualizado exitosamente.",
+      data: proveedorActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado (activo/inactivo) de un proveedor.
+ */
+const cambiarEstadoProveedor = async (req, res, next) => {
+  try {
+    const { idProveedor } = req.params;
+    const { estado } = req.body; // Se espera un booleano
+
+    const proveedorActualizado = await proveedorService.cambiarEstadoProveedor(
+      Number(idProveedor),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado del proveedor ID ${idProveedor} cambiado a ${estado} exitosamente.`,
       data: proveedorActualizado,
     });
   } catch (error) {
@@ -133,8 +148,7 @@ const eliminarProveedorFisico = async (req, res, next) => {
   try {
     const { idProveedor } = req.params;
     await proveedorService.eliminarProveedorFisico(Number(idProveedor));
-    // El servicio lanza NotFoundError o ConflictError
-    res.status(204).send(); // 204 No Content para eliminaciones físicas exitosas
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -148,4 +162,5 @@ module.exports = {
   anularProveedor,
   habilitarProveedor,
   eliminarProveedorFisico,
+  cambiarEstadoProveedor, // <-- Nueva función exportada
 };

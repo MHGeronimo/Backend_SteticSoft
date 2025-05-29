@@ -53,7 +53,6 @@ const crearCompraValidators = [
           p.productoId <= 0 ||
           !Number.isInteger(p.productoId)
         ) {
-          // Añadido Number.isInteger
           throw new Error(
             'Cada producto debe tener un "productoId" (entero positivo) válido.'
           );
@@ -83,7 +82,7 @@ const crearCompraValidators = [
     .optional({ checkFalsy: true })
     .isFloat({ gt: -0.01 })
     .withMessage("El IVA debe ser un número no negativo."),
-  body("estado") // NUEVO CAMPO EN VALIDACIÓN
+  body("estado")
     .optional()
     .isBoolean()
     .withMessage(
@@ -137,15 +136,12 @@ const actualizarCompraValidators = [
       }
       return true;
     }),
-  body("estado") // NUEVO CAMPO EN VALIDACIÓN
+  body("estado")
     .optional()
     .isBoolean()
     .withMessage(
       "El estado de la compra debe ser un valor booleano (true o false) si se actualiza."
     ),
-  // No se incluyen validadores para 'productos', 'total', o 'iva' aquí en la actualización de cabecera,
-  // ya que su modificación es compleja y podría requerir endpoints/lógica separada.
-  // Si se permite actualizar 'total' o 'iva' directamente, añadir sus validaciones aquí.
   handleValidationErrors,
 ];
 
@@ -156,8 +152,24 @@ const idCompraValidator = [
   handleValidationErrors,
 ];
 
+// Nuevo validador para cambiar el estado
+const cambiarEstadoCompraValidators = [
+  param("idCompra")
+    .isInt({ gt: 0 })
+    .withMessage("El ID de la compra debe ser un entero positivo."),
+  body("estado")
+    .exists({ checkFalsy: false })
+    .withMessage(
+      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
+    )
+    .isBoolean()
+    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+  handleValidationErrors,
+];
+
 module.exports = {
   crearCompraValidators,
   actualizarCompraValidators,
   idCompraValidator,
+  cambiarEstadoCompraValidators, // <-- Exportar nuevo validador
 };

@@ -42,6 +42,15 @@ router.put(
   especialidadController.actualizarEspecialidad
 );
 
+// NUEVA RUTA: Cambiar el estado de una especialidad
+router.patch(
+  "/:idEspecialidad/estado",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_ESPECIALIDADES),
+  especialidadValidators.cambiarEstadoEspecialidadValidators,
+  especialidadController.cambiarEstadoEspecialidad
+);
+
 router.patch(
   "/:idEspecialidad/anular",
   authMiddleware,
