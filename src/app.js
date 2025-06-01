@@ -32,8 +32,10 @@ app.use(helmet());
 // 2. CORS (Cross-Origin Resource Sharing): Permite o restringe las solicitudes de diferentes orígenes.
 app.use(
   cors({
-    origin: CORS_ORIGIN, // Origen(s) permitidos (desde variables de entorno)
-    credentials: true, // Permite el envío de cookies y cabeceras de autorización
+    origin: CORS_ORIGIN, // Esto ahora recibe la salida de getCorsOriginLogic()
+    credentials: true,
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE", // Es bueno ser explícito
+    optionsSuccessStatus: 204,
   })
 );
 
