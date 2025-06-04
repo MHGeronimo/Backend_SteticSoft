@@ -27,14 +27,14 @@ module.exports = (sequelize, DataTypes) => {
       },
       idRol: {
         type: DataTypes.INTEGER,
-        allowNull: true, // Mantenido como true según DDL
+        allowNull: true,
         field: "idrol",
         references: { model: "rol", key: "idrol" },
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-        allowNull: false, // Ajustado por DDL: DEFAULT TRUE NOT NULL
+        allowNull: false,
         field: "estado",
       },
     },
@@ -57,9 +57,15 @@ module.exports = (sequelize, DataTypes) => {
         as: "clienteInfo",
       });
     }
+    if (models.Empleado) {
+      Usuario.hasOne(models.Empleado, {
+        foreignKey: { name: "idUsuario", field: "idusuario", unique: true }, // Asume que Empleado.idusuario es la FK
+        as: "empleadoInfo", // Alias para la relación
+      });
+    }
     if (models.TokenRecuperacion) {
       Usuario.hasMany(models.TokenRecuperacion, {
-        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false }, // En TokenRecuperacion idUsuario es NOT NULL
+        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false },
         as: "tokensRecuperacion",
       });
     }

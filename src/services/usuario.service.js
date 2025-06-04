@@ -69,50 +69,95 @@ const crearUsuario = async (datosUsuario) => {
         `El correo electrónico '${correo}' ya está registrado.`
       );
     }
-    console.error("Error al crear el usuario en el servicio:", error.message);
+    // console.error("Error al crear el usuario en el servicio:", error.message); // Comentado según solicitud previa
     throw new CustomError(`Error al crear el usuario: ${error.message}`, 500);
   }
 };
 
 /**
- * Obtener todos los usuarios.
+ * Obtener todos los usuarios con su rol y perfil de Cliente asociado.
  */
 const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
   try {
     const usuarios = await db.Usuario.findAll({
       where: opcionesDeFiltro,
-      attributes: { exclude: ["contrasena"] },
+      attributes: ["idUsuario", "correo", "estado", "idRol"], // Campos explícitos de la tabla Usuario
       include: [
         {
           model: db.Rol,
-          as: "rol",
-          attributes: ["idRol", "nombre"],
+          as: "rol", // Alias definido en Usuario.model.js
+          attributes: ["idRol", "nombre"], // Campos que quieres del Rol
         },
+        {
+          model: db.Cliente,
+          as: "clienteInfo", // Alias definido en Usuario.model.js
+          attributes: [ // Campos que quieres del Cliente
+            "idCliente",
+            "nombre",
+            "apellido",
+            "telefono",
+            "tipoDocumento",
+            "numeroDocumento",
+            "fechaNacimiento",
+            // 'estado' del cliente podría ser redundante si el 'estado' principal es el del Usuario
+          ],
+          required: false, // Importante: usa LEFT JOIN para traer usuarios aunque no tengan perfil de Cliente
+        },
+        // NOTA: Para incluir "empleadoInfo", primero necesitarías definir la asociación
+        // en Usuario.model.js y asegurar que la tabla Empleado tenga un idUsuario.
+        // {
+        //   model: db.Empleado,
+        //   as: "empleadoInfo",
+        //   attributes: [/* ... */],
+        //   required: false,
+        // },
       ],
+      order: [["idUsuario", "ASC"]], // Opcional: para ordenar los resultados
     });
     return usuarios;
   } catch (error) {
-    console.error(
-      "Error al obtener todos los usuarios en el servicio:",
-      error.message
-    );
+    // console.error( // Comentado según solicitud previa
+    //   "Error al obtener todos los usuarios en el servicio:",
+    //   error.message
+    // );
     throw new CustomError(`Error al obtener usuarios: ${error.message}`, 500);
   }
 };
 
 /**
- * Obtener un usuario por su ID.
+ * Obtener un usuario por su ID, incluyendo su rol y perfil de Cliente.
  */
 const obtenerUsuarioPorId = async (idUsuario) => {
   try {
     const usuario = await db.Usuario.findByPk(idUsuario, {
-      attributes: { exclude: ["contrasena"] },
+      attributes: ["idUsuario", "correo", "estado", "idRol"], // Campos explícitos de la tabla Usuario
       include: [
         {
           model: db.Rol,
-          as: "rol",
+          as: "rol", // Alias definido en Usuario.model.js
           attributes: ["idRol", "nombre"],
         },
+        {
+          model: db.Cliente,
+          as: "clienteInfo", // Alias definido en Usuario.model.js
+          attributes: [
+            "idCliente",
+            "nombre",
+            "apellido",
+            "telefono",
+            "tipoDocumento",
+            "numeroDocumento",
+            "fechaNacimiento",
+          ],
+          required: false, // LEFT JOIN
+        },
+        // NOTA: Incluir "empleadoInfo" seguiría la misma lógica que en obtenerTodosLosUsuarios
+        // {
+        //   model: db.Empleado,
+        //   as: "empleadoInfo",
+        //   attributes: [/* ... */],
+        //   required: false,
+        // },
       ],
     });
     if (!usuario) {
@@ -121,16 +166,18 @@ const obtenerUsuarioPorId = async (idUsuario) => {
     return usuario;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al obtener el usuario con ID ${idUsuario} en el servicio:`,
-      error.message
-    );
+    // console.error( // Comentado según solicitud previa
+    //   `Error al obtener el usuario con ID ${idUsuario} en el servicio:`,
+    //   error.message
+    // );
     throw new CustomError(`Error al obtener el usuario: ${error.message}`, 500);
   }
 };
 
 /**
  * Actualizar (Editar) un usuario existente.
+ * NOTA: Esta función actualmente solo actualiza la tabla Usuario.
+ * Para actualizar el perfil (Cliente/Empleado) necesitaría lógica adicional.
  */
 const actualizarUsuario = async (idUsuario, datosActualizar) => {
   try {
@@ -139,6 +186,7 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
       throw new NotFoundError("Usuario no encontrado para actualizar.");
     }
 
+    // Lógica para validar correo, contraseña y rol (sin cambios respecto a tu original)
     if (datosActualizar.correo && datosActualizar.correo !== usuario.correo) {
       const usuarioConMismoCorreo = await db.Usuario.findOne({
         where: {
@@ -170,7 +218,11 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
         );
       }
     }
+    // FIN Lógica de validación
 
+    // Actualizar solo la tabla Usuario (como estaba en tu código original)
+    // Si `datosActualizar` también contiene campos del perfil (ej. `datosActualizar.nombre`),
+    // se necesitaría lógica adicional aquí para actualizar el modelo Cliente/Empleado asociado.
     await usuario.update(datosActualizar);
     const { contrasena: _, ...usuarioActualizadoSinContrasena } =
       usuario.toJSON();
@@ -187,10 +239,10 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
         `El correo electrónico '${datosActualizar.correo}' ya está registrado por otro usuario.`
       );
     }
-    console.error(
-      `Error al actualizar el usuario con ID ${idUsuario} en el servicio:`,
-      error.message
-    );
+    // console.error( // Comentado según solicitud previa
+    //   `Error al actualizar el usuario con ID ${idUsuario} en el servicio:`,
+    //   error.message
+    // );
     throw new CustomError(
       `Error al actualizar el usuario: ${error.message}`,
       500
@@ -206,10 +258,10 @@ const anularUsuario = async (idUsuario) => {
     return await cambiarEstadoUsuario(idUsuario, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al anular el usuario con ID ${idUsuario} en el servicio:`,
-      error.message
-    );
+    // console.error( // Comentado según solicitud previa
+    //   `Error al anular el usuario con ID ${idUsuario} en el servicio:`,
+    //   error.message
+    // );
     throw new CustomError(`Error al anular el usuario: ${error.message}`, 500);
   }
 };
@@ -222,10 +274,10 @@ const habilitarUsuario = async (idUsuario) => {
     return await cambiarEstadoUsuario(idUsuario, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al habilitar el usuario con ID ${idUsuario} en el servicio:`,
-      error.message
-    );
+    // console.error( // Comentado según solicitud previa
+    //   `Error al habilitar el usuario con ID ${idUsuario} en el servicio:`,
+    //   error.message
+    // );
     throw new CustomError(
       `Error al habilitar el usuario: ${error.message}`,
       500
@@ -255,10 +307,10 @@ const eliminarUsuarioFisico = async (idUsuario) => {
         "No se puede eliminar el usuario porque está siendo referenciado por otras entidades (ej. Cliente). Considere anularlo."
       );
     }
-    console.error(
-      `Error al eliminar físicamente el usuario con ID ${idUsuario} en el servicio:`,
-      error.message
-    );
+    // console.error( // Comentado según solicitud previa
+    //   `Error al eliminar físicamente el usuario con ID ${idUsuario} en el servicio:`,
+    //   error.message
+    // );
     throw new CustomError(
       `Error al eliminar físicamente el usuario: ${error.message}`,
       500
@@ -274,5 +326,5 @@ module.exports = {
   anularUsuario,
   habilitarUsuario,
   eliminarUsuarioFisico,
-  cambiarEstadoUsuario, // Exportar la nueva función
+  cambiarEstadoUsuario,
 };
