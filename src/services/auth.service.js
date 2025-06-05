@@ -1,4 +1,4 @@
-// src/services/auth.service.js
+// src/shared/src_api/services/auth.service.js
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -15,13 +15,12 @@ const {
   EMAIL_FROM,
   APP_NAME,
   FRONTEND_URL,
-} = require("../config/env.config"); // Añadido FRONTEND_URL y APP_NAME
+} = require("../config/env.config");
 const mailerService = require("./mailer.service.js");
-// No necesitamos importar usuarioService aquí si la creación de usuario se maneja completamente en este servicio de auth.
 
 const JWT_EXPIRATION = "1d";
 const TOKEN_RECUPERACION_EXPIRATION_MINUTES = 60;
-const saltRounds = 10; // Definido para bcrypt
+const saltRounds = 10;
 
 /**
  * Registra un nuevo usuario y su perfil de cliente asociado.
@@ -41,7 +40,6 @@ const registrarUsuario = async (datosRegistro) => {
     fechaNacimiento,
   } = datosRegistro;
 
-  // Verificar si el correo del usuario ya existe
   const usuarioExistente = await db.Usuario.findOne({ where: { correo } });
   if (usuarioExistente) {
     throw new ConflictError(
@@ -49,7 +47,6 @@ const registrarUsuario = async (datosRegistro) => {
     );
   }
 
-  // Verificar si el número de documento del cliente ya existe
   const clienteConDocumento = await db.Cliente.findOne({
     where: { numeroDocumento },
   });
@@ -59,7 +56,6 @@ const registrarUsuario = async (datosRegistro) => {
     );
   }
 
-  // Verificar si el correo del cliente ya existe (si es diferente al correo del usuario, aunque aquí se asume que es el mismo)
   const clienteConCorreo = await db.Cliente.findOne({ where: { correo } });
   if (clienteConCorreo) {
     throw new ConflictError(
@@ -87,23 +83,22 @@ const registrarUsuario = async (datosRegistro) => {
         correo,
         contrasena: contrasenaHasheada,
         idRol: rolCliente.idRol,
-        estado: true, // Los usuarios se activan por defecto
+        estado: true,
       },
       { transaction }
     );
 
-    // Crear el registro de Cliente asociado
     await db.Cliente.create(
       {
-        idUsuario: nuevoUsuario.idUsuario, // Vincula con el Usuario creado
+        idUsuario: nuevoUsuario.idUsuario,
         nombre,
         apellido,
-        correo, // Usamos el mismo correo para el perfil de cliente
+        correo,
         telefono,
         tipoDocumento,
         numeroDocumento,
         fechaNacimiento,
-        estado: true, // El perfil de cliente también se activa por defecto
+        estado: true,
       },
       { transaction }
     );
@@ -120,7 +115,6 @@ const registrarUsuario = async (datosRegistro) => {
 
     const { contrasena: _, ...usuarioSinContrasena } = nuevoUsuario.toJSON();
 
-    // Enviar correo de bienvenida
     try {
       const htmlBienvenida = `
         <div style="font-family: Arial, sans-serif; color: #333;">
@@ -145,10 +139,8 @@ const registrarUsuario = async (datosRegistro) => {
     return { usuario: usuarioSinContrasena, token };
   } catch (error) {
     await transaction.rollback();
-    if (error instanceof ConflictError) throw error; // Si las validaciones previas fallan
+    if (error instanceof ConflictError) throw error;
     if (error.name === "SequelizeUniqueConstraintError") {
-      // Esto podría ser por 'correo' en Usuario o 'numeroDocumento' en Cliente, o 'correo' en Cliente
-      // Los validadores deberían haberlo capturado, pero es una salvaguarda.
       let mensajeConflicto =
         "Uno de los datos proporcionados ya está en uso (correo o número de documento).";
       if (error.fields) {
@@ -172,29 +164,68 @@ const registrarUsuario = async (datosRegistro) => {
 };
 
 const loginUsuario = async (correo, contrasena) => {
-  // ... (sin cambios respecto a la versión anterior)
+  // 1. Se modifica la consulta para incluir los permisos del rol
   const usuario = await db.Usuario.findOne({
     where: { correo, estado: true },
-    include: [{ model: db.Rol, as: "rol", attributes: ["idRol", "nombre"] }],
+    include: [
+      {
+        model: db.Rol,
+        as: "rol",
+        attributes: ["idRol", "nombre"],
+        include: [
+          // <-- Incluimos los permisos asociados al rol
+          {
+            model: db.Permisos,
+            as: "permisos",
+            attributes: ["nombre"],
+            through: { attributes: [] },
+            where: { estado: true },
+            required: false,
+          },
+        ],
+      },
+    ],
   });
 
   if (!usuario) {
     throw new UnauthorizedError("Credenciales inválidas.");
   }
+
   const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
   if (!contrasenaValida) {
     throw new UnauthorizedError("Credenciales inválidas.");
   }
 
+  // 2. Procesamos los permisos para enviarlos de forma plana en la respuesta
+  const permisosDelUsuario = usuario.rol?.permisos?.map((p) => p.nombre) || [];
+
+  // El payload del JWT se mantiene ligero, sin la lista completa de permisos
   const payload = {
     idUsuario: usuario.idUsuario,
     idRol: usuario.idRol,
     rolNombre: usuario.rol ? usuario.rol.nombre : null,
     correo: usuario.correo,
   };
+
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
-  const { contrasena: _, ...usuarioSinContrasena } = usuario.toJSON();
-  return { usuario: usuarioSinContrasena, token };
+
+  const { contrasena: _, ...usuarioData } = usuario.toJSON();
+
+  // 3. Preparamos el objeto de usuario para el frontend
+  const usuarioParaFrontend = {
+    ...usuarioData,
+    rol: usuario.rol
+      ? { idRol: usuario.rol.idRol, nombre: usuario.rol.nombre }
+      : null,
+    permisos: permisosDelUsuario, // <-- ¡Aquí añadimos el array plano de permisos!
+  };
+
+  // Limpiamos la info anidada que ya no es necesaria
+  if (usuarioParaFrontend.rol) {
+    delete usuarioParaFrontend.rol.permisos;
+  }
+
+  return { usuario: usuarioParaFrontend, token };
 };
 
 const solicitarRecuperacionContrasena = async (correo) => {
@@ -253,7 +284,9 @@ const solicitarRecuperacionContrasena = async (correo) => {
 };
 
 const validarTokenRecuperacion = async (token) => {
-  // ... (sin cambios respecto a la versión anterior)
+  // Necesitamos Op de Sequelize para la comparación de fechas
+  const { Op } = require("sequelize");
+
   if (!token)
     throw new BadRequestError(
       "Token de recuperación no proporcionado o inválido."
@@ -267,7 +300,6 @@ const validarTokenRecuperacion = async (token) => {
 };
 
 const resetearContrasena = async (token, nuevaContrasena) => {
-  // ... (sin cambios respecto a la versión anterior, pero asegurar el correo de confirmación)
   const tokenDataValido = await validarTokenRecuperacion(token);
   const usuario = await db.Usuario.findByPk(tokenDataValido.idUsuario);
   if (!usuario || !usuario.estado)
