@@ -1,4 +1,4 @@
-// src/models/Empleado.model.js
+// src/shared/src_api/models/Empleado.model.js
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
@@ -11,7 +11,11 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         field: "idempleado",
       },
-      nombre: { type: DataTypes.STRING(100), field: "nombre" }, // Ajustado en tu archivo original a STRING(100)
+      nombre: {
+        type: DataTypes.STRING(100),
+        field: "nombre",
+        allowNull: false,
+      },
       tipoDocumento: {
         type: DataTypes.TEXT,
         allowNull: false,
@@ -28,26 +32,25 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "fechanacimiento",
       },
-      celular: { type: DataTypes.STRING(45), field: "celular" },
+      celular: { type: DataTypes.STRING(45), field: "celular" }, // Podría ser obligatorio
       estado: {
+        // Estado del perfil del empleado
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
         field: "estado",
       },
-      // --- INICIO DE CAMBIO: Añadir idUsuario ---
       idUsuario: {
+        // Clave Foránea para vincular con la tabla Usuario
         type: DataTypes.INTEGER,
-        allowNull: true, // O false, dependiendo si un empleado SIEMPRE debe tener una cuenta de usuario
-        unique: true,    // Un usuario solo puede estar vinculado a un empleado
-        field: "idusuario", // Nombre de la columna en la base de datos
+        allowNull: false, // Un perfil de Empleado DEBE estar asociado a un Usuario
+        unique: true, // Un Usuario solo puede tener un perfil de Empleado
+        field: "idusuario",
         references: {
-          model: "usuario", // Nombre de la tabla 'usuario'
-          key: "idusuario",   // Nombre de la columna 'idusuario' en la tabla 'usuario'
+          model: "usuario",
+          key: "idusuario",
         },
-        // onDelete y onUpdate se definen a nivel de base de datos con ALTER TABLE o migración
       },
-      // --- FIN DE CAMBIO ---
     },
     {
       tableName: "empleado",
@@ -56,54 +59,46 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Empleado.associate = (models) => {
-    // --- INICIO DE CAMBIO: Añadir asociación con Usuario ---
+    // Un Empleado pertenece a una cuenta de Usuario
     if (models.Usuario) {
       Empleado.belongsTo(models.Usuario, {
-        foreignKey: { 
-          name: "idUsuario", // Nombre de la FK en el modelo Empleado
-          field: "idusuario"  // Nombre de la columna FK en la tabla empleado
-        }, 
-        as: "cuentaUsuario", // Alias para acceder al Usuario desde una instancia de Empleado
-                              // Ejemplo: empleado.getCuentaUsuario()
+        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false },
+        as: "cuentaUsuario", // Alias para acceder al Usuario desde Empleado
       });
     }
-    // --- FIN DE CAMBIO ---
 
-    // Tus asociaciones existentes:
+    // Tus asociaciones existentes para Empleado:
     if (models.Especialidad && models.EmpleadoEspecialidad) {
       Empleado.belongsToMany(models.Especialidad, {
         through: models.EmpleadoEspecialidad,
-        foreignKey: { name: "idEmpleado", field: "idempleado" }, // Corregido: debe ser el campo de Empleado en la tabla intermedia
-        otherKey: { name: "idEspecialidad", field: "idespecialidad" }, // Corregido: debe ser el campo de Especialidad
+        foreignKey: { name: "idEmpleado", field: "idempleado" },
+        otherKey: { name: "idEspecialidad", field: "idespecialidad" },
         as: "especialidades",
       });
     }
     if (models.Cita) {
       Empleado.hasMany(models.Cita, {
-        // Asumiendo que en Cita.model.js, la FK a empleado es 'empleado_idempleado'
-        // y el 'name' de la FK en Cita.model.js es 'Empleado_idEmpleado'
-        foreignKey: { name: "Empleado_idEmpleado", field: "empleado_idempleado" }, // Mantenido como estaba en tu archivo
-        as: "citasAtendidas", // Cambiado de 'citasAsignadas' si este alias es más preciso o el que usas
+        foreignKey: {
+          name: "Empleado_idEmpleado",
+          field: "empleado_idempleado",
+        }, // Revisa si este es el nombre de la FK en Cita
+        as: "citasAtendidas",
       });
     }
     if (models.Abastecimiento) {
       Empleado.hasMany(models.Abastecimiento, {
-        // Asumiendo que en Abastecimiento.model.js, la FK es 'empleado_asignado'
-        // y el 'name' de la FK es 'empleadoAsignado'
-        foreignKey: { name: "empleadoAsignado", field: "empleado_asignado" }, // Mantenido como estaba
+        foreignKey: { name: "empleado_asignado", field: "empleado_asignado" }, // Revisa si este es el nombre de la FK en Abastecimiento
         as: "abastecimientosAsignados",
       });
     }
     if (models.Novedades) {
       Empleado.hasMany(models.Novedades, {
-        // Asumiendo que en Novedades.model.js, la FK es 'empleado_idempleado'
-        // y el 'name' de la FK es 'empleadoId'
         foreignKey: {
-          name: "Empleado_idEmpleado", // Mantenido como estaba
-          field: "empleado_idempleado", // Mantenido como estaba
+          name: "Empleado_idEmpleado", // Revisa si este es el nombre de la FK en Novedades
+          field: "empleado_idempleado",
           allowNull: false,
         },
-        as: "novedadesHorario", // Cambiado de 'novedades' si este alias es más preciso o el que usas
+        as: "novedadesHorario",
       });
     }
   };

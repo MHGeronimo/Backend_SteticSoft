@@ -1,4 +1,4 @@
-// src/models/Usuario.model.js
+// src/shared/src_api/models/Usuario.model.js
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       idRol: {
         type: DataTypes.INTEGER,
-        allowNull: true,
+        allowNull: false, // Un usuario siempre debe tener un rol
         field: "idrol",
         references: { model: "rol", key: "idrol" },
       },
@@ -45,24 +45,31 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Usuario.associate = (models) => {
+    // Un Usuario pertenece a un Rol
     if (models.Rol) {
       Usuario.belongsTo(models.Rol, {
-        foreignKey: { name: "idRol", field: "idrol" },
-        as: "rol",
+        foreignKey: { name: "idRol", field: "idrol", allowNull: false },
+        as: "rol", // Alias para acceder a la info del rol
       });
     }
+
+    // Un Usuario puede tener un perfil de Cliente (relación uno a uno)
     if (models.Cliente) {
       Usuario.hasOne(models.Cliente, {
-        foreignKey: { name: "idUsuario", field: "idusuario", unique: true },
-        as: "clienteInfo",
+        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false, unique: true }, // FK en la tabla Cliente
+        as: "clienteInfo", // Alias para acceder a la info del cliente
       });
     }
-    if (models.Empleado) {
+
+    // Un Usuario puede tener un perfil de Empleado (relación uno a uno)
+    if (models.Empleado) { 
       Usuario.hasOne(models.Empleado, {
-        foreignKey: { name: "idUsuario", field: "idusuario", unique: true }, // Asume que Empleado.idusuario es la FK
-        as: "empleadoInfo", // Alias para la relación
+        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false, unique: true }, // FK en la tabla Empleado
+        as: "empleadoInfo", // Alias para acceder a la info del empleado
       });
     }
+
+    // Un Usuario puede tener muchos Tokens de Recuperación
     if (models.TokenRecuperacion) {
       Usuario.hasMany(models.TokenRecuperacion, {
         foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false },

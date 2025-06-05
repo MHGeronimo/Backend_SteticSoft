@@ -1,4 +1,5 @@
-// src/services/cliente.service.js
+// src/shared/src_api/services/cliente.service.js
+const bcrypt = require("bcrypt");
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -8,107 +9,122 @@ const {
   BadRequestError,
 } = require("../errors");
 
+const saltRounds = 10; // Para hashear contraseñas
+
 /**
  * Helper interno para cambiar el estado de un cliente.
- * @param {number} idCliente - ID del cliente.
- * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
- * @returns {Promise<object>} El cliente con el estado cambiado.
+ * Considerar si esto también debe afectar el estado del Usuario asociado.
  */
 const cambiarEstadoCliente = async (idCliente, nuevoEstado) => {
   const cliente = await db.Cliente.findByPk(idCliente);
   if (!cliente) {
     throw new NotFoundError("Cliente no encontrado para cambiar estado.");
   }
-  if (cliente.estado === nuevoEstado) {
-    return cliente; // Ya está en el estado deseado
-  }
+  // Opcional: Sincronizar estado con la cuenta de Usuario si la lógica de negocio lo requiere
+  // if (cliente.idUsuario) {
+  //   await db.Usuario.update({ estado: nuevoEstado }, { where: { idUsuario: cliente.idUsuario } });
+  // }
+  if (cliente.estado === nuevoEstado) return cliente;
   await cliente.update({ estado: nuevoEstado });
   return cliente;
 };
 
 /**
- * Crear un nuevo cliente.
+ * Crea un nuevo perfil de Cliente y su cuenta de Usuario asociada.
+ * Espera todos los datos necesarios para ambas entidades.
  */
-const crearCliente = async (datosCliente) => {
+const crearCliente = async (datosCompletos) => {
   const {
+    // Datos para Usuario
+    correo,             // Correo para la cuenta de Usuario y perfil Cliente
+    contrasena,         // Contraseña para la nueva cuenta de Usuario
+    // idRol ya no se pasaría, se asume Rol "Cliente"
+    // estadoUsuario (opcional, por defecto true para Usuario)
+
+    // Datos para Cliente
     nombre,
     apellido,
-    correo,
     telefono,
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
-    idUsuario, 
-    estado,
-  } = datosCliente;
+    // direccion, // Si decides usarlo
+    estadoCliente, // Estado para el perfil de Cliente (opcional, por defecto true)
+  } = datosCompletos;
 
-  let clienteExistente = await db.Cliente.findOne({
-    where: { numeroDocumento },
-  });
-  if (clienteExistente) {
-    throw new ConflictError(
-      `El número de documento '${numeroDocumento}' ya está registrado para otro cliente.`
-    );
+  // Validaciones previas
+  if (!correo || !contrasena || !nombre || !apellido || !telefono || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
+    throw new BadRequestError("Faltan campos obligatorios para crear el cliente y su cuenta de usuario.");
   }
 
-  if (correo) {
-    clienteExistente = await db.Cliente.findOne({ where: { correo } });
-    if (clienteExistente) {
-      throw new ConflictError(
-        `El correo electrónico '${correo}' ya está registrado para otro cliente.`
-      );
-    }
+  let usuarioExistente = await db.Usuario.findOne({ where: { correo } });
+  if (usuarioExistente) {
+    throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para una cuenta de Usuario.`);
   }
 
-  if (idUsuario) {
-    const usuario = await db.Usuario.findByPk(idUsuario);
-    if (!usuario) {
-      throw new BadRequestError(`El usuario con ID ${idUsuario} no existe.`);
-    }
-    const otroClienteConEsteUsuario = await db.Cliente.findOne({
-      where: { idUsuario },
-    });
-    if (otroClienteConEsteUsuario) {
-      throw new ConflictError(
-        `El usuario con ID ${idUsuario} ya está asociado a otro cliente.`
-      );
-    }
+  let clienteExistenteNumeroDoc = await db.Cliente.findOne({ where: { numeroDocumento } });
+  if (clienteExistenteNumeroDoc) {
+    throw new ConflictError(`El número de documento '${numeroDocumento}' ya está registrado para otro cliente.`);
+  }
+  
+  let clienteExistenteCorreo = await db.Cliente.findOne({ where: { correo } });
+  if (clienteExistenteCorreo) {
+    throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para otro perfil de cliente.`);
   }
 
+  const rolCliente = await db.Rol.findOne({ where: { nombre: "Cliente" } });
+  if (!rolCliente) {
+    throw new CustomError("El rol 'Cliente' no está configurado en el sistema.", 500);
+  }
+
+  const transaction = await db.sequelize.transaction();
   try {
+    // 1. Crear el Usuario
+    const contrasenaHasheada = await bcrypt.hash(contrasena, saltRounds);
+    const nuevoUsuario = await db.Usuario.create({
+      correo,
+      contrasena: contrasenaHasheada,
+      idRol: rolCliente.idRol,
+      estado: datosCompletos.estadoUsuario !== undefined ? datosCompletos.estadoUsuario : true,
+    }, { transaction });
+
+    // 2. Crear el Cliente, vinculándolo al nuevo Usuario
     const nuevoCliente = await db.Cliente.create({
+      idUsuario: nuevoUsuario.idUsuario,
       nombre,
       apellido,
-      correo: correo || null,
-      telefono: telefono || null,
+      correo, // Usamos el mismo correo para el perfil del cliente
+      telefono,
       tipoDocumento,
       numeroDocumento,
       fechaNacimiento,
-      idUsuario: idUsuario || null,
-      estado: typeof estado === "boolean" ? estado : true,
+      // direccion: datosCompletos.direccion, // Si se incluye
+      estado: datosCompletos.estadoCliente !== undefined ? datosCompletos.estadoCliente : true,
+    }, { transaction });
+
+    await transaction.commit();
+    
+    // Devolver el cliente con su cuenta de usuario asociada
+    return db.Cliente.findByPk(nuevoCliente.idCliente, {
+        include: [{ model: db.Usuario, as: "usuarioCuenta", attributes: ["idUsuario", "correo", "estado", "idRol"] }]
     });
-    return nuevoCliente;
+
   } catch (error) {
-    if (error.name === "SequelizeUniqueConstraintError") {
-      const constraintField =
-        error.errors && error.errors[0]
-          ? error.errors[0].path
-          : "un campo único";
-      throw new ConflictError(
-        `Ya existe un cliente con el mismo valor para '${constraintField}'.`
-      );
+    await transaction.rollback();
+    if (error instanceof ConflictError || error instanceof BadRequestError || error instanceof CustomError) {
+      throw error;
     }
-    console.error(
-      "Error al crear el cliente en el servicio:",
-      error.message,
-      error.stack
-    );
+    if (error.name === "SequelizeUniqueConstraintError") {
+      const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "un campo único";
+      throw new ConflictError(`Ya existe un registro con el mismo valor para '${constraintField}'.`);
+    }
+    // console.error("Error al crear el cliente y usuario en el servicio:", error.message, error.stack); // Comentado
     throw new CustomError(`Error al crear el cliente: ${error.message}`, 500);
   }
 };
 
 /**
- * Obtener todos los clientes.
+ * Obtener todos los clientes, incluyendo la información de su cuenta de Usuario.
  */
 const obtenerTodosLosClientes = async (opcionesDeFiltro = {}) => {
   try {
@@ -117,27 +133,26 @@ const obtenerTodosLosClientes = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.Usuario,
-          as: "usuarioCuenta",
-          attributes: ["idUsuario", "correo", "estado"],
+          as: "usuarioCuenta", // Alias definido en Cliente.model.js
+          attributes: ["idUsuario", "correo", "estado", "idRol"], // Incluir idRol del Usuario
+          include: [{ // Anidar para obtener el nombre del rol
+            model: db.Rol,
+            as: "rol", // Alias definido en Usuario.model.js
+            attributes: ["nombre"]
+          }]
         },
       ],
-      order: [
-        ["apellido", "ASC"],
-        ["nombre", "ASC"],
-      ],
+      order: [["apellido", "ASC"], ["nombre", "ASC"]],
     });
     return clientes;
   } catch (error) {
-    console.error(
-      "Error al obtener todos los clientes en el servicio:",
-      error.message
-    );
+    // console.error("Error al obtener todos los clientes en el servicio:", error.message); // Comentado
     throw new CustomError(`Error al obtener clientes: ${error.message}`, 500);
   }
 };
 
 /**
- * Obtener un cliente por su ID.
+ * Obtener un cliente por su ID, incluyendo la información de su cuenta de Usuario.
  */
 const obtenerClientePorId = async (idCliente) => {
   try {
@@ -146,7 +161,12 @@ const obtenerClientePorId = async (idCliente) => {
         {
           model: db.Usuario,
           as: "usuarioCuenta",
-          attributes: ["idUsuario", "correo", "estado"],
+          attributes: ["idUsuario", "correo", "estado", "idRol"],
+           include: [{
+            model: db.Rol,
+            as: "rol",
+            attributes: ["nombre"]
+          }]
         },
       ],
     });
@@ -156,178 +176,161 @@ const obtenerClientePorId = async (idCliente) => {
     return cliente;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al obtener el cliente con ID ${idCliente} en el servicio:`,
-      error.message
-    );
+    // console.error(`Error al obtener el cliente con ID ${idCliente} en el servicio:`, error.message); // Comentado
     throw new CustomError(`Error al obtener el cliente: ${error.message}`, 500);
   }
 };
 
 /**
- * Actualizar un cliente existente.
+ * Actualizar un cliente existente y, opcionalmente, su cuenta de Usuario asociada.
  */
 const actualizarCliente = async (idCliente, datosActualizar) => {
+  const transaction = await db.sequelize.transaction();
   try {
-    const cliente = await db.Cliente.findByPk(idCliente);
+    const cliente = await db.Cliente.findByPk(idCliente, { transaction });
     if (!cliente) {
+      await transaction.rollback();
       throw new NotFoundError("Cliente no encontrado para actualizar.");
     }
 
-    if (
-      datosActualizar.numeroDocumento &&
-      datosActualizar.numeroDocumento !== cliente.numeroDocumento
-    ) {
-      const otroClienteConDocumento = await db.Cliente.findOne({
-        where: {
-          numeroDocumento: datosActualizar.numeroDocumento,
-          idCliente: { [Op.ne]: idCliente },
-        },
-      });
+    // Separar datos para Cliente y para Usuario
+    const datosParaCliente = {};
+    const datosParaUsuario = {};
+
+    // Campos directos de Cliente
+    if (datosActualizar.hasOwnProperty('nombre')) datosParaCliente.nombre = datosActualizar.nombre;
+    if (datosActualizar.hasOwnProperty('apellido')) datosParaCliente.apellido = datosActualizar.apellido;
+    if (datosActualizar.hasOwnProperty('telefono')) datosParaCliente.telefono = datosActualizar.telefono;
+    if (datosActualizar.hasOwnProperty('tipoDocumento')) datosParaCliente.tipoDocumento = datosActualizar.tipoDocumento;
+    if (datosActualizar.hasOwnProperty('numeroDocumento')) datosParaCliente.numeroDocumento = datosActualizar.numeroDocumento;
+    if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaCliente.fechaNacimiento = datosActualizar.fechaNacimiento;
+    // if (datosActualizar.hasOwnProperty('direccion')) datosParaCliente.direccion = datosActualizar.direccion; // Si se usa
+    if (datosActualizar.hasOwnProperty('estadoCliente')) datosParaCliente.estado = datosActualizar.estadoCliente; // Estado del perfil Cliente
+
+    // Campos que podrían afectar a la tabla Usuario
+    if (datosActualizar.hasOwnProperty('correo')) {
+        datosParaCliente.correo = datosActualizar.correo; // Actualizar correo en perfil Cliente
+        datosParaUsuario.correo = datosActualizar.correo; // Marcar para actualizar correo en Usuario
+    }
+    if (datosActualizar.hasOwnProperty('estadoUsuario')) datosParaUsuario.estado = datosActualizar.estadoUsuario; // Estado de la cuenta Usuario
+
+    // Validaciones de unicidad para Cliente
+    if (datosParaCliente.numeroDocumento && datosParaCliente.numeroDocumento !== cliente.numeroDocumento) {
+      const otroClienteConDocumento = await db.Cliente.findOne({ where: { numeroDocumento: datosParaCliente.numeroDocumento, idCliente: { [Op.ne]: idCliente } }, transaction });
       if (otroClienteConDocumento) {
-        throw new ConflictError(
-          `El número de documento '${datosActualizar.numeroDocumento}' ya está registrado para otro cliente.`
-        );
+        await transaction.rollback();
+        throw new ConflictError(`El número de documento '${datosParaCliente.numeroDocumento}' ya está registrado para otro cliente.`);
       }
     }
-
-    if (datosActualizar.correo && datosActualizar.correo !== cliente.correo) {
-      const otroClienteConCorreo = await db.Cliente.findOne({
-        where: {
-          correo: datosActualizar.correo,
-          idCliente: { [Op.ne]: idCliente },
-        },
-      });
+    if (datosParaCliente.correo && datosParaCliente.correo !== cliente.correo) {
+      const otroClienteConCorreo = await db.Cliente.findOne({ where: { correo: datosParaCliente.correo, idCliente: { [Op.ne]: idCliente } }, transaction });
       if (otroClienteConCorreo) {
-        throw new ConflictError(
-          `El correo electrónico '${datosActualizar.correo}' ya está registrado para otro cliente.`
-        );
+        await transaction.rollback();
+        throw new ConflictError(`El correo electrónico '${datosParaCliente.correo}' ya está registrado para otro perfil de cliente.`);
       }
     }
 
-    if (datosActualizar.hasOwnProperty("idUsuario")) {
-      if (
-        datosActualizar.idUsuario !== null &&
-        datosActualizar.idUsuario !== undefined
-      ) {
-        if (datosActualizar.idUsuario !== cliente.idUsuario) {
-          const usuario = await db.Usuario.findByPk(datosActualizar.idUsuario);
-          if (!usuario) {
-            throw new BadRequestError(
-              `El usuario con ID ${datosActualizar.idUsuario} no existe.`
-            );
-          }
-          const otroClienteConEsteUsuario = await db.Cliente.findOne({
-            where: {
-              idUsuario: datosActualizar.idUsuario,
-              idCliente: { [Op.ne]: idCliente },
-            },
-          });
-          if (otroClienteConEsteUsuario) {
-            throw new ConflictError(
-              `El usuario con ID ${datosActualizar.idUsuario} ya está asociado a otro cliente.`
-            );
+    // Actualizar Cliente si hay datos para ello
+    if (Object.keys(datosParaCliente).length > 0) {
+      await cliente.update(datosParaCliente, { transaction });
+    }
+
+    // Actualizar Usuario asociado si hay datos para ello y existe idUsuario
+    if (cliente.idUsuario && Object.keys(datosParaUsuario).length > 0) {
+      const usuario = await db.Usuario.findByPk(cliente.idUsuario, { transaction });
+      if (usuario) {
+        // Validar unicidad de correo en Usuario si se está cambiando
+        if (datosParaUsuario.correo && datosParaUsuario.correo !== usuario.correo) {
+          const otroUsuarioConCorreo = await db.Usuario.findOne({ where: { correo: datosParaUsuario.correo, idUsuario: { [Op.ne]: cliente.idUsuario } }, transaction });
+          if (otroUsuarioConCorreo) {
+            await transaction.rollback();
+            throw new ConflictError(`El correo electrónico '${datosParaUsuario.correo}' ya está en uso por otra cuenta de usuario.`);
           }
         }
+        await usuario.update(datosParaUsuario, { transaction });
       }
     }
+    // Lógica para cambiar idUsuario (desvincular y vincular a otro) es más compleja y se omite por ahora.
 
-    await cliente.update(datosActualizar);
-    return obtenerClientePorId(cliente.idCliente);
+    await transaction.commit();
+    return obtenerClientePorId(cliente.idCliente); // Devuelve el cliente actualizado con su usuario
+
   } catch (error) {
-    if (
-      error instanceof NotFoundError ||
-      error instanceof ConflictError ||
-      error instanceof BadRequestError
-    )
-      throw error;
+    await transaction.rollback();
+    if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof BadRequestError || error instanceof CustomError) throw error;
     if (error.name === "SequelizeUniqueConstraintError") {
-      const constraintField =
-        error.errors && error.errors[0]
-          ? error.errors[0].path
-          : "un campo único";
-      throw new ConflictError(
-        `Ya existe un cliente con el mismo valor para '${constraintField}'.`
-      );
+      const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "un campo único";
+      throw new ConflictError(`Ya existe un cliente con el mismo valor para '${constraintField}'.`);
     }
-    console.error(
-      `Error al actualizar el cliente con ID ${idCliente} en el servicio:`,
-      error.message,
-      error.stack
-    );
-    throw new CustomError(
-      `Error al actualizar el cliente: ${error.message}`,
-      500
-    );
+    // console.error(`Error al actualizar el cliente con ID ${idCliente} en el servicio:`, error.message, error.stack); // Comentado
+    throw new CustomError(`Error al actualizar el cliente: ${error.message}`, 500);
   }
 };
 
 /**
- * Anular un cliente (borrado lógico, establece estado = false).
+ * Anular un cliente (borrado lógico, establece estado = false en Cliente).
+ * Considerar si también se debe anular el Usuario asociado.
  */
 const anularCliente = async (idCliente) => {
   try {
+    // Si también se quiere anular el Usuario:
+    // const cliente = await db.Cliente.findByPk(idCliente);
+    // if (cliente && cliente.idUsuario) {
+    //   await db.Usuario.update({ estado: false }, { where: { idUsuario: cliente.idUsuario } });
+    // }
     return await cambiarEstadoCliente(idCliente, false);
   } catch (error) {
+    // ... (manejo de error existente) ...
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al anular el cliente con ID ${idCliente} en el servicio:`,
-      error.message
-    );
+    // console.error(`Error al anular el cliente con ID ${idCliente} en el servicio:`, error.message); // Comentado
     throw new CustomError(`Error al anular el cliente: ${error.message}`, 500);
   }
 };
 
 /**
- * Habilitar un cliente (cambia estado = true).
+ * Habilitar un cliente (cambia estado = true en Cliente).
+ * Considerar si también se debe habilitar el Usuario asociado.
  */
 const habilitarCliente = async (idCliente) => {
   try {
+    // Si también se quiere habilitar el Usuario:
+    // const cliente = await db.Cliente.findByPk(idCliente);
+    // if (cliente && cliente.idUsuario) {
+    //   await db.Usuario.update({ estado: true }, { where: { idUsuario: cliente.idUsuario } });
+    // }
     return await cambiarEstadoCliente(idCliente, true);
   } catch (error) {
+    // ... (manejo de error existente) ...
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al habilitar el cliente con ID ${idCliente} en el servicio:`,
-      error.message
-    );
-    throw new CustomError(
-      `Error al habilitar el cliente: ${error.message}`,
-      500
-    );
+    // console.error(`Error al habilitar el cliente con ID ${idCliente} en el servicio:`, error.message); // Comentado
+    throw new CustomError(`Error al habilitar el cliente: ${error.message}`, 500);
   }
 };
 
 /**
  * Eliminar un cliente físicamente de la base de datos.
+ * La FK en Cliente.idUsuario tiene ON DELETE SET NULL, por lo que el Usuario no se borra.
  */
 const eliminarClienteFisico = async (idCliente) => {
   try {
     const cliente = await db.Cliente.findByPk(idCliente);
     if (!cliente) {
-      throw new NotFoundError(
-        "Cliente no encontrado para eliminar físicamente."
-      );
+      throw new NotFoundError("Cliente no encontrado para eliminar físicamente.");
     }
-
-    const filasEliminadas = await db.Cliente.destroy({
-      where: { idCliente },
-    });
-    return filasEliminadas;
+    // Opcional: Si al eliminar un cliente también quieres eliminar su cuenta de usuario (si no se usa en otro lado)
+    // if (cliente.idUsuario) {
+    //   await db.Usuario.destroy({ where: { idUsuario: cliente.idUsuario }});
+    // }
+    const filasEliminadas = await db.Cliente.destroy({ where: { idCliente } });
+    return filasEliminadas > 0; // Devuelve true si se eliminó algo
   } catch (error) {
+    // ... (manejo de error existente) ...
     if (error instanceof NotFoundError) throw error;
     if (error.name === "SequelizeForeignKeyConstraintError") {
-      throw new ConflictError(
-        "No se puede eliminar el cliente porque está siendo referenciado de una manera que impide su borrado. Verifique las dependencias (ej. Ventas, Citas)."
-      );
+      throw new ConflictError("No se puede eliminar el cliente porque está siendo referenciado de una manera que impide su borrado. Verifique las dependencias (ej. Ventas, Citas).");
     }
-    console.error(
-      `Error al eliminar físicamente el cliente con ID ${idCliente} en el servicio:`,
-      error.message
-    );
-    throw new CustomError(
-      `Error al eliminar físicamente el cliente: ${error.message}`,
-      500
-    );
+    // console.error(`Error al eliminar físicamente el cliente con ID ${idCliente} en el servicio:`, error.message); // Comentado
+    throw new CustomError(`Error al eliminar físicamente el cliente: ${error.message}`, 500);
   }
 };
 
@@ -339,5 +342,5 @@ module.exports = {
   anularCliente,
   habilitarCliente,
   eliminarClienteFisico,
-  cambiarEstadoCliente, // Exportar la nueva función
+  cambiarEstadoCliente,
 };
