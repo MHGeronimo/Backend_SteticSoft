@@ -1,43 +1,59 @@
 // src/models/Rol.model.js
-const { Model, DataTypes } = require('sequelize');
+"use strict";
 
-module.exports = (sequelize) => {
-  class Rol extends Model {
-    static associate(models) {
-      Rol.belongsToMany(models.Permisos, {
-        through: 'PermisosXRol', // La tabla intermedia
-        foreignKey: 'idRol',
-        otherKey: 'idPermiso',
-        as: 'permisos' // Alias para acceder a los permisos de un rol
-      });
+module.exports = (sequelize, DataTypes) => {
+  const Rol = sequelize.define(
+    "Rol",
+    {
+      idRol: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+        field: "idrol",
+      },
+      nombre: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        unique: true,
+        field: "nombre",
+      },
+      descripcion: {
+        type: DataTypes.TEXT,
+        field: "descripcion",
+      },
+      estado: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false,
+        field: "estado",
+      },
+    },
+    {
+      tableName: "rol",
+      timestamps: false,
+    }
+  );
 
+  Rol.associate = (models) => {
+    if (models.Usuario) {
       Rol.hasMany(models.Usuario, {
-        foreignKey: 'idRol'
+        foreignKey: {
+          name: "idRol",
+          field: "idrol", // También corregido aquí.
+          allowNull: true,
+        },
+        as: "usuarios",
       });
     }
-  }
-  Rol.init({
-    idRol: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    nombre: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-      unique: true
-    },
-    descripcion: DataTypes.TEXT,
-    estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-      allowNull: false
+    if (models.Permisos) {
+      Rol.belongsToMany(models.Permisos, {
+        through: "PermisosXRol",
+        foreignKey: { name: "idRol", field: "idrol" },
+        otherKey: { name: "idPermiso", field: "idpermiso" },
+        as: "permisos",
+      });
     }
-  }, {
-    sequelize,
-    modelName: 'Rol',
-    tableName: 'rol', // Asegúrate que el nombre de la tabla sea correcto
-    timestamps: false,
-  });
+  };
+
   return Rol;
 };

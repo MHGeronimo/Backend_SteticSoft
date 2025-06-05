@@ -1,39 +1,49 @@
 // src/models/Permisos.model.js
-const { Model, DataTypes } = require('sequelize');
+"use strict";
 
-module.exports = (sequelize) => {
-  class Permisos extends Model {
-    static associate(models) {
-      Permisos.belongsToMany(models.Rol, {
-        through: 'PermisosXRol',
-        foreignKey: 'idPermiso',
-        otherKey: 'idRol',
-        as: 'roles' // Alias para acceder a los roles de un permiso
-      });
-    }
-  }
-  Permisos.init({
-    idPermiso: {
+module.exports = (sequelize, DataTypes) => {
+  const Permisos = sequelize.define(
+    "Permisos",
+    {
+      idPermiso: {
         type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
-        autoIncrement: true
-    },
-    nombre: {
+        field: "idpermiso",
+      },
+      nombre: {
         type: DataTypes.TEXT,
         allowNull: false,
-        unique: true
-    },
-    descripcion: DataTypes.TEXT,
-    estado: {
+        unique: true,
+        field: "nombre",
+      },
+      descripcion: {
+        type: DataTypes.TEXT,
+        field: "descripcion",
+      },
+      estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-        allowNull: false
+        allowNull: false,
+        field: "estado",
+      },
+    },
+    {
+      tableName: "permisos",
+      timestamps: false,
     }
-  }, {
-    sequelize,
-    modelName: 'Permisos',
-    tableName: 'permisos',
-    timestamps: false,
-  });
+  );
+
+  Permisos.associate = (models) => {
+    if (models.Rol) {
+      Permisos.belongsToMany(models.Rol, {
+        through: 'PermisosXRol',
+        foreignKey: { name: "idPermiso", field: "idpermiso" },
+        otherKey: { name: "idRol", field: "idrol" },
+        as: "roles",
+      });
+    }
+  };
+
   return Permisos;
 };
