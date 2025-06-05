@@ -1,49 +1,39 @@
 // src/models/Permisos.model.js
-"use strict";
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
-  const Permisos = sequelize.define(
-    "Permisos",
-    {
-      idPermiso: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-        field: "idpermiso",
-      },
-      nombre: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-        unique: true,
-        field: "nombre",
-      },
-      descripcion: {
-        type: DataTypes.TEXT,
-        field: "descripcion",
-      },
-      estado: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false, // Ajustado por DDL: DEFAULT TRUE NOT NULL
-        field: "estado",
-      },
-    },
-    {
-      tableName: "permisos",
-      timestamps: false,
-    }
-  );
-
-  Permisos.associate = (models) => {
-    if (models.Rol && models.PermisosXRol) {
+module.exports = (sequelize) => {
+  class Permisos extends Model {
+    static associate(models) {
       Permisos.belongsToMany(models.Rol, {
-        through: models.PermisosXRol,
-        foreignKey: { name: "idPermiso", field: "idpermiso" },
-        otherKey: { name: "idRol", field: "idrol" },
-        as: "roles",
+        through: 'PermisosXRol',
+        foreignKey: 'idPermiso',
+        otherKey: 'idRol',
+        as: 'roles' // Alias para acceder a los roles de un permiso
       });
     }
-  };
-
+  }
+  Permisos.init({
+    idPermiso: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    nombre: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        unique: true
+    },
+    descripcion: DataTypes.TEXT,
+    estado: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false
+    }
+  }, {
+    sequelize,
+    modelName: 'Permisos',
+    tableName: 'permisos',
+    timestamps: false,
+  });
   return Permisos;
 };

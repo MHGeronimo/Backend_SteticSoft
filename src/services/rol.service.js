@@ -3,27 +3,20 @@ const db = require("../models");
 const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
-/**
- * Helper interno para cambiar el estado de un rol.
- * @param {number} idRol - ID del rol.
- * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
- * @returns {Promise<object>} El rol con el estado cambiado.
- */
+//... (tu función cambiarEstadoRol se mantiene igual)
 const cambiarEstadoRol = async (idRol, nuevoEstado) => {
   const rol = await db.Rol.findByPk(idRol);
   if (!rol) {
     throw new NotFoundError("Rol no encontrado para cambiar estado.");
   }
   if (rol.estado === nuevoEstado) {
-    return rol; // Ya está en el estado deseado
+    return rol;
   }
   await rol.update({ estado: nuevoEstado });
   return rol;
 };
 
-/**
- * Crear un nuevo rol.
- */
+//... (tu función crearRol se mantiene igual)
 const crearRol = async (datosRol) => {
   const { nombre, descripcion, estado } = datosRol;
 
@@ -50,7 +43,16 @@ const crearRol = async (datosRol) => {
  */
 const obtenerTodosLosRoles = async (opcionesDeFiltro = {}) => {
   try {
-    return await db.Rol.findAll({ where: opcionesDeFiltro });
+    // CORRECCIÓN: Se añade 'include' para traer los permisos de cada rol.
+    return await db.Rol.findAll({
+      where: opcionesDeFiltro,
+      include: [{
+        model: db.Permisos,
+        as: 'permisos',
+        attributes: ['nombre'], // Solo traemos el nombre para la tabla
+        through: { attributes: [] }
+      }]
+    });
   } catch (error) {
     console.error(
       "Error al obtener todos los roles en el servicio:",
@@ -65,7 +67,14 @@ const obtenerTodosLosRoles = async (opcionesDeFiltro = {}) => {
  */
 const obtenerRolPorId = async (idRol) => {
   try {
-    const rol = await db.Rol.findByPk(idRol);
+    // CORRECCIÓN: Se añade 'include' para los detalles del rol.
+    const rol = await db.Rol.findByPk(idRol, {
+      include: [{
+        model: db.Permisos,
+        as: 'permisos',
+        through: { attributes: [] }
+      }]
+    });
     if (!rol) {
       throw new NotFoundError("Rol no encontrado.");
     }
@@ -80,16 +89,13 @@ const obtenerRolPorId = async (idRol) => {
   }
 };
 
-/**
- * Actualizar (Editar) un rol existente.
- */
+//... (tu función actualizarRol se mantiene igual)
 const actualizarRol = async (idRol, datosActualizar) => {
   try {
     const rol = await db.Rol.findByPk(idRol);
     if (!rol) {
       throw new NotFoundError("Rol no encontrado para actualizar.");
     }
-
     if (datosActualizar.nombre && datosActualizar.nombre !== rol.nombre) {
       const rolConMismoNombre = await db.Rol.findOne({
         where: {
@@ -103,7 +109,6 @@ const actualizarRol = async (idRol, datosActualizar) => {
         );
       }
     }
-
     await rol.update(datosActualizar);
     return rol;
   } catch (error) {
@@ -117,9 +122,7 @@ const actualizarRol = async (idRol, datosActualizar) => {
   }
 };
 
-/**
- * Anular un rol (borrado lógico, establece estado = false).
- */
+//... (tu función anularRol se mantiene igual, no la borro)
 const anularRol = async (idRol) => {
   try {
     return await cambiarEstadoRol(idRol, false);
@@ -133,9 +136,7 @@ const anularRol = async (idRol) => {
   }
 };
 
-/**
- * Habilitar un rol (cambia estado = true).
- */
+//... (tu función habilitarRol se mantiene igual, no la borro)
 const habilitarRol = async (idRol) => {
   try {
     return await cambiarEstadoRol(idRol, true);
@@ -149,16 +150,13 @@ const habilitarRol = async (idRol) => {
   }
 };
 
-/**
- * Eliminar un rol físicamente de la base de datos.
- */
+//... (tu función eliminarRolFisico se mantiene igual)
 const eliminarRolFisico = async (idRol) => {
   try {
     const rol = await db.Rol.findByPk(idRol);
     if (!rol) {
       throw new NotFoundError("Rol no encontrado para eliminar físicamente.");
     }
-
     const filasEliminadas = await db.Rol.destroy({
       where: { idRol },
     });
@@ -189,5 +187,5 @@ module.exports = {
   anularRol,
   habilitarRol,
   eliminarRolFisico,
-  cambiarEstadoRol, // Exportar la nueva función
+  cambiarEstadoRol,
 };
