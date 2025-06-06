@@ -164,7 +164,6 @@ const registrarUsuario = async (datosRegistro) => {
 };
 
 const loginUsuario = async (correo, contrasena) => {
-  // 1. Se modifica la consulta para incluir los permisos del rol
   const usuario = await db.Usuario.findOne({
     where: { correo, estado: true },
     include: [
@@ -173,14 +172,11 @@ const loginUsuario = async (correo, contrasena) => {
         as: "rol",
         attributes: ["idRol", "nombre"],
         include: [
-          // <-- Incluimos los permisos asociados al rol
           {
             model: db.Permisos,
             as: "permisos",
-            attributes: ["nombre"],
-            through: { attributes: [] },
-            where: { estado: true },
-            required: false,
+            attributes: ["nombre"], // Solo necesitamos el nombre del permiso
+            through: { attributes: [] }, // No traer la tabla de unión
           },
         ],
       },
@@ -196,10 +192,6 @@ const loginUsuario = async (correo, contrasena) => {
     throw new UnauthorizedError("Credenciales inválidas.");
   }
 
-  // 2. Procesamos los permisos para enviarlos de forma plana en la respuesta
-  const permisosDelUsuario = usuario.rol?.permisos?.map((p) => p.nombre) || [];
-
-  // El payload del JWT se mantiene ligero, sin la lista completa de permisos
   const payload = {
     idUsuario: usuario.idUsuario,
     idRol: usuario.idRol,
@@ -209,24 +201,24 @@ const loginUsuario = async (correo, contrasena) => {
 
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
 
-  const { contrasena: _, ...usuarioData } = usuario.toJSON();
+  // Transformar la data para el frontend
+  const usuarioJSON = usuario.toJSON();
 
-  // 3. Preparamos el objeto de usuario para el frontend
-  const usuarioParaFrontend = {
-    ...usuarioData,
-    rol: usuario.rol
-      ? { idRol: usuario.rol.idRol, nombre: usuario.rol.nombre }
-      : null,
-    permisos: permisosDelUsuario, // <-- ¡Aquí añadimos el array plano de permisos!
-  };
+  // Extraer solo los nombres de los permisos en un array simple
+  const permisosNombres = usuarioJSON.rol?.permisos?.map((p) => p.nombre) || [];
 
-  // Limpiamos la info anidada que ya no es necesaria
-  if (usuarioParaFrontend.rol) {
-    delete usuarioParaFrontend.rol.permisos;
+  // Limpiar datos sensibles o redundantes antes de enviar
+  delete usuarioJSON.contrasena;
+  if (usuarioJSON.rol) {
+    delete usuarioJSON.rol.permisos; // Quitar el array de objetos de permisos
   }
+  
+  // Añadir el array de nombres de permisos al objeto de usuario
+  usuarioJSON.permisos = permisosNombres;
 
-  return { usuario: usuarioParaFrontend, token };
+  return { usuario: usuarioJSON, token };
 };
+
 
 const solicitarRecuperacionContrasena = async (correo) => {
   const usuario = await db.Usuario.findOne({ where: { correo, estado: true } });
