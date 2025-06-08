@@ -1,115 +1,78 @@
-import { Router } from 'express';
-import * as compraController from '../controllers/compra.controller.js';
+// src/routes/compra.routes.js
+const express = require("express");
+const router = express.Router();
+const compraController = require("../controllers/compra.controller.js");
+const compraValidators = require("../validators/compra.validators.js");
 
-// CORRECCIÓN 1: 'authMiddleware' se importa sin llaves porque es una exportación por defecto.
-import authMiddleware from '../middlewares/auth.middleware.js';
+const authMiddleware = require("../middlewares/auth.middleware.js");
+const {
+  checkPermission,
+} = require("../middlewares/authorization.middleware.js");
 
-// CORRECCIÓN 2: Se importa directamente el validador que se va a usar.
-import { createCompraValidators } from '../validators/compra.validators.js';
+const PERMISO_MODULO_COMPRAS = "MODULO_COMPRAS_GESTIONAR";
 
-import { checkPermission } from '../middlewares/authorization.middleware.js';
-
-const router = Router();
-
-/**
- * @swagger
- * /compras:
- * get:
- * summary: Obtiene todas las compras
- * tags: [Compras]
- * security:
- * - bearerAuth: []
- * responses:
- * 200:
- * description: Lista de compras
- */
-router.get(
-  '/',
-  authMiddleware,
-  checkPermission('ver compras'),
-  compraController.findAllCompras
-);
-
-/**
- * @swagger
- * /compras/{id}:
- * get:
- * summary: Obtiene una compra por ID
- * tags: [Compras]
- * security:
- * - bearerAuth: []
- * parameters:
- * - in: path
- * name: id
- * required: true
- * schema:
- * type: string
- * responses:
- * 200:
- * description: Detalle de la compra
- */
-router.get(
-  '/:id',
-  authMiddleware,
-  checkPermission('ver compras'),
-  compraController.findCompraById
-);
-
-/**
- * @swagger
- * /compras:
- * post:
- * summary: Crea una nueva compra
- * tags: [Compras]
- * security:
- * - bearerAuth: []
- * requestBody:
- * required: true
- * content:
- * application/json:
- * schema:
- * $ref: '#/components/schemas/Compra'
- * responses:
- * 201:
- * description: Compra creada
- */
 router.post(
-  '/',
+  "/",
   authMiddleware,
-  checkPermission('gestionar compras'),
-  // CORRECCIÓN 3: Se usa directamente el validador importado.
-  createCompraValidators,
-  compraController.createCompra
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.crearCompraValidators,
+  compraController.crearCompra
 );
 
-/**
- * @swagger
- * /compras/{id}/anular:
- * patch:
- * summary: Anula una compra existente
- * tags: [Compras]
- * security:
- * - bearerAuth: []
- * parameters:
- * - in: path
- * name: id
- * required: true
- * description: ID de la compra a anular.
- * schema:
- * type: string
- * responses:
- * 200:
- * description: Compra anulada exitosamente.
- * 404:
- * description: La compra no fue encontrada.
- * 409:
- * description: La compra ya ha sido anulada.
- */
+router.get(
+  "/",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraController.listarCompras
+);
+
+router.get(
+  "/:idCompra",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.idCompraValidator,
+  compraController.obtenerCompraPorId
+);
+
+router.put(
+  "/:idCompra",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.actualizarCompraValidators,
+  compraController.actualizarCompra // Esta ruta ya permite actualizar el estado y otros campos
+);
+
+// NUEVA RUTA: Cambiar el estado de una compra (enfocada solo en el booleano estado)
 router.patch(
-  '/:id/anular',
+  "/:idCompra/estado",
   authMiddleware,
-  checkPermission('gestionar compras'),
-  compraController.anularCompra // Esta es la corrección que ya habías aplicado y está perfecta.
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.cambiarEstadoCompraValidators,
+  compraController.cambiarEstadoCompra
 );
 
-export default router;
+router.patch(
+  "/:idCompra/anular",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.idCompraValidator,
+  compraController.anularCompra
+);
+
+router.patch(
+  "/:idCompra/habilitar",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.idCompraValidator,
+  compraController.habilitarCompra
+);
+
+router.delete(
+  "/:idCompra",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_COMPRAS),
+  compraValidators.idCompraValidator,
+  compraController.eliminarCompraFisica
+);
+
+module.exports = router;
