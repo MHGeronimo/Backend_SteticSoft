@@ -1,5 +1,3 @@
-// RUTA: src/shared/src_api/services/compra.service.js
-// DESCRIPCIÓN: Código completo con la función 'actualizarCompra' y 'anularCompra' corregidas.
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -16,7 +14,6 @@ const TASA_IVA = 0.19;
  * Crear una nueva compra y sus detalles.
  */
 const crearCompra = async (datosCompra) => {
-  // ... tu función crearCompra se mantiene igual ...
   const {
     fecha,
     proveedorId,
@@ -134,7 +131,6 @@ const crearCompra = async (datosCompra) => {
 
 
 const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
-  // ... tu función obtenerTodasLasCompras se mantiene igual ...
   try {
     return await db.Compra.findAll({
       where: opcionesDeFiltro,
@@ -173,7 +169,6 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
 
 
 const obtenerCompraPorId = async (idCompra) => {
-  // ... tu función obtenerCompraPorId se mantiene igual ...
   try {
     const compra = await db.Compra.findByPk(idCompra, {
       include: [
@@ -205,7 +200,6 @@ const obtenerCompraPorId = async (idCompra) => {
 };
 
 const actualizarCompra = async (idCompra, datosActualizar) => {
-  // ... tu función actualizarCompra se mantiene igual ...
   const { fecha, proveedorId, dashboardId, total, iva, estado } =
     datosActualizar;
   const camposParaActualizar = {};
@@ -322,7 +316,6 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
 
 
 const eliminarCompraFisica = async (idCompra) => {
-  // ... tu función eliminarCompraFisica se mantiene igual ...
   const transaction = await db.sequelize.transaction();
   const productosAfectadosParaAlerta = new Set();
   let compraOriginalEstado = null;
@@ -404,17 +397,9 @@ const eliminarCompraFisica = async (idCompra) => {
   }
 };
 
-
-// ===================== INICIO DE LA FUNCIÓN ANULAR CORREGIDA =====================
-/**
- * Anula una compra y revierte el stock de los productos asociados de forma segura.
- * @param {string} idCompra - El ID de la compra a anular.
- * @returns {Promise<object>} - La compra actualizada.
- */
 const anularCompra = async (idCompra) => {
     const transaction = await db.sequelize.transaction();
     try {
-        // 1. Obtener la compra con sus productos
         const compra = await db.Compra.findByPk(idCompra, {
             include: [{
                 model: db.Producto,
@@ -431,18 +416,14 @@ const anularCompra = async (idCompra) => {
             throw new ConflictError('Esta compra ya ha sido anulada previamente.');
         }
 
-        // 2. Iterar sobre cada producto y REVERTIR el stock
         for (const productoComprado of compra.productosComprados) {
             const cantidadRevertir = productoComprado.CompraXProducto.cantidad;
-
-            // CORRECCIÓN CLAVE: Buscar el producto por su ID para bloquearlo y actualizarlo de forma segura.
             const productoEnStock = await db.Producto.findByPk(productoComprado.idProducto, {
                 transaction,
-                lock: transaction.LOCK.UPDATE // Bloquea la fila para la actualización
+                lock: transaction.LOCK.UPDATE
             });
 
             if (productoEnStock) {
-                // Al anular una compra, la existencia del producto DEBE DISMINUIR.
                 productoEnStock.existencia -= cantidadRevertir;
                 await productoEnStock.save({ transaction });
             } else {
@@ -450,7 +431,6 @@ const anularCompra = async (idCompra) => {
             }
         }
 
-        // 3. Actualizar el estado de la compra a "anulada"
         compra.estado = false;
         await compra.save({ transaction });
 
@@ -459,7 +439,6 @@ const anularCompra = async (idCompra) => {
 
     } catch (error) {
         await transaction.rollback();
-        // Re-lanza el error para que el controlador lo maneje
         if (error instanceof NotFoundError || error instanceof ConflictError) {
             throw error;
         }
@@ -469,12 +448,37 @@ const anularCompra = async (idCompra) => {
 };
 
 const habilitarCompra = async (idCompra) => {
-    // Esta función ahora usa la lógica segura de 'actualizarCompra' si es necesario,
-    // o puede tener su propia lógica de reactivación si es diferente.
-    // Por simplicidad, se mantiene la llamada a actualizarCompra.
     return actualizarCompra(idCompra, { estado: true });
 };
-// ====================== FIN DE LA FUNCIÓN ANULAR CORREGIDA =======================
+
+// --- INICIO DE LA MODIFICACIÓN ---
+/**
+ * Cambia el estado del proceso de una compra (Pendiente/Completado).
+ * Esta acción NO afecta el stock de productos.
+ * @param {number} compraId - El ID de la compra a modificar.
+ * @param {string} nuevoEstadoProceso - El nuevo estado ('Pendiente' o 'Completado').
+ * @returns {Promise<object>} La compra con su estado de proceso actualizado.
+ */
+const cambiarEstadoProceso = async (compraId, nuevoEstadoProceso) => {
+  const compra = await db.Compra.findByPk(compraId);
+
+  if (!compra) {
+    throw new NotFoundError('La compra que intentas actualizar no fue encontrada.');
+  }
+
+  // No se puede cambiar el estado de proceso de una compra que ya está anulada
+  if (compra.estado === false) {
+    throw new ConflictError('No se puede cambiar el estado de proceso de una compra anulada.');
+  }
+
+  // Actualiza solo el campo estadoProceso
+  compra.estadoProceso = nuevoEstadoProceso;
+  await compra.save();
+
+  // Devuelve la compra actualizada
+  return compra;
+};
+// --- FIN DE LA MODIFICACIÓN ---
 
 
 module.exports = {
@@ -485,4 +489,5 @@ module.exports = {
   anularCompra,
   habilitarCompra,
   eliminarCompraFisica,
+  cambiarEstadoProceso, // <-- Exportación de la nueva función
 };
