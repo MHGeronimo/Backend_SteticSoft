@@ -1,31 +1,30 @@
-// src/shared/src_api/server.js
-require("dotenv").config(); 
+// src/server.js
+require("dotenv").config(); // Cargar variables de entorno lo antes posible
 
 const http = require("http");
-const app =require("./app.js"); 
-const db = require("./models/index.js"); 
-const { PORT, NODE_ENV, APP_NAME } = require("./config/env.config.js");
+const app = require("./app"); // Importar la aplicación Express configurada
+const db = require("./models"); // Para la conexión Sequelize
+const { PORT, NODE_ENV, APP_NAME } = require("./config/env.config"); // Variables de entorno centralizadas
 
 const server = http.createServer(app);
 
 const startServer = async () => {
   try {
+    // Verificar conexión a la base de datos con Sequelize
     await db.sequelize.authenticate();
     console.log(
       "✅ Conexión a la base de datos (Sequelize) establecida exitosamente."
     );
 
-    // if (NODE_ENV === "development") {
-    //   // --- INICIO DE LA MODIFICACIÓN ---
-    //   // Descomenta o añade esta línea TEMPORALMENTE.
-    //   // alter: true intentará añadir la nueva columna `estado_proceso` sin borrar datos.
-    //   await db.sequelize.sync({ alter: true }); 
-    //   // --- FIN DE LA MODIFICACIÓN ---
-      
-    //   console.log(
-    //     "🔄 Sincronización de modelos Sequelize ejecutada con { alter: true }."
-    //   );
-    // }
+    // Sincronizar modelos (SOLO PARA DESARROLLO y con PRECAUCIÓN)
+    if (NODE_ENV === "development") {
+      // await db.sequelize.sync(); // Crea tablas si no existen, no altera si ya coinciden.
+      // await db.sequelize.sync({ alter: true }); // Intenta alterar tablas. ¡Precaución!
+      // await db.sequelize.sync({ force: true }); // ¡PELIGRO! Borra y recrea tablas.
+      console.log(
+        "🔄 Sincronización de modelos Sequelize verificada/ejecutada (modo desarrollo)."
+      );
+    }
 
     server.listen(PORT, () => {
       console.log(
@@ -38,7 +37,7 @@ const startServer = async () => {
       "❌ Error crítico al iniciar el servidor o conectar a la base de datos:",
       error
     );
-    process.exit(1);
+    process.exit(1); // Salir si hay un error crítico al inicio
   }
 };
 
