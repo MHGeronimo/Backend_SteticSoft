@@ -1,3 +1,4 @@
+// src/validators/compra.validators.js
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
@@ -151,7 +152,7 @@ const idCompraValidator = [
   handleValidationErrors,
 ];
 
-// Validador para cambiar el estado de ANULACIÓN
+// Nuevo validador para cambiar el estado
 const cambiarEstadoCompraValidators = [
   param("idCompra")
     .isInt({ gt: 0 })
@@ -166,25 +167,9 @@ const cambiarEstadoCompraValidators = [
   handleValidationErrors,
 ];
 
-// --- INICIO DE LA MODIFICACIÓN ---
-// Nuevo validador para cambiar el estado del PROCESO
-const cambiarEstadoProcesoCompraValidators = [
-  param("idCompra")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la compra debe ser un entero positivo."),
-  body("estadoProceso")
-    .exists()
-    .withMessage("El campo 'estadoProceso' es obligatorio.")
-    .isIn(['Pendiente', 'Completado'])
-    .withMessage("El valor de 'estadoProceso' debe ser 'Pendiente' o 'Completado'."),
-  handleValidationErrors,
-];
-// --- FIN DE LA MODIFICACIÓN ---
-
 module.exports = {
   crearCompraValidators,
   actualizarCompraValidators,
   idCompraValidator,
-  cambiarEstadoCompraValidators,
-  cambiarEstadoProcesoCompraValidators, // <-- Exportación del nuevo validador
+  cambiarEstadoCompraValidators, // <-- Exportar nuevo validador
 };

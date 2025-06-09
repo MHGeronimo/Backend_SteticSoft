@@ -1,3 +1,4 @@
+// src/controllers/compra.controller.js
 const compraService = require("../services/compra.service.js");
 
 /**
@@ -149,32 +150,6 @@ const habilitarCompra = async (req, res, next) => {
   }
 };
 
-// --- INICIO DE LA MODIFICACIÓN ---
-/**
- * Cambia el estado del proceso de una compra (Pendiente/Completado).
- * NO afecta el inventario.
- */
-const cambiarEstadoProcesoCompra = async (req, res, next) => {
-  try {
-    const { idCompra } = req.params;
-    const { estadoProceso } = req.body; // Se espera 'Pendiente' o 'Completado'
-
-    const compraActualizada = await compraService.cambiarEstadoProceso(
-      Number(idCompra),
-      estadoProceso
-    );
-
-    res.status(200).json({
-      success: true,
-      message: `El estado de proceso de la compra se actualizó a "${estadoProceso}".`,
-      data: compraActualizada,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-// --- FIN DE LA MODIFICACIÓN ---
-
 /**
  * Elimina físicamente una compra por su ID.
  */
@@ -196,6 +171,5 @@ module.exports = {
   anularCompra,
   habilitarCompra,
   eliminarCompraFisica,
-  cambiarEstadoCompra,
-  cambiarEstadoProcesoCompra, // <-- Exportación de la nueva función
+  cambiarEstadoCompra, // <-- Nueva función exportada
 };

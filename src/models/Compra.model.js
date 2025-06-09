@@ -1,3 +1,4 @@
+// src/models/Compra.model.js
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
@@ -51,15 +52,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "estado",
       },
-      // --- INICIO DE LA MODIFICACIÓN ---
-      // Este es el único campo que se añade.
-      estadoProceso: {
-        type: DataTypes.ENUM('Pendiente', 'Completado'),
-        defaultValue: 'Pendiente',
-        allowNull: false,
-        field: 'estado_proceso'
-      },
-      // --- FIN DE LA MODIFICACIÓN ---
     },
     {
       tableName: "compra",
