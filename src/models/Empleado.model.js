@@ -9,12 +9,29 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: 'id_empleado' // CORREGIDO
+        field: 'id_empleado' 
       },
       nombre: {
         type: DataTypes.STRING(100),
         allowNull: false,
         field: 'nombre'
+      },
+      apellido: { 
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        field: 'apellido',
+      },
+      correo: { 
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        unique: true, 
+        validate: { isEmail: true },
+        field: 'correo',
+      },
+      telefono: { 
+        type: DataTypes.STRING(20), 
+        allowNull: false,
+        field: 'telefono',
       },
       tipoDocumento: {
         type: DataTypes.STRING(50), 
@@ -31,10 +48,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATEONLY,
         allowNull: false,
         field: 'fecha_nacimiento' 
-      },
-      celular: {
-        type: DataTypes.STRING(20), 
-        field: 'celular'
       },
       estado: {
         type: DataTypes.BOOLEAN,
