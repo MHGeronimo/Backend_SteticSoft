@@ -1,99 +1,108 @@
 // src/models/Venta.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Venta = sequelize.define(
-    "Venta",
+    'Venta',
     {
       idVenta: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idventa",
+        field: 'id_venta' 
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      }, // Ajustado
+        field: 'estado'
+      },
       fecha: {
         type: DataTypes.DATEONLY,
         defaultValue: DataTypes.NOW,
-        field: "fecha",
-      }, // Ajustado
+        field: 'fecha'
+      },
       total: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(12, 2), 
         defaultValue: 0.0,
-        field: "total",
-      }, // Ajustado
-      iva: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0, field: "iva" }, // Ajustado
-      clienteId: {
+        field: 'total'
+      },
+      iva: {
+        type: DataTypes.DECIMAL(12, 2), 
+        defaultValue: 0.0,
+        field: 'iva'
+      },
+      idCliente: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "cliente_idcliente",
-        references: { model: "cliente", key: "idcliente" },
-        onDelete: "SET NULL",
-        onUpdate: "CASCADE",
+        field: 'id_cliente', 
+        references: {
+          model: 'cliente',
+          key: 'id_cliente' 
+        },
+        onDelete: 'RESTRICT' 
       },
-      dashboardId: {
+      idDashboard: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "dashboard_iddashboard",
-        references: { model: "dashboard", key: "iddashboard" },
-        onDelete: "SET NULL",
-        onUpdate: "CASCADE",
+        field: 'id_dashboard', 
+        references: {
+          model: 'dashboard',
+          key: 'id_dashboard' 
+        },
+        onDelete: 'SET NULL'
       },
-      estadoVentaId: {
+      idEstado: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "estado_idestado",
-        references: { model: "estado", key: "idestado" },
-        onDelete: "SET NULL",
-        onUpdate: "CASCADE",
-      },
+        field: 'id_estado', 
+        references: {
+          model: 'estado',
+          key: 'id_estado' 
+        },
+        onDelete: 'RESTRICT' 
+      }
     },
     {
-      tableName: "venta",
-      timestamps: false,
+      tableName: 'venta',
+      timestamps: false
     }
   );
 
   Venta.associate = (models) => {
-    if (models.Cliente) {
-      Venta.belongsTo(models.Cliente, {
-        foreignKey: { name: "clienteId", field: "cliente_idcliente" },
-        as: "cliente",
-      });
-    }
-    if (models.Dashboard) {
-      Venta.belongsTo(models.Dashboard, {
-        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" },
-        as: "dashboard",
-      });
-    }
-    if (models.Estado) {
-      Venta.belongsTo(models.Estado, {
-        foreignKey: { name: "estadoVentaId", field: "estado_idestado" },
-        as: "estadoDetalle",
-      });
-    }
-    if (models.Producto && models.ProductoXVenta) {
-      Venta.belongsToMany(models.Producto, {
-        through: models.ProductoXVenta,
-        foreignKey: { name: "ventaId", field: "venta_idventa" },
-        otherKey: { name: "productoId", field: "producto_idproducto" },
-        as: "productosVendidos",
-      });
-    }
-    if (models.Servicio && models.VentaXServicio) {
-      Venta.belongsToMany(models.Servicio, {
-        through: models.VentaXServicio,
-        foreignKey: { name: "ventaId", field: "venta_idventa" },
-        otherKey: { name: "servicioId", field: "servicio_idservicio" },
-        as: "serviciosVendidos",
-      });
-    }
+    // Una Venta pertenece a un Cliente.
+    Venta.belongsTo(models.Cliente, {
+      foreignKey: 'idCliente',
+      as: 'cliente'
+    });
+
+    // Una Venta puede pertenecer a un Dashboard.
+    Venta.belongsTo(models.Dashboard, {
+      foreignKey: 'idDashboard',
+      as: 'dashboard'
+    });
+
+    // Una Venta tiene un Estado.
+    Venta.belongsTo(models.Estado, {
+      foreignKey: 'idEstado',
+      as: 'estadoDetalle'
+    });
+
+    // Una Venta puede tener muchos Productos.
+    Venta.belongsToMany(models.Producto, {
+      through: 'producto_x_venta', 
+      foreignKey: 'id_venta',      
+      otherKey: 'id_producto',     
+      as: 'productos'
+    });
+    
+    // Una Venta puede tener muchos Servicios.
+    Venta.belongsToMany(models.Servicio, {
+      through: 'venta_x_servicio', 
+      foreignKey: 'id_venta',      
+      otherKey: 'id_servicio',     
+      as: 'servicios'
+    });
   };
 
   return Venta;

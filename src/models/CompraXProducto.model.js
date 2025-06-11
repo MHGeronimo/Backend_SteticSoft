@@ -1,63 +1,64 @@
 // src/models/CompraXProducto.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const CompraXProducto = sequelize.define(
-    "CompraXProducto",
+    'CompraXProducto',
     {
       idCompraXProducto: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idcompraxproducto",
+        field: 'id_compra_x_producto' 
       },
       cantidad: {
         type: DataTypes.INTEGER,
-        field: "cantidad",
+        defaultValue: 1,
+        field: 'cantidad'
       },
       valorUnitario: {
-        // JS camelCase
-        type: DataTypes.DECIMAL(10, 2),
-        field: "valorunitario", // BD snake_case o minúsculas
+        type: DataTypes.DECIMAL(12, 2), 
+        defaultValue: 0.0,
+        field: 'valor_unitario' 
       },
-      compraId: {
-        // JS: compraId, FK: Compra_idCompra
+      idCompra: { 
         type: DataTypes.INTEGER,
-        field: "compra_idcompra",
+        allowNull: false,
+        field: 'id_compra', 
         references: {
-          model: "compra",
-          key: "idcompra",
+          model: 'compra',
+          key: 'id_compra' 
         },
+        onDelete: 'CASCADE' 
       },
-      productoId: {
-        // JS: productoId, FK: Producto_idProducto
+      idProducto: { 
         type: DataTypes.INTEGER,
-        field: "producto_idproducto",
+        allowNull: false,
+        field: 'id_producto', 
         references: {
-          model: "producto",
-          key: "idproducto",
+          model: 'producto',
+          key: 'id_producto' 
         },
-      },
+        onDelete: 'RESTRICT' 
+      }
     },
     {
-      tableName: "compraxproducto",
-      timestamps: false,
+      tableName: 'compra_x_producto', 
+      timestamps: false
     }
   );
 
   CompraXProducto.associate = (models) => {
-    if (models.Compra) {
-      CompraXProducto.belongsTo(models.Compra, {
-        foreignKey: { name: "compraId", field: "compra_idcompra" },
-        as: "compra",
-      });
-    }
-    if (models.Producto) {
-      CompraXProducto.belongsTo(models.Producto, {
-        foreignKey: { name: "productoId", field: "producto_idproducto" },
-        as: "producto",
-      });
-    }
+    // Un detalle de CompraXProducto pertenece a una Compra.
+    CompraXProducto.belongsTo(models.Compra, {
+      foreignKey: 'idCompra',
+      as: 'compra'
+    });
+    // Un detalle de CompraXProducto pertenece a un Producto.
+    CompraXProducto.belongsTo(models.Producto, {
+      foreignKey: 'idProducto',
+      as: 'producto'
+    });
   };
 
   return CompraXProducto;

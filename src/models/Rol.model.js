@@ -9,10 +9,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idrol",
+        field: "id_rol", 
       },
       nombre: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(50), 
         allowNull: false,
         unique: true,
         field: "nombre",
@@ -35,24 +35,19 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Rol.associate = (models) => {
-    if (models.Usuario) {
-      Rol.hasMany(models.Usuario, {
-        foreignKey: {
-          name: "idRol",
-          field: "idrol", // También corregido aquí.
-          allowNull: true,
-        },
-        as: "usuarios",
-      });
-    }
-    if (models.Permisos) {
-      Rol.belongsToMany(models.Permisos, {
-        through: "PermisosXRol",
-        foreignKey: { name: "idRol", field: "idrol" },
-        otherKey: { name: "idPermiso", field: "idpermiso" },
-        as: "permisos",
-      });
-    }
+    // Un rol puede tener muchos usuarios.
+    Rol.hasMany(models.Usuario, {
+      foreignKey: "idRol", // Se refiere al atributo en el modelo Usuario.
+      as: "usuarios",
+    });
+
+    // Un rol puede tener muchos permisos a través de la tabla de unión.
+    Rol.belongsToMany(models.Permisos, {
+      through: "permisos_x_rol", 
+      foreignKey: "id_rol", // Clave foránea en la tabla de unión.
+      otherKey: "id_permiso", // La otra clave foránea en la tabla de unión.
+      as: "permisos",
+    });
   };
 
   return Rol;

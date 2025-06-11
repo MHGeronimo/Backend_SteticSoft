@@ -1,85 +1,84 @@
 // src/models/Compra.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Compra = sequelize.define(
-    "Compra",
+    'Compra',
     {
       idCompra: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idcompra",
+        field: 'id_compra'
       },
       fecha: {
         type: DataTypes.DATEONLY,
-        defaultValue: DataTypes.NOW, // Sequelize puede manejar el default
-        field: "fecha",
+        defaultValue: DataTypes.NOW,
+        field: 'fecha'
       },
       total: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(12, 2), 
         defaultValue: 0.0,
-        field: "total",
+        field: 'total'
       },
       iva: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(12, 2), 
         defaultValue: 0.0,
-        field: "iva",
+        field: 'iva'
       },
-      proveedorId: {
+      idProveedor: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "proveedor_idproveedor",
+        field: 'id_proveedor',
         references: {
-          model: "proveedor",
-          key: "idproveedor",
+          model: 'proveedor',
+          key: 'id_proveedor'
         },
-        onDelete: "SET NULL",
+        onDelete: 'RESTRICT'
       },
-      dashboardId: {
+      idDashboard: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "dashboard_iddashboard",
+        field: 'id_dashboard',
         references: {
-          model: "dashboard",
-          key: "iddashboard",
+          model: 'dashboard',
+          key: 'id_dashboard'
         },
-        onDelete: "SET NULL",
+        onDelete: 'SET NULL'
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      },
+        field: 'estado'
+      }
     },
     {
-      tableName: "compra",
-      timestamps: false, // Asumiendo que no tienes createdAt/updatedAt aquí
+      tableName: 'compra',
+      timestamps: false
     }
   );
 
   Compra.associate = (models) => {
-    if (models.Proveedor) {
-      Compra.belongsTo(models.Proveedor, {
-        foreignKey: { name: "proveedorId", field: "proveedor_idproveedor" },
-        as: "proveedor",
-      });
-    }
-    if (models.Dashboard) {
-      Compra.belongsTo(models.Dashboard, {
-        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" },
-        as: "dashboard",
-      });
-    }
-    if (models.Producto && models.CompraXProducto) {
-      Compra.belongsToMany(models.Producto, {
-        through: models.CompraXProducto,
-        foreignKey: { name: "compraId", field: "compra_idcompra" }, // Clave en CompraXProducto que referencia a Compra
-        otherKey: { name: "productoId", field: "producto_idproducto" }, // Clave en CompraXProducto que referencia a Producto
-        as: "productosComprados",
-      });
-    }
+    // Una Compra pertenece a un Proveedor.
+    Compra.belongsTo(models.Proveedor, {
+      foreignKey: 'idProveedor',
+      as: 'proveedor'
+    });
+
+    // Una Compra puede pertenecer a un Dashboard.
+    Compra.belongsTo(models.Dashboard, {
+      foreignKey: 'idDashboard',
+      as: 'dashboard'
+    });
+
+    // Una Compra tiene muchos Productos (a través de CompraXProducto).
+    Compra.belongsToMany(models.Producto, {
+      through: 'compra_x_producto',
+      foreignKey: 'id_compra',     
+      otherKey: 'id_producto',     
+      as: 'productos'
+    });
   };
 
   return Compra;

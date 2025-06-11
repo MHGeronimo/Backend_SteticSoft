@@ -1,48 +1,47 @@
 // src/models/Permisos.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Permisos = sequelize.define(
-    "Permisos",
+    'Permisos',
     {
       idPermiso: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idpermiso",
+        field: 'id_permiso' 
       },
       nombre: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(100), 
         allowNull: false,
         unique: true,
-        field: "nombre",
+        field: 'nombre'
       },
       descripcion: {
         type: DataTypes.TEXT,
-        field: "descripcion",
+        field: 'descripcion'
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      },
+        field: 'estado'
+      }
     },
     {
-      tableName: "permisos",
-      timestamps: false,
+      tableName: 'permisos',
+      timestamps: false
     }
   );
 
   Permisos.associate = (models) => {
-    if (models.Rol) {
-      Permisos.belongsToMany(models.Rol, {
-        through: 'PermisosXRol',
-        foreignKey: { name: "idPermiso", field: "idpermiso" },
-        otherKey: { name: "idRol", field: "idrol" },
-        as: "roles",
-      });
-    }
+    // Un permiso puede pertenecer a muchos roles a través de la tabla de unión.
+    Permisos.belongsToMany(models.Rol, {
+      through: 'permisos_x_rol', 
+      foreignKey: 'id_permiso',  // Clave foránea en la tabla de unión.
+      otherKey: 'id_rol',        // La otra clave foránea en la tabla de unión.
+      as: 'roles'
+    });
   };
 
   return Permisos;

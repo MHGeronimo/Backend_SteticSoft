@@ -1,95 +1,97 @@
 // src/models/Servicio.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Servicio = sequelize.define(
-    "Servicio",
+    'Servicio',
     {
       idServicio: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idservicio",
+        field: 'id_servicio'
       },
       nombre: {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
-        field: "nombre",
+        field: 'nombre'
       },
-      descripcion: { type: DataTypes.TEXT, field: "descripcion" },
+      descripcion: {
+        type: DataTypes.TEXT,
+        field: 'descripcion'
+      },
       precio: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
         defaultValue: 0.0,
-        field: "precio",
-      }, // Ajustado
-      duracionEstimada: { type: DataTypes.INTEGER, field: "duracion_estimada" },
+        field: 'precio'
+      },
+      duracionEstimadaMin: { 
+        type: DataTypes.INTEGER,
+        field: 'duracion_estimada_min'
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      }, // Ajustado
-      categoriaServicioId: {
+        field: 'estado'
+      },
+      idCategoriaServicio: { 
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: "categoria_servicio_idcategoriaservicio",
-        references: { model: "categoria_servicio", key: "idcategoriaservicio" },
-        onDelete: "RESTRICT", // Reflejando DDL
-        onUpdate: "CASCADE",
+        field: 'id_categoria_servicio',
+        references: {
+          model: 'categoria_servicio',
+          key: 'id_categoria_servicio'
+        },
+        onDelete: 'RESTRICT'
       },
-      especialidadId: {
+      idEspecialidad: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "especialidad_idespecialidad",
-        references: { model: "especialidad", key: "idespecialidad" },
-        onDelete: "SET NULL", // Reflejando DDL
-        onUpdate: "CASCADE",
-      },
+        field: 'id_especialidad',
+        references: {
+          model: 'especialidad',
+          key: 'id_especialidad'
+        },
+        onDelete: 'RESTRICT'
+      }
     },
     {
-      tableName: "servicio",
-      timestamps: false,
+      tableName: 'servicio',
+      timestamps: false
     }
   );
 
   Servicio.associate = (models) => {
-    if (models.CategoriaServicio) {
-      Servicio.belongsTo(models.CategoriaServicio, {
-        foreignKey: {
-          name: "categoriaServicioId",
-          field: "categoria_servicio_idcategoriaservicio",
-          allowNull: false,
-        },
-        as: "categoriaServicio",
-      });
-    }
-    if (models.Especialidad) {
-      Servicio.belongsTo(models.Especialidad, {
-        foreignKey: {
-          name: "especialidadId",
-          field: "especialidad_idespecialidad",
-        },
-        as: "especialidadRequerida",
-      });
-    }
-    if (models.Cita && models.ServicioXCita) {
-      Servicio.belongsToMany(models.Cita, {
-        through: models.ServicioXCita,
-        foreignKey: { name: "servicioId", field: "servicio_idservicio" },
-        otherKey: { name: "citaId", field: "cita_idcita" },
-        as: "citasDondeSeIncluye", // Alias ajustado
-      });
-    }
-    if (models.Venta && models.VentaXServicio) {
-      Servicio.belongsToMany(models.Venta, {
-        through: models.VentaXServicio,
-        foreignKey: { name: "servicioId", field: "servicio_idservicio" },
-        otherKey: { name: "ventaId", field: "venta_idventa" },
-        as: "ventasDondeSeIncluye",
-      });
-    }
+    // Un Servicio pertenece a una CategoriaServicio.
+    Servicio.belongsTo(models.CategoriaServicio, {
+      foreignKey: 'idCategoriaServicio',
+      as: 'categoria'
+    });
+
+    // Un Servicio puede requerir una Especialidad.
+    Servicio.belongsTo(models.Especialidad, {
+      foreignKey: 'idEspecialidad',
+      as: 'especialidad'
+    });
+
+    // Un Servicio puede estar incluido en muchas Citas.
+    Servicio.belongsToMany(models.Cita, {
+      through: 'servicio_x_cita',
+      foreignKey: 'id_servicio',   
+      otherKey: 'id_cita',       
+      as: 'citas'
+    });
+
+    // Un Servicio puede ser parte de muchas Ventas.
+    Servicio.belongsToMany(models.Venta, {
+      through: 'venta_x_servicio',
+      foreignKey: 'id_servicio',  
+      otherKey: 'id_venta',       
+      as: 'ventas'
+    });
   };
 
   return Servicio;

@@ -1,41 +1,41 @@
 // src/models/EmpleadoEspecialidad.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const EmpleadoEspecialidad = sequelize.define(
-    "EmpleadoEspecialidad",
+    'EmpleadoEspecialidad',
     {
       idEmpleado: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        field: "idempleado",
+        field: 'id_empleado', 
         references: {
-          model: "empleado",
-          key: "idempleado",
+          model: 'empleado',
+          key: 'id_empleado' 
         },
-        onDelete: "CASCADE",
+        onDelete: 'CASCADE'
       },
       idEspecialidad: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        field: "idespecialidad",
+        field: 'id_especialidad', 
         references: {
-          model: "especialidad",
-          key: "idespecialidad",
+          model: 'especialidad',
+          key: 'id_especialidad' 
         },
-        onDelete: "CASCADE",
-      },
+        onDelete: 'CASCADE'
+      }
     },
     {
-      tableName: "empleadoespecialidad",
-      timestamps: false,
+      tableName: 'empleado_especialidad', 
+      timestamps: false
     }
   );
 
-  // EmpleadoEspecialidad.associate = (models) => {
-  //   EmpleadoEspecialidad.belongsTo(models.Empleado, { foreignKey: { name: 'idEmpleado', field: 'idempleado' } });
-  //   EmpleadoEspecialidad.belongsTo(models.Especialidad, { foreignKey: { name: 'idEspecialidad', field: 'idespecialidad' } });
-  // };
+  EmpleadoEspecialidad.associate = (models) => {
+    EmpleadoEspecialidad.belongsTo(models.Empleado, { foreignKey: 'idEmpleado' });
+    EmpleadoEspecialidad.belongsTo(models.Especialidad, { foreignKey: 'idEspecialidad' });
+  };
 
   return EmpleadoEspecialidad;
 };

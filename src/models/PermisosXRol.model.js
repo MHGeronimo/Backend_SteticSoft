@@ -7,38 +7,41 @@ module.exports = (sequelize, DataTypes) => {
     {
       idRol: {
         type: DataTypes.INTEGER,
-        primaryKey: true, // Parte de la PK compuesta
-        field: "idrol",
+        primaryKey: true,
+        field: "id_rol", // CORREGIDO: Mapeo a la columna snake_case.
         references: {
-          model: "rol", // Nombre de la tabla referenciada en BD
-          key: "idrol",
+          model: "rol",
+          key: "id_rol", // CORREGIDO: Clave referenciada en la tabla rol.
         },
         onDelete: "CASCADE",
       },
       idPermiso: {
         type: DataTypes.INTEGER,
-        primaryKey: true, // Parte de la PK compuesta
-        field: "idpermiso",
+        primaryKey: true,
+        field: "id_permiso", // CORREGIDO: Mapeo a la columna snake_case.
         references: {
-          model: "permisos", // Nombre de la tabla referenciada en BD
-          key: "idpermiso",
+          model: "permisos",
+          key: "id_permiso", // CORREGIDO: Clave referenciada en la tabla permisos.
         },
         onDelete: "CASCADE",
       },
     },
     {
-      tableName: "permisosxrol", // Nombre exacto de la tabla en BD
+      tableName: "permisos_x_rol", // CORREGIDO: Nombre exacto de la tabla en snake_case.
       timestamps: false,
     }
   );
 
-  // PermisosXRol.associate = (models) => {
-  //   // Las asociaciones belongsTo son opcionales aquí si no las necesitas directamente
-  //   // ya que la relación many-to-many se define en Rol y Permisos.
-  //   // Pero si quieres poder hacer PermisosXRol.getRol() o PermisosXRol.getPermiso():
-  //   PermisosXRol.belongsTo(models.Rol, { foreignKey: { name: 'idRol', field: 'idrol' }, as: 'rol' });
-  //   PermisosXRol.belongsTo(models.Permisos, { foreignKey: { name: 'idPermiso', field: 'idpermiso' }, as: 'permiso' });
-  // };
+  // Aunque las asociaciones principales están en Rol y Permisos,
+  // es una buena práctica definir las inversas aquí por si se necesita
+  // consultar esta tabla directamente e incluir sus "padres".
+  PermisosXRol.associate = (models) => {
+    PermisosXRol.belongsTo(models.Rol, { foreignKey: "idRol", as: "rol" });
+    PermisosXRol.belongsTo(models.Permisos, {
+      foreignKey: "idPermiso",
+      as: "permiso",
+    });
+  };
 
   return PermisosXRol;
 };

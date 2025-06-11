@@ -1,78 +1,81 @@
 // src/models/ProductoXVenta.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const ProductoXVenta = sequelize.define(
-    "ProductoXVenta",
+    'ProductoXVenta',
     {
       idProductoXVenta: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idproductoxventa",
+        field: 'id_producto_x_venta' 
       },
       cantidad: {
         type: DataTypes.INTEGER,
-        field: "cantidad",
+        defaultValue: 1,
+        field: 'cantidad'
       },
       valorUnitario: {
-        type: DataTypes.DECIMAL(10, 2),
-        field: "valorunitario",
+        type: DataTypes.DECIMAL(12, 2), 
+        defaultValue: 0.0,
+        field: 'valor_unitario' 
       },
-      productoId: {
-        // JS: productoId, FK: Producto_idProducto
+      idProducto: { 
         type: DataTypes.INTEGER,
-        field: "producto_idproducto",
+        allowNull: false,
+        field: 'id_producto', 
         references: {
-          model: "producto",
-          key: "idproducto",
+          model: 'producto',
+          key: 'id_producto' 
         },
+        onDelete: 'RESTRICT' 
       },
-      ventaId: {
-        // JS: ventaId, FK: Venta_idVenta
+      idVenta: { 
         type: DataTypes.INTEGER,
-        field: "venta_idventa",
+        allowNull: false,
+        field: 'id_venta', 
         references: {
-          model: "venta",
-          key: "idventa",
+          model: 'venta',
+          key: 'id_venta' 
         },
+        onDelete: 'CASCADE' 
       },
-      dashboardId: {
-        // JS: dashboardId, FK: Dashboard_idDashboard
+      idDashboard: { 
         type: DataTypes.INTEGER,
-        allowNull: true, // Asumiendo que puede ser nulo según DDL
-        field: "dashboard_iddashboard",
+        allowNull: true,
+        field: 'id_dashboard', 
         references: {
-          model: "dashboard",
-          key: "iddashboard",
+          model: 'dashboard',
+          key: 'id_dashboard' 
         },
-      },
+        onDelete: 'SET NULL' 
+      }
     },
     {
-      tableName: "productoxventa",
-      timestamps: false,
+      tableName: 'producto_x_venta', 
+      timestamps: false
     }
   );
 
   ProductoXVenta.associate = (models) => {
-    if (models.Producto) {
-      ProductoXVenta.belongsTo(models.Producto, {
-        foreignKey: { name: "productoId", field: "producto_idproducto" },
-        as: "producto",
-      });
-    }
-    if (models.Venta) {
-      ProductoXVenta.belongsTo(models.Venta, {
-        foreignKey: { name: "ventaId", field: "venta_idventa" },
-        as: "venta",
-      });
-    }
-    if (models.Dashboard) {
-      ProductoXVenta.belongsTo(models.Dashboard, {
-        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" },
-        as: "dashboard",
-      });
-    }
+    // Indica que cada registro de 'ProductoXVenta' (un detalle de la venta) pertenece a un solo 'Producto'.
+    ProductoXVenta.belongsTo(models.Producto, {
+      foreignKey: "idProducto",
+      as: "producto",
+    });
+
+    // Indica que cada registro de 'ProductoXVenta' pertenece a una sola 'Venta'.
+    ProductoXVenta.belongsTo(models.Venta, {
+      foreignKey: "idVenta",
+      as: "venta",
+    });
+
+    // Indica que cada registro de 'ProductoXVenta' puede estar opcionalmente asociado a un 'Dashboard'.
+    ProductoXVenta.belongsTo(models.Dashboard, {
+      foreignKey: "idDashboard",
+      as: "dashboard",
+    });
   };
 
   return ProductoXVenta;

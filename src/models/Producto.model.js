@@ -1,96 +1,101 @@
 // src/models/Producto.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Producto = sequelize.define(
-    "Producto",
+    'Producto',
     {
       idProducto: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idproducto",
+        field: 'id_producto' 
       },
-      nombre: { type: DataTypes.STRING(45), field: "nombre" },
-      descripcion: { type: DataTypes.TEXT, field: "descripcion" },
+      nombre: {
+        type: DataTypes.STRING(100), 
+        allowNull: false,
+        field: 'nombre'
+      },
+      descripcion: {
+        type: DataTypes.TEXT,
+        field: 'descripcion'
+      },
       existencia: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        field: "existencia",
+        validate: { min: 0 },
+        field: 'existencia'
       },
       precio: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(12, 2), 
         defaultValue: 0.0,
-        field: "precio",
+        field: 'precio'
       },
       stockMinimo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        field: "stockminimo",
+        field: 'stock_minimo' 
       },
       stockMaximo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        field: "stockmaximo",
+        field: 'stock_maximo' 
       },
-      imagen: { type: DataTypes.TEXT, field: "imagen" },
+      imagen: {
+        type: DataTypes.TEXT,
+        field: 'imagen'
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      }, // Ajustado
-      categoriaProductoId: {
+        field: 'estado'
+      },
+      idCategoriaProducto: { 
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: "categoria_producto_idcategoria",
-        references: { model: "categoria_producto", key: "idcategoria" },
-        onDelete: "SET NULL", // Reflejando DDL
-        onUpdate: "CASCADE",
-      },
+        field: 'id_categoria_producto', 
+        references: {
+          model: 'categoria_producto',
+          key: 'id_categoria_producto' 
+        },
+        onDelete: 'RESTRICT' 
+      }
     },
     {
-      tableName: "producto",
-      timestamps: false,
+      tableName: 'producto',
+      timestamps: false
     }
   );
 
   Producto.associate = (models) => {
-    if (models.CategoriaProducto) {
-      Producto.belongsTo(models.CategoriaProducto, {
-        foreignKey: {
-          name: "categoriaProductoId",
-          field: "categoria_producto_idcategoria",
-        },
-        as: "categoriaProducto",
-      });
-    }
-    if (models.Compra && models.CompraXProducto) {
-      Producto.belongsToMany(models.Compra, {
-        through: models.CompraXProducto,
-        foreignKey: { name: "productoId", field: "producto_idproducto" },
-        otherKey: { name: "compraId", field: "compra_idcompra" },
-        as: "comprasRelacionadas",
-      });
-    }
-    if (models.Venta && models.ProductoXVenta) {
-      Producto.belongsToMany(models.Venta, {
-        through: models.ProductoXVenta,
-        foreignKey: { name: "productoId", field: "producto_idproducto" },
-        otherKey: { name: "ventaId", field: "venta_idventa" },
-        as: "ventasRelacionadas",
-      });
-    }
-    if (models.Abastecimiento) {
-      Producto.hasMany(models.Abastecimiento, {
-        foreignKey: {
-          name: "productoId",
-          field: "producto_idproducto",
-          allowNull: false,
-        },
-        as: "historialAbastecimiento",
-      });
-    }
+    // Un Producto pertenece a una CategoriaProducto.
+    Producto.belongsTo(models.CategoriaProducto, {
+      foreignKey: 'idCategoriaProducto', // Se refiere al atributo en este modelo.
+      as: 'categoria'
+    });
+    
+    // Un Producto puede estar en muchas Compras.
+    Producto.belongsToMany(models.Compra, {
+      through: 'compra_x_producto', 
+      foreignKey: 'id_producto',    
+      otherKey: 'id_compra',        
+      as: 'compras'
+    });
+
+    // Un Producto puede estar en muchas Ventas.
+    Producto.belongsToMany(models.Venta, {
+      through: 'producto_x_venta', 
+      foreignKey: 'id_producto',   
+      otherKey: 'id_venta',       
+      as: 'ventas'
+    });
+    
+    // Un Producto puede tener muchos registros de Abastecimiento.
+    Producto.hasMany(models.Abastecimiento, {
+      foreignKey: 'idProducto', // Se refiere al atributo en el modelo Abastecimiento.
+      as: 'abastecimientos'
+    });
   };
 
   return Producto;

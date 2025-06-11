@@ -1,114 +1,100 @@
 // src/models/Proveedor.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Proveedor = sequelize.define(
-    "Proveedor",
+    'Proveedor',
     {
       idProveedor: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idproveedor",
+        field: 'id_proveedor' 
       },
       nombre: {
         type: DataTypes.STRING(100),
         allowNull: false,
-        field: "nombre",
+        field: 'nombre'
       },
       tipo: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(50), 
         allowNull: false,
-        field: "tipo",
+        field: 'tipo'
       },
       tipoDocumento: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(50), 
         allowNull: true,
-        field: "tipodocumento",
+        field: 'tipo_documento'
       },
       numeroDocumento: {
         type: DataTypes.STRING(45),
         allowNull: true,
-        field: "numerodocumento",
+        field: 'numero_documento' 
       },
       nitEmpresa: {
         type: DataTypes.STRING(45),
         unique: true,
         allowNull: true,
-        field: "nit_empresa",
+        field: 'nit_empresa'
       },
       telefono: {
-        type: DataTypes.STRING(45),
+        type: DataTypes.STRING(20), 
         allowNull: false,
-        field: "telefono",
+        field: 'telefono'
       },
       correo: {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
-        field: "correo",
-        validate: {
-          isEmail: {
-            // Esto está bien para un campo que es SIEMPRE email
-            msg: "Debe proporcionar un correo electrónico válido para el proveedor.",
-          },
-        },
+        validate: { isEmail: true },
+        field: 'correo'
       },
       direccion: {
         type: DataTypes.TEXT,
         allowNull: false,
-        field: "direccion",
+        field: 'direccion'
       },
       nombrePersonaEncargada: {
         type: DataTypes.STRING(100),
         allowNull: true,
-        field: "nombre_persona_encargada",
+        field: 'nombre_persona_encargada'
       },
       telefonoPersonaEncargada: {
-        type: DataTypes.STRING(45),
+        type: DataTypes.STRING(20), 
         allowNull: true,
-        field: "telefono_persona_encargada",
+        field: 'telefono_persona_encargada' 
       },
       emailPersonaEncargada: {
         type: DataTypes.STRING(100),
         allowNull: true,
-        field: "email_persona_encargada",
-        validate: {
-          isEmail: {
-            msg: "Debe proporcionar un correo electrónico válido para la persona encargada o dejarlo vacío.",
-          },
-        },
+        validate: { isEmail: true },
+        field: 'email_persona_encargada'
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      },
+        field: 'estado'
+      }
     },
     {
-      tableName: "proveedor",
+      tableName: 'proveedor',
       timestamps: false,
       indexes: [
         {
           unique: true,
-          fields: ["nombre", "tipo"], // Nombres de los atributos del modelo Sequelize
-        },
-      ],
+          fields: ['nombre', 'tipo']
+        }
+      ]
     }
   );
 
   Proveedor.associate = (models) => {
-    if (models.Compra) {
-      Proveedor.hasMany(models.Compra, {
-        foreignKey: {
-          name: "proveedorId",
-          field: "proveedor_idproveedor",
-          allowNull: true,
-        },
-        as: "comprasRealizadas",
-      });
-    }
+    // Un Proveedor puede tener muchas Compras.
+    Proveedor.hasMany(models.Compra, {
+      foreignKey: 'idProveedor', // Se refiere al atributo 'idProveedor' en el modelo Compra.
+      as: 'compras'
+    });
   };
 
   return Proveedor;

@@ -1,60 +1,70 @@
 // src/models/Novedades.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Novedades = sequelize.define(
-    "Novedades",
+    'Novedades',
     {
-      idNovedades: {
+      idNovedad: { 
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idnovedades",
+        field: 'id_novedad' 
       },
       diaSemana: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: "diasemana",
+        field: 'dia_semana', 
+        validate: {
+          min: 0,
+          max: 6
+        }
       },
       horaInicio: {
         type: DataTypes.TIME,
         allowNull: false,
-        field: "horainicio",
+        field: 'hora_inicio' 
       },
-      horaFin: { type: DataTypes.TIME, allowNull: false, field: "horafin" },
+      horaFin: {
+        type: DataTypes.TIME,
+        allowNull: false,
+        field: 'hora_fin' 
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: "estado",
-      }, // Ajustado
-      empleadoId: {
+        field: 'estado'
+      },
+      idEmpleado: { 
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: "empleado_idempleado",
-        references: { model: "empleado", key: "idempleado" },
-        onDelete: "CASCADE", // Reflejando DDL
-        onUpdate: "CASCADE",
-      },
+        field: 'id_empleado', 
+        references: {
+          model: 'empleado',
+          key: 'id_empleado' 
+        },
+        onDelete: 'CASCADE'
+      }
     },
     {
-      tableName: "novedades",
+      tableName: 'novedades',
       timestamps: false,
-      indexes: [{ unique: true, fields: ["empleado_idempleado", "diasemana"] }],
+      indexes: [
+        {
+          unique: true,
+          fields: ['id_empleado', 'dia_semana']
+        }
+      ]
     }
   );
 
   Novedades.associate = (models) => {
-    if (models.Empleado) {
-      Novedades.belongsTo(models.Empleado, {
-        foreignKey: {
-          name: "empleadoId",
-          field: "empleado_idempleado",
-          allowNull: false,
-        },
-        as: "empleadoConNovedad",
-      });
-    }
+    // Una Novedad pertenece a un Empleado.
+    Novedades.belongsTo(models.Empleado, {
+      foreignKey: 'idEmpleado',
+      as: 'empleado'
+    });
   };
 
   return Novedades;

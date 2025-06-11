@@ -1,54 +1,56 @@
 // src/models/ServicioXCita.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const ServicioXCita = sequelize.define(
-    "ServicioXCita",
+    'ServicioXCita',
     {
       idServicioXCita: {
-        // DDL tiene un PK SERIAL para esta tabla de unión
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idservicioxcita",
+        field: 'id_servicio_x_cita' 
       },
-      servicioId: {
-        // FK: Servicio_idServicio
+      idServicio: { 
         type: DataTypes.INTEGER,
-        field: "servicio_idservicio",
+        allowNull: false,
+        field: 'id_servicio', 
         references: {
-          model: "servicio",
-          key: "idservicio",
+          model: 'servicio',
+          key: 'id_servicio' 
         },
-        // UNIQUE (Servicio_idServicio, Cita_idCita) se maneja con un índice
+        onDelete: 'CASCADE' 
       },
-      citaId: {
-        // FK: Cita_idCita
+      idCita: { 
         type: DataTypes.INTEGER,
-        field: "cita_idcita",
+        allowNull: false,
+        field: 'id_cita', 
         references: {
-          model: "cita",
-          key: "idcita",
+          model: 'cita',
+          key: 'id_cita' 
         },
-      },
+        onDelete: 'CASCADE' 
+      }
     },
     {
-      tableName: "servicioxcita",
+      tableName: 'servicio_x_cita', 
       timestamps: false,
       indexes: [
-        // Para la restricción UNIQUE (Servicio_idServicio, Cita_idCita)
         {
           unique: true,
-          fields: ["servicio_idservicio", "cita_idcita"], // Nombres de columna en BD
-        },
-      ],
+          fields: ['id_servicio', 'id_cita'] 
+        }
+      ]
     }
   );
 
-  // ServicioXCita.associate = (models) => {
-  //   ServicioXCita.belongsTo(models.Servicio, { foreignKey: { name: 'servicioId', field: 'servicio_idservicio' } });
-  //   ServicioXCita.belongsTo(models.Cita, { foreignKey: { name: 'citaId', field: 'cita_idcita' } });
-  // };
+  ServicioXCita.associate = (models) => {
+    // Indica que cada registro de 'ServicioXCita' pertenece a un único 'Servicio'.
+    ServicioXCita.belongsTo(models.Servicio, { foreignKey: "idServicio" });
+
+    // Indica que cada registro de 'ServicioXCita' pertenece a una única 'Cita'.
+    ServicioXCita.belongsTo(models.Cita, { foreignKey: "idCita" });
+  };
 
   return ServicioXCita;
 };

@@ -1,57 +1,51 @@
 // src/models/Dashboard.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Dashboard = sequelize.define(
-    "Dashboard",
+    'Dashboard',
     {
       idDashboard: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "iddashboard",
+        field: 'id_dashboard' 
       },
       fechaCreacion: {
-        // JS camelCase
-        type: DataTypes.DATEONLY, // Tu DDL dice DATE
+        type: DataTypes.DATEONLY,
         allowNull: false,
-        defaultValue: DataTypes.NOW, // Sequelize usará la función NOW() de la BD
-        field: "fecha_creacion", // BD snake_case
+        defaultValue: DataTypes.NOW,
+        field: 'fecha_creacion'
       },
       nombreDashboard: {
-        // JS camelCase
         type: DataTypes.STRING(100),
-        field: "nombre_dashboard", // BD snake_case
-      },
+        field: 'nombre_dashboard'
+      }
     },
     {
-      tableName: "dashboard",
-      // Para esta tabla, sí gestionamos un timestamp de creación, pero con nombre específico
-      timestamps: true, // Habilitar timestamps
-      createdAt: "fecha_creacion", // Mapear 'createdAt' de Sequelize a tu columna 'fecha_creacion'
-      updatedAt: false, // No tienes columna 'updatedAt'
+      tableName: 'dashboard',
+      timestamps: false
     }
   );
 
   Dashboard.associate = (models) => {
-    if (models.Compra) {
-      Dashboard.hasMany(models.Compra, {
-        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" }, // FK en tabla 'compra'
-        as: "compras",
-      });
-    }
-    if (models.Venta) {
-      Dashboard.hasMany(models.Venta, {
-        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" }, // FK en tabla 'venta'
-        as: "ventas",
-      });
-    }
-    if (models.ProductoXVenta) {
-      Dashboard.hasMany(models.ProductoXVenta, {
-        foreignKey: { name: "dashboardId", field: "dashboard_iddashboard" }, // FK en tabla 'productoxventa'
-        as: "detallesVentaConDashboard",
-      });
-    }
+    // Un Dashboard puede estar asociado a muchas Compras.
+    Dashboard.hasMany(models.Compra, {
+      foreignKey: 'idDashboard', // Se refiere al atributo en el modelo Compra.
+      as: 'compras'
+    });
+
+    // Un Dashboard puede estar asociado a muchas Ventas.
+    Dashboard.hasMany(models.Venta, {
+      foreignKey: 'idDashboard', // Se refiere al atributo en el modelo Venta.
+      as: 'ventas'
+    });
+    
+    // Un Dashboard puede estar asociado a muchos detalles de Venta de Productos.
+    Dashboard.hasMany(models.ProductoXVenta, {
+      foreignKey: 'idDashboard', // Se refiere al atributo en el modelo ProductoXVenta.
+      as: 'detallesVenta'
+    });
   };
 
   return Dashboard;

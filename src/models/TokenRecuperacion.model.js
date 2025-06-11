@@ -1,49 +1,50 @@
 // src/models/TokenRecuperacion.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const TokenRecuperacion = sequelize.define(
-    "TokenRecuperacion",
+    'TokenRecuperacion',
     {
-      id: {
+      idTokenRecuperacion: { 
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "id",
+        field: 'id_token_recuperacion' 
       },
       idUsuario: {
         type: DataTypes.INTEGER,
-        allowNull: false, // Ajustado
-        field: "idusuario",
-        references: { model: "usuario", key: "idusuario" },
-        onDelete: "CASCADE", // Reflejando DDL
-        onUpdate: "CASCADE",
+        allowNull: false,
+        field: 'id_usuario', 
+        references: {
+          model: 'usuario',
+          key: 'id_usuario' 
+        },
+        onDelete: 'CASCADE'
       },
       token: {
         type: DataTypes.TEXT,
         allowNull: false,
         unique: true,
-        field: "token",
-      }, // Ajustado unique
-      fechaExpiracion: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        field: "fechaexpiracion",
+        field: 'token'
       },
+      fechaExpiracion: {
+        type: DataTypes.DATE, // Se mapea a TIMESTAMP WITH TIME ZONE en PostgreSQL
+        allowNull: false,
+        field: 'fecha_expiracion' 
+      }
     },
     {
-      tableName: "tokenrecuperacion",
-      timestamps: false,
+      tableName: 'token_recuperacion', 
+      timestamps: false
     }
   );
 
   TokenRecuperacion.associate = (models) => {
-    if (models.Usuario) {
-      TokenRecuperacion.belongsTo(models.Usuario, {
-        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false },
-        as: "usuario",
-      });
-    }
+    // Un TokenRecuperacion pertenece a un Usuario.
+    TokenRecuperacion.belongsTo(models.Usuario, {
+      foreignKey: 'idUsuario',
+      as: 'usuario'
+    });
   };
 
   return TokenRecuperacion;

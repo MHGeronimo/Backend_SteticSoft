@@ -1,42 +1,45 @@
 // src/models/CategoriaServicio.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const CategoriaServicio = sequelize.define(
-    "CategoriaServicio",
+    'CategoriaServicio',
     {
       idCategoriaServicio: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idcategoriaservicio",
+        field: 'id_categoria_servicio' 
       },
-      nombre: { type: DataTypes.STRING(45), unique: true, field: "nombre" },
-      descripcion: { type: DataTypes.STRING(45), field: "descripcion" },
+      nombre: {
+        type: DataTypes.STRING(100), 
+        allowNull: false,
+        unique: true,
+        field: 'nombre'
+      },
+      descripcion: {
+        type: DataTypes.TEXT, 
+        field: 'descripcion'
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
-        allowNull: false, // Ajustado
-        field: "estado",
-      },
+        allowNull: false,
+        field: 'estado'
+      }
     },
     {
-      tableName: "categoria_servicio",
-      timestamps: false,
+      tableName: 'categoria_servicio',
+      timestamps: false
     }
   );
 
   CategoriaServicio.associate = (models) => {
-    if (models.Servicio) {
-      CategoriaServicio.hasMany(models.Servicio, {
-        foreignKey: {
-          name: "categoriaServicioId",
-          field: "categoria_servicio_idcategoriaservicio",
-          allowNull: false,
-        },
-        as: "servicios",
-      });
-    }
+    // Una CategoriaServicio puede tener muchos Servicios.
+    CategoriaServicio.hasMany(models.Servicio, {
+      foreignKey: 'idCategoriaServicio', // Se refiere al atributo en el modelo Servicio.
+      as: 'servicios'
+    });
   };
 
   return CategoriaServicio;

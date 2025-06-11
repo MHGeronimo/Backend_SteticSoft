@@ -1,75 +1,74 @@
 // src/models/VentaXServicio.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const VentaXServicio = sequelize.define(
-    "VentaXServicio",
+    'VentaXServicio',
     {
       idVentaXServicio: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idventaxservicio",
+        field: 'id_venta_x_servicio' 
       },
       valorServicio: {
-        // JS camelCase
-        type: DataTypes.DECIMAL(10, 2),
-        field: "valorservicio", // BD snake_case o minúsculas
+        type: DataTypes.DECIMAL(12, 2), 
+        defaultValue: 0.0,
+        field: 'valor_servicio' 
       },
-      servicioId: {
-        // JS: servicioId, FK: Servicio_idServicio
+      idServicio: { 
         type: DataTypes.INTEGER,
-        field: "servicio_idservicio",
+        allowNull: false,
+        field: 'id_servicio', 
         references: {
-          model: "servicio",
-          key: "idservicio",
+          model: 'servicio',
+          key: 'id_servicio' 
         },
+        onDelete: 'RESTRICT' 
       },
-      citaId: {
-        // JS: citaId, FK: Cita_idCita
+      idCita: { 
         type: DataTypes.INTEGER,
-        allowNull: true, // Asumiendo que puede ser nulo si una venta de servicio no siempre está ligada a una cita previa
-        field: "cita_idcita",
+        allowNull: true,
+        field: 'id_cita', 
         references: {
-          model: "cita",
-          key: "idcita",
+          model: 'cita',
+          key: 'id_cita' 
         },
+        onDelete: 'SET NULL' 
       },
-      ventaId: {
-        // JS: ventaId, FK: Venta_idVenta
+      idVenta: { 
         type: DataTypes.INTEGER,
-        field: "venta_idventa",
+        allowNull: false,
+        field: 'id_venta', 
         references: {
-          model: "venta",
-          key: "idventa",
+          model: 'venta',
+          key: 'id_venta' 
         },
-      },
+        onDelete: 'CASCADE' 
+      }
     },
     {
-      tableName: "ventaxservicio",
-      timestamps: false,
+      tableName: 'venta_x_servicio', 
+      timestamps: false
     }
   );
 
   VentaXServicio.associate = (models) => {
-    if (models.Servicio) {
-      VentaXServicio.belongsTo(models.Servicio, {
-        foreignKey: { name: "servicioId", field: "servicio_idservicio" },
-        as: "servicio",
-      });
-    }
-    if (models.Cita) {
-      VentaXServicio.belongsTo(models.Cita, {
-        foreignKey: { name: "citaId", field: "cita_idcita" },
-        as: "cita",
-      });
-    }
-    if (models.Venta) {
-      VentaXServicio.belongsTo(models.Venta, {
-        foreignKey: { name: "ventaId", field: "venta_idventa" },
-        as: "venta",
-      });
-    }
+    // Un detalle VentaXServicio pertenece a un Servicio.
+    VentaXServicio.belongsTo(models.Servicio, {
+      foreignKey: 'idServicio',
+      as: 'servicio'
+    });
+    // Un detalle VentaXServicio puede pertenecer a una Cita.
+    VentaXServicio.belongsTo(models.Cita, {
+      foreignKey: 'idCita',
+      as: 'cita'
+    });
+    // Un detalle VentaXServicio pertenece a una Venta.
+    VentaXServicio.belongsTo(models.Venta, {
+      foreignKey: 'idVenta',
+      as: 'venta'
+    });
   };
 
   return VentaXServicio;

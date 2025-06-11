@@ -1,4 +1,4 @@
-// src/shared/src_api/models/Cliente.model.js
+// src/models/Cliente.model.js
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
@@ -9,64 +9,62 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "idcliente",
+        field: "id_cliente", 
       },
       nombre: {
         type: DataTypes.STRING(100),
-        field: "nombre",
         allowNull: false,
+        field: "nombre",
       },
       apellido: {
         type: DataTypes.STRING(100),
-        field: "apellido",
         allowNull: false,
+        field: "apellido",
       },
       correo: {
-        // Correo del perfil del cliente, puede o no ser el mismo que el de la cuenta Usuario
         type: DataTypes.STRING(100),
-        field: "correo",
-        unique: true, // Este correo de perfil también es único
         allowNull: false,
+        unique: true,
         validate: { isEmail: true },
+        field: "correo",
       },
       telefono: {
-        type: DataTypes.STRING(45),
-        field: "telefono",
+        type: DataTypes.STRING(20), 
         allowNull: false,
+        field: "telefono",
       },
       tipoDocumento: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(50), 
         allowNull: false,
-        field: "tipodocumento",
+        field: "tipo_documento", 
       },
       numeroDocumento: {
         type: DataTypes.STRING(45),
         allowNull: false,
         unique: true,
-        field: "numerodocumento",
+        field: "numero_documento", 
       },
       fechaNacimiento: {
         type: DataTypes.DATEONLY,
         allowNull: false,
-        field: "fechanacimiento",
+        field: "fecha_nacimiento", 
       },
       estado: {
-        // Estado del perfil del cliente
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
         field: "estado",
       },
       idUsuario: {
-        // Clave Foránea para vincular con la tabla Usuario
         type: DataTypes.INTEGER,
-        allowNull: false, // Un perfil de Cliente DEBE estar asociado a un Usuario
-        unique: true, // Un Usuario solo puede tener un perfil de Cliente
-        field: "idusuario",
+        allowNull: false,
+        unique: true,
+        field: "id_usuario", 
         references: {
-          model: "usuario", // Nombre de la tabla 'usuario'
-          key: "idusuario", // Nombre de la columna 'idusuario' en la tabla 'usuario'
+          model: "usuario",
+          key: "id_usuario", 
         },
+        onDelete: "RESTRICT", // AÑADIDO: Política de integridad crítica.
       },
     },
     {
@@ -76,25 +74,23 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Cliente.associate = (models) => {
-    // Un Cliente pertenece a una cuenta de Usuario
-    if (models.Usuario) {
-      Cliente.belongsTo(models.Usuario, {
-        foreignKey: { name: "idUsuario", field: "idusuario", allowNull: false },
-        as: "usuarioCuenta", // Alias para acceder al Usuario desde un Cliente
-      });
-    }
-    if (models.Venta) {
-      Cliente.hasMany(models.Venta, {
-        foreignKey: { name: "clienteId", field: "cliente_idcliente" }, 
-        as: "ventas",
-      });
-    }
-    if (models.Cita) {
-      Cliente.hasMany(models.Cita, {
-        foreignKey: { name: "clienteId", field: "cliente_idcliente" }, 
-        as: "citas",
-      });
-    }
+    // Un Cliente pertenece a una cuenta de Usuario.
+    Cliente.belongsTo(models.Usuario, {
+      foreignKey: "idUsuario", // Se refiere al atributo 'idUsuario' en este mismo modelo.
+      as: "usuarioCuenta",
+    });
+
+    // Un Cliente puede tener muchas Ventas.
+    Cliente.hasMany(models.Venta, {
+      foreignKey: "idCliente", // Se refiere al atributo 'idCliente' en el modelo Venta.
+      as: "ventas",
+    });
+
+    // Un Cliente puede tener muchas Citas.
+    Cliente.hasMany(models.Cita, {
+      foreignKey: "idCliente", // Se refiere al atributo 'idCliente' en el modelo Cita.
+      as: "citas",
+    });
   };
 
   return Cliente;
