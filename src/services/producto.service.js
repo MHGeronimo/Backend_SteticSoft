@@ -90,27 +90,38 @@ const crearProducto = async (datosProducto) => {
 /**
  * Obtener todos los productos.
  */
-const obtenerTodosLosProductos = async (opcionesDeFiltro = {}) => {
-  const whereClause = { ...opcionesDeFiltro };
-  try {
-    return await db.Producto.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: db.CategoriaProducto,
-          as: "categoriaProducto",
-          attributes: ["idCategoria", "nombre"],
-        },
-      ],
-      order: [["nombre", "ASC"]],
-    });
-  } catch (error) {
-    console.error(
-      "Error al obtener todos los productos en el servicio:",
-      error.message
-    );
-    throw new CustomError(`Error al obtener productos: ${error.message}`, 500);
+const obtenerTodosLosProductos = async (filtros = {}) => {
+  // 1. Añadimos 'tipoUso' a los filtros que podemos recibir.
+  const { estado, categoriaId, tipoUso, busqueda } = filtros;
+  
+  const where = {};
+  if (estado) where.estado = estado === "true";
+  if (categoriaId) where.Categoria_producto_idCategoria = categoriaId;
+  if (busqueda) {
+    where.nombre = { [Op.iLike]: `%${busqueda}%` };
   }
+
+  // 2. Creamos una opción de 'include' para poder filtrar por el modelo asociado.
+  const includeOptions = [
+    {
+      model: CategoriaProducto,
+      as: "categoriaProducto",
+      where: {} // Objeto 'where' para la categoría
+    },
+  ];
+
+  // 3. Si se proporciona 'tipoUso', lo aplicamos al 'where' de la categoría.
+  if (tipoUso) {
+    includeOptions[0].where.tipoUso = tipoUso;
+  }
+
+  const { count, rows } = await Producto.findAndCountAll({
+    where,
+    include: includeOptions, // 4. Aplicamos el 'include' con el filtro.
+    order: [["nombre", "ASC"]],
+  });
+  
+  return { data: rows, total: count };
 };
 
 /**
