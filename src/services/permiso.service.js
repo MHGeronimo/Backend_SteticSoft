@@ -191,5 +191,5 @@ module.exports = {
   anularPermiso,
   habilitarPermiso,
   eliminarPermisoFisico,
-  cambiarEstadoPermiso, // Exportar la nueva función
+  cambiarEstadoPermiso, 
 };
