@@ -37,27 +37,36 @@ const cambiarEstadoEmpleado = async (idEmpleado, nuevoEstado) => {
  */
 const crearEmpleado = async (datosCompletosEmpleado) => {
   const {
-    // Datos para Usuario
-    correo,           // Correo para la cuenta de Usuario
+    // Datos para Usuario y Empleado (compartidos)
+    correo,           // Correo para la cuenta de Usuario y el perfil del Empleado
     contrasena,       // Contraseña para la nueva cuenta de Usuario
-    nombre,           // Nombre del empleado (podría necesitar apellido si tu modelo Empleado lo tiene)
+    nombre,           // Nombre del empleado
+    apellido,         // Nuevo campo añadido
+    telefono,         // Nuevo campo añadido (reemplaza a celular)
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
-    celular,
-    estadoEmpleado, // Estado para el perfil de Empleado (opcional, por defecto true)
+    estadoEmpleado,   // Estado para el perfil de Empleado (opcional, por defecto true)
   } = datosCompletosEmpleado;
 
   // Validaciones previas
-  if (!correo || !contrasena || !nombre || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
-    throw new BadRequestError("Faltan campos obligatorios para crear el empleado y su cuenta de usuario (correo, contraseña, nombre, tipo/número doc, fecha nacimiento).");
+  if (!correo || !contrasena || !nombre || !apellido || !telefono || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
+    throw new BadRequestError("Faltan campos obligatorios para crear el empleado y su cuenta de usuario.");
   }
 
+  // Verificar unicidad del correo en la tabla Usuario
   let usuarioExistente = await db.Usuario.findOne({ where: { correo } });
   if (usuarioExistente) {
     throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para una cuenta de Usuario.`);
   }
 
+  // Verificar unicidad del correo en la tabla Empleado
+  let empleadoExistenteCorreo = await db.Empleado.findOne({ where: { correo } });
+  if (empleadoExistenteCorreo) {
+    throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para otro perfil de empleado.`);
+  }
+
+  // Verificar unicidad del número de documento en la tabla Empleado
   let empleadoExistenteNumeroDoc = await db.Empleado.findOne({ where: { numeroDocumento } });
   if (empleadoExistenteNumeroDoc) {
     throw new ConflictError(`El número de documento '${numeroDocumento}' ya está registrado para otro empleado.`);
@@ -80,14 +89,15 @@ const crearEmpleado = async (datosCompletosEmpleado) => {
     }, { transaction });
 
     // 2. Crear el Empleado, vinculándolo al nuevo Usuario
-    // Asegúrate que los campos coincidan con tu modelo Empleado.model.js
     const nuevoEmpleado = await db.Empleado.create({
       idUsuario: nuevoUsuario.idUsuario,
-      nombre, // Si Empleado tiene nombre y apellido separados, ajústalo. Tu modelo actual solo tiene 'nombre'.
+      nombre,
+      apellido, // Añadido
+      correo,   // Añadido
+      telefono, // Añadido
       tipoDocumento,
       numeroDocumento,
       fechaNacimiento,
-      celular: celular || null,
       estado: datosCompletosEmpleado.estadoEmpleado !== undefined ? datosCompletosEmpleado.estadoEmpleado : true,
     }, { transaction });
 
@@ -109,8 +119,18 @@ const crearEmpleado = async (datosCompletosEmpleado) => {
       throw error;
     }
     if (error.name === "SequelizeUniqueConstraintError") {
-      const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "un campo único";
-      throw new ConflictError(`Ya existe un registro con el mismo valor para '${constraintField}'.`);
+      let mensajeConflicto =
+        "Uno de los datos proporcionados ya está en uso (correo o número de documento).";
+      if (error.fields) {
+        if (error.fields.correo && error.fields.correo === correo)
+          mensajeConflicto = `El correo electrónico '${correo}' ya está registrado.`;
+        if (
+          error.fields.numerodocumento &&
+          error.fields.numerodocumento === numeroDocumento
+        )
+          mensajeConflicto = `El número de documento '${numeroDocumento}' ya está registrado.`;
+      }
+      throw new ConflictError(mensajeConflicto);
     }
     // console.error("Error al crear el empleado y usuario en el servicio:", error.message, error.stack); // Comentado
     throw new CustomError(`Error al crear el empleado: ${error.message}`, 500);
@@ -138,7 +158,7 @@ const obtenerTodosLosEmpleados = async (opcionesDeFiltro = {}) => {
         // Podrías incluir otras asociaciones de Empleado aquí si es necesario, como Especialidades
         // { model: db.Especialidad, as: "especialidades", through: { attributes: [] } /* Para no traer la tabla intermedia */ }
       ],
-      order: [["nombre", "ASC"]], // O por apellido si lo tuvieras separado en Empleado
+      order: [["apellido", "ASC"], ["nombre", "ASC"]], // Ordenar por apellido y luego nombre
     });
     return empleados;
   } catch (error) {
@@ -195,16 +215,18 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
 
     // Campos directos de Empleado
     if (datosActualizar.hasOwnProperty('nombre')) datosParaEmpleado.nombre = datosActualizar.nombre;
+    if (datosActualizar.hasOwnProperty('apellido')) datosParaEmpleado.apellido = datosActualizar.apellido; // Añadido
+    if (datosActualizar.hasOwnProperty('telefono')) datosParaEmpleado.telefono = datosActualizar.telefono; // Añadido
     if (datosActualizar.hasOwnProperty('tipoDocumento')) datosParaEmpleado.tipoDocumento = datosActualizar.tipoDocumento;
     if (datosActualizar.hasOwnProperty('numeroDocumento')) datosParaEmpleado.numeroDocumento = datosActualizar.numeroDocumento;
     if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaEmpleado.fechaNacimiento = datosActualizar.fechaNacimiento;
-    if (datosActualizar.hasOwnProperty('celular')) datosParaEmpleado.celular = datosActualizar.celular;
     if (datosActualizar.hasOwnProperty('estadoEmpleado')) datosParaEmpleado.estado = datosActualizar.estadoEmpleado;
 
     // Campos que podrían afectar a la tabla Usuario
-    // El correo de un empleado podría ser un correo corporativo y diferente al de login,
-    // o ser el mismo. Define tu lógica. Aquí asumimos que se puede actualizar el correo del Usuario.
-    if (datosActualizar.hasOwnProperty('correo')) datosParaUsuario.correo = datosActualizar.correo;
+    if (datosActualizar.hasOwnProperty('correo')) {
+      datosParaEmpleado.correo = datosActualizar.correo; // Actualizar correo en perfil Empleado
+      datosParaUsuario.correo = datosActualizar.correo; // Marcar para actualizar correo en Usuario
+    }
     if (datosActualizar.hasOwnProperty('estadoUsuario')) datosParaUsuario.estado = datosActualizar.estadoUsuario;
     // No se maneja cambio de contraseña ni de rol aquí directamente. Esas serían operaciones separadas.
 
@@ -215,6 +237,13 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
       if (otroEmpleadoConDocumento) {
         await transaction.rollback();
         throw new ConflictError(`El número de documento '${datosParaEmpleado.numeroDocumento}' ya está registrado para otro empleado.`);
+      }
+    }
+    if (datosParaEmpleado.correo && datosParaEmpleado.correo !== empleado.correo) {
+      const otroEmpleadoConCorreo = await db.Empleado.findOne({ where: { correo: datosParaEmpleado.correo, idEmpleado: { [Op.ne]: idEmpleado } }, transaction });
+      if (otroEmpleadoConCorreo) {
+        await transaction.rollback();
+        throw new ConflictError(`El correo electrónico '${datosParaEmpleado.correo}' ya está registrado para otro perfil de empleado.`);
       }
     }
     
@@ -246,8 +275,6 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
     await transaction.rollback();
     if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof BadRequestError || error instanceof CustomError) throw error;
     if (error.name === "SequelizeUniqueConstraintError") {
-      // Este error podría surgir si, por ejemplo, se intenta cambiar el correo del Usuario a uno ya existente
-      // y la validación de arriba no lo capturó por alguna razón.
       const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "un campo único";
       throw new ConflictError(`Error de unicidad. Ya existe un registro con el mismo valor para '${constraintField}'.`);
     }
