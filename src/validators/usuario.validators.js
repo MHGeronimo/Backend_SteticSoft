@@ -3,123 +3,103 @@ const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
-const db = require("../models"); // Asegúrate que db esté disponible
+const db = require("../models"); // Ensure db is available
 
 const crearUsuarioValidators = [
-  // Validaciones para la entidad Usuario (existentes y correctas)
+  // Validations for the User entity (existing and correct)
   body("correo")
-    .trim().notEmpty().withMessage("El correo electrónico es obligatorio.")
-    .isEmail().withMessage("Debe proporcionar un correo electrónico válido.")
+    .trim().notEmpty().withMessage("The email address is required.")
+    .isEmail().withMessage("You must provide a valid email address.")
     .normalizeEmail()
     .custom(async (value) => {
       const usuarioExistente = await db.Usuario.findOne({ where: { correo: value } });
       if (usuarioExistente) {
-        return Promise.reject("El correo electrónico ya está registrado para una cuenta de usuario.");
+        return Promise.reject("The email address is already registered for a user account.");
       }
     }),
   body("contrasena")
-    .notEmpty().withMessage("La contraseña es obligatoria.")
-    .isString().withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8 }).withMessage("La contraseña debe tener al menos 8 caracteres."),
+    .notEmpty().withMessage("The password is required.")
+    .isString().withMessage("The password must be a text string.")
+    .isLength({ min: 8 }).withMessage("The password must be at least 8 characters long."),
   body("idRol")
-    .notEmpty().withMessage("El ID del rol es obligatorio.")
-    .isInt({ gt: 0 }).withMessage("El ID del rol debe ser un entero positivo.")
+    .notEmpty().withMessage("The role ID is required.")
+    .isInt({ gt: 0 }).withMessage("The role ID must be a positive integer.")
     .custom(async (value) => {
       const rolExistente = await db.Rol.findOne({ where: { idRol: value, estado: true } });
       if (!rolExistente) {
-        return Promise.reject("El rol especificado no existe o no está activo.");
+        return Promise.reject("The specified role does not exist or is not active.");
       }
     }),
-  body("estado").optional().isBoolean().withMessage("El estado debe ser un valor booleano (true o false)."),
+  body("estado").optional().isBoolean().withMessage("The status must be a boolean value (true or false)."),
 
-  // Validaciones para campos de Perfil (Cliente/Empleado)
-  // Estos se marcan como opcionales aquí, y el servicio (crearUsuario)
-  // verificará la obligatoriedad basada en el rol.
-  // O, puedes hacerlos condicionalmente requeridos aquí usando .custom() si prefieres.
+  // Validations for Profile fields (Client/Employee)
+  // These are marked as optional here, and the service (crearUsuario)
+  // will check for mandatory fields based on the role.
+  // Or, you can make them conditionally required here using .custom() if you prefer.
 
   body("nombre")
-    .optional() // El servicio verificará si es requerido según el rol
+    .optional() // The service will check if it is required based on the role
     .trim()
-    .notEmpty().withMessage("El nombre no puede estar vacío si se proporciona.")
-    .isString().withMessage("El nombre debe ser una cadena de texto.")
-    .isLength({ min: 2, max: 100 }).withMessage("El nombre debe tener entre 2 y 100 caracteres."),
+    .notEmpty().withMessage("The name cannot be empty if provided.")
+    .isString().withMessage("The name must be a text string.")
+    .isLength({ min: 2, max: 100 }).withMessage("The name must be between 2 and 100 characters."),
   
   body("apellido")
-    .optional() // El servicio verificará si es requerido según el rol
+    .optional() // The service will check if it is required based on the role
     .trim()
-    .notEmpty().withMessage("El apellido не puede estar vacío si se proporciona.")
-    .isString().withMessage("El apellido debe ser una cadena de texto.")
-    .isLength({ min: 2, max: 100 }).withMessage("El apellido debe tener entre 2 y 100 caracteres."),
+    .notEmpty().withMessage("The last name cannot be empty if provided.")
+    .isString().withMessage("The last name must be a text string.")
+    .isLength({ min: 2, max: 100 }).withMessage("The last name must be between 2 and 100 characters."),
 
   body("telefono")
-    .optional() // El servicio verificará si es requerido según el rol
+    .optional() // The service will check if it is required based on the role
     .trim()
-    .notEmpty().withMessage("El teléfono no puede estar vacío si se proporciona.")
-    .isString().withMessage("El teléfono debe ser una cadena de texto.") // Podrías añadir isNumeric o un regex específico si quieres.
-    .isLength({ min: 7, max: 45 }).withMessage("El teléfono debe tener entre 7 y 45 caracteres."),
+    .notEmpty().withMessage("The phone number cannot be empty if provided.")
+    .isString().withMessage("The phone number must be a text string.") // You could add isNumeric or a specific regex if you want.
+    .isLength({ min: 7, max: 45 }).withMessage("The phone number must be between 7 and 45 characters."),
 
   body("tipoDocumento")
-    .optional() // El servicio verificará si es requerido según el rol
+    .optional() // The service will check if it is required based on the role
     .trim()
-    .notEmpty().withMessage("El tipo de documento no puede estar vacío si se proporciona.")
-    .isString().withMessage("El tipo de documento debe ser texto.")
-    .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']) // Ejemplo de valores permitidos
-    .withMessage("Tipo de documento no válido."),
+    .notEmpty().withMessage("The document type cannot be empty if provided.")
+    .isString().withMessage("The document type must be text.")
+    .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']) // Example of allowed values
+    .withMessage("Invalid document type."),
 
   body("numeroDocumento")
-    .optional() // El servicio verificará si es requerido según el rol
+    .optional() // The service will check if it is required based on the role
     .trim()
-    .notEmpty().withMessage("El número de documento no puede estar vacío si se proporciona.")
-    .isString().withMessage("El número de documento debe ser texto.")
-    .isLength({ min: 5, max: 45 }).withMessage("El número de documento debe tener entre 5 y 45 caracteres.")
+    .notEmpty().withMessage("The document number cannot be empty if provided.")
+    .isString().withMessage("The document number must be text.")
+    .isLength({ min: 5, max: 45 }).withMessage("The document number must be between 5 and 45 characters.")
     .custom(async (value, { req }) => {
-        if (!value) return true; // Si es opcional y no se provee, no validar custom
+        if (!value) return true; // If optional and not provided, do not custom validate
 
         const idRol = req.body.idRol;
-        if (!idRol) return true; // Si no hay rol, no podemos determinar el tipo de perfil
+        if (!idRol) return true; // If no role, we cannot determine the profile type
         
         const rol = await db.Rol.findByPk(idRol);
-        if (!rol) return true; // Si el rol no existe, otra validación lo capturará
+        if (!rol) return true; // If the role does not exist, another validation will catch it
 
         if (rol.nombre === 'Cliente') {
             const clienteExistente = await db.Cliente.findOne({ where: { numeroDocumento: value } });
             if (clienteExistente) {
-                return Promise.reject("El número de documento ya está registrado para un cliente.");
+                return Promise.reject("The document number is already registered for a client.");
             }
         } else if (rol.nombre === 'Empleado') {
-            // Asumiendo que ya tienes la relación Empleado-Usuario y la tabla Empleado con numeroDocumento
+            // Assuming you already have the Employee-User relationship and the Employee table with numeroDocumento
             const empleadoExistente = await db.Empleado.findOne({ where: { numeroDocumento: value } });
             if (empleadoExistente) {
-                return Promise.reject("El número de documento ya está registrado para un empleado.");
+                return Promise.reject("The document number is already registered for an employee.");
             }
         }
         return true;
     }),
 
   body("fechaNacimiento")
-    .optional() // El servicio verificará si es requerido según el rol
-    .isISO8601().withMessage("La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD).")
-    .toDate(), // Convierte a objeto Date
-
-  // Validador para 'celular' (si es específico para Empleados)
-  body("celular")
-    .optional()
-    .trim()
-    .if((value, { req }) => { // Solo validar si el rol es Empleado
-        const idRol = req.body.idRol;
-        if (!idRol) return false;
-        // Esta lógica es un poco simplista, idealmente se haría con una función custom o
-        // el servicio manejaría la obligatoriedad
-        // const rol = await db.Rol.findByPk(idRol); // No se puede hacer await directo aquí
-        // Para una validación condicional más robusta, podrías necesitar una función custom para 'celular'
-        // que internamente verifique el rol.
-        // O dejar que el servicio lo valide.
-        // Por ahora, si se envía, se valida su formato.
-        return true; 
-    })
-    .notEmpty().withMessage("El celular no puede estar vacío si se proporciona para un empleado.")
-    .isString().withMessage("El celular debe ser una cadena de texto.")
-    .isLength({ min: 7, max: 45 }).withMessage("El celular debe tener entre 7 y 45 caracteres."),
+    .optional() // The service will check if it is required based on the role
+    .isISO8601().withMessage("The date of birth must be a valid date (YYYY-MM-DD).")
+    .toDate(), // Converts to Date object
   
   handleValidationErrors,
 ];
@@ -127,98 +107,96 @@ const crearUsuarioValidators = [
 const actualizarUsuarioValidators = [
   param("idUsuario")
     .isInt({ gt: 0 })
-    .withMessage("El ID del usuario debe ser un entero positivo."),
+    .withMessage("The user ID must be a positive integer."),
   body("correo")
     .optional()
     .trim()
     .isEmail()
-    .withMessage("Debe proporcionar un correo electrónico válido si se actualiza.")
+    .withMessage("You must provide a valid email address if updating.")
     .normalizeEmail()
     .custom(async (value, { req }) => {
       const idUsuario = Number(req.params.idUsuario);
       const usuarioExistente = await db.Usuario.findOne({
         where: {
           correo: value,
-          idUsuario: { [db.Sequelize.Op.ne]: idUsuario }, // Usar Op de db.Sequelize
+          idUsuario: { [db.Sequelize.Op.ne]: idUsuario }, // Use Op from db.Sequelize
         },
       });
       if (usuarioExistente) {
-        return Promise.reject("El correo electrónico ya está registrado por otro usuario.");
+        return Promise.reject("The email address is already registered by another user.");
       }
     }),
-  body("contrasena") // La contraseña es opcional en actualización
-    .optional({ checkFalsy: true }) // Permite string vacío para ser ignorado, o no enviar el campo
-    .isString().withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8 }).withMessage("La contraseña debe tener al menos 8 caracteres si se actualiza."),
+  body("contrasena") // Password is optional on update
+    .optional({ checkFalsy: true }) // Allows empty string to be ignored, or not send the field
+    .isString().withMessage("The password must be a text string.")
+    .isLength({ min: 8 }).withMessage("The password must be at least 8 characters long if updating."),
   body("idRol")
     .optional()
-    .isInt({ gt: 0 }).withMessage("El ID del rol debe ser un entero positivo si se actualiza.")
+    .isInt({ gt: 0 }).withMessage("The role ID must be a positive integer if updating.")
     .custom(async (value) => {
-      if (value) { // Solo validar si se proporciona un idRol
+      if (value) { // Only validate if an idRol is provided
         const rolExistente = await db.Rol.findOne({
           where: { idRol: value, estado: true },
         });
         if (!rolExistente) {
-          return Promise.reject("El rol especificado para actualizar no existe o no está activo.");
+          return Promise.reject("The specified role for update does not exist or is not active.");
         }
       }
     }),
-  body("estado").optional().isBoolean().withMessage("El estado debe ser un valor booleano (true o false)."),
+  body("estado").optional().isBoolean().withMessage("The status must be a boolean value (true or false)."),
 
-  // Validadores opcionales para campos de perfil en actualización
-  body("nombre").optional().trim().notEmpty().withMessage("El nombre no puede ser vacío si se actualiza.").isLength({ min: 2, max: 100 }),
-  body("apellido").optional().trim().notEmpty().withMessage("El apellido no puede ser vacío si se actualiza.").isLength({ min: 2, max: 100 }),
-  body("telefono").optional().trim().notEmpty().withMessage("El teléfono no puede ser vacío si se actualiza.").isLength({ min: 7, max: 45 }),
-  body("tipoDocumento").optional().trim().notEmpty().withMessage("El tipo de documento no puede ser vacío si se actualiza.").isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']),
-  body("numeroDocumento").optional().trim().notEmpty().withMessage("El número de documento no puede ser vacío si se actualiza.").isLength({ min: 5, max: 45 })
+  // Optional validators for profile fields on update
+  body("nombre").optional().trim().notEmpty().withMessage("The name cannot be empty if updating.").isLength({ min: 2, max: 100 }),
+  body("apellido").optional().trim().notEmpty().withMessage("The last name cannot be empty if updating.").isLength({ min: 2, max: 100 }),
+  body("telefono").optional().trim().notEmpty().withMessage("The phone number cannot be empty if updating.").isLength({ min: 7, max: 45 }),
+  body("tipoDocumento").optional().trim().notEmpty().withMessage("The document type cannot be empty if updating.").isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']),
+  body("numeroDocumento").optional().trim().notEmpty().withMessage("The document number cannot be empty if updating.").isLength({ min: 5, max: 45 })
     .custom(async (value, { req }) => {
         if (!value) return true;
-        const idUsuario = Number(req.params.idUsuario); // Obtener el idUsuario que se está actualizando
+        const idUsuario = Number(req.params.idUsuario); // Get the idUsuario being updated
         const usuarioActual = await db.Usuario.findByPk(idUsuario, { include: ['rol'] });
-        if (!usuarioActual) return true; // Otra validación lo capturará
+        if (!usuarioActual) return true; // Another validation will catch it
 
         const rolNombre = usuarioActual.rol?.nombre;
 
         if (rolNombre === 'Cliente') {
             const clienteAsociado = await db.Cliente.findOne({ where: { idUsuario } });
-            if (clienteAsociado && clienteAsociado.numeroDocumento === value) return true; // Es el mismo documento del cliente actual, no hay conflicto
+            if (clienteAsociado && clienteAsociado.numeroDocumento === value) return true; // It's the same document of the current client, no conflict
             const otroClienteConDocumento = await db.Cliente.findOne({ where: { numeroDocumento: value } });
             if (otroClienteConDocumento) {
-                return Promise.reject("El número de documento ya está registrado para otro cliente.");
+                return Promise.reject("The document number is already registered for another client.");
             }
         } else if (rolNombre === 'Empleado') {
             const empleadoAsociado = await db.Empleado.findOne({ where: { idUsuario } });
             if (empleadoAsociado && empleadoAsociado.numeroDocumento === value) return true;
             const otroEmpleadoConDocumento = await db.Empleado.findOne({ where: { numeroDocumento: value } });
             if (otroEmpleadoConDocumento) {
-                return Promise.reject("El número de documento ya está registrado para otro empleado.");
+                return Promise.reject("The document number is already registered for another employee.");
             }
         }
         return true;
     }),
-  body("fechaNacimiento").optional().isISO8601().withMessage("La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD).").toDate(),
-  // body("celular").optional().trim().isLength({ min: 7, max: 45 }),
-  // body("direccion").optional().trim(),
-
+  body("fechaNacimiento").optional().isISO8601().withMessage("The date of birth must be a valid date (YYYY-MM-DD).").toDate(),
+  
   handleValidationErrors,
 ];
 
-const idUsuarioValidator = [ // Sin cambios
+const idUsuarioValidator = [ // No changes
   param("idUsuario")
     .isInt({ gt: 0 })
-    .withMessage("El ID del usuario debe ser un entero positivo."),
+    .withMessage("The user ID must be a positive integer."),
   handleValidationErrors,
 ];
 
-const cambiarEstadoUsuarioValidators = [ // Sin cambios
+const cambiarEstadoUsuarioValidators = [ // No changes
   param("idUsuario")
     .isInt({ gt: 0 })
-    .withMessage("El ID del usuario debe ser un entero positivo."),
+    .withMessage("The user ID must be a positive integer."),
   body("estado")
-    .exists({ checkFalsy: false }) // Asegura que 'estado' exista, incluso si es false
-    .withMessage("El campo 'estado' es obligatorio en el cuerpo de la solicitud.")
+    .exists({ checkFalsy: false }) // Ensures 'status' field exists, even if false
+    .withMessage("The 'status' field is required in the request body.")
     .isBoolean()
-    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+    .withMessage("The 'status' value must be a boolean (true or false)."),
   handleValidationErrors,
 ];
 
