@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: 'id_empleado' 
+        field: 'id_empleado'
       },
       nombre: {
         type: DataTypes.STRING(100),
@@ -24,19 +24,19 @@ module.exports = (sequelize, DataTypes) => {
       correo: { 
         type: DataTypes.STRING(100),
         allowNull: false,
-        unique: true, 
+        unique: true,
         validate: { isEmail: true },
         field: 'correo',
       },
       telefono: { 
-        type: DataTypes.STRING(20), 
+        type: DataTypes.STRING(20),
         allowNull: false,
         field: 'telefono',
       },
       tipoDocumento: {
-        type: DataTypes.STRING(50), 
+        type: DataTypes.STRING(50),
         allowNull: false,
-        field: 'tipo_documento' 
+        field: 'tipo_documento'
       },
       numeroDocumento: {
         type: DataTypes.STRING(45),
@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
       fechaNacimiento: {
         type: DataTypes.DATEONLY,
         allowNull: false,
-        field: 'fecha_nacimiento' 
+        field: 'fecha_nacimiento'
       },
       estado: {
         type: DataTypes.BOOLEAN,
@@ -62,9 +62,9 @@ module.exports = (sequelize, DataTypes) => {
         field: 'id_usuario',
         references: {
           model: 'usuario',
-          key: 'id_usuario' 
+          key: 'id_usuario'
         },
-        onDelete: 'RESTRICT' 
+        onDelete: 'RESTRICT'
       }
     },
     {
@@ -82,9 +82,9 @@ module.exports = (sequelize, DataTypes) => {
 
     // Un Empleado puede tener muchas Especialidades.
     Empleado.belongsToMany(models.Especialidad, {
-      through: 'empleado_especialidad', 
-      foreignKey: 'id_empleado',     
-      otherKey: 'id_especialidad',    
+      through: 'empleado_especialidad',
+      foreignKey: 'id_empleado',
+      otherKey: 'id_especialidad',
       as: 'especialidades'
     });
 
