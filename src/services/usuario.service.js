@@ -42,13 +42,12 @@ const crearUsuario = async (datosCompletosUsuario) => {
   // Datos para el perfil (Cliente o Empleado) - se extraerán del mismo objeto
   const {
     nombre,
-    apellido,
-    telefono,
+    apellido,      // Añadido
+    telefono,      // Añadido (reemplaza a celular)
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
     // 'direccion' // Si decides incluirlo y manejarlo
-    // 'celular' // específico para Empleado
   } = datosCompletosUsuario;
 
   const usuarioExistente = await db.Usuario.findOne({ where: { correo } });
@@ -112,26 +111,33 @@ const crearUsuario = async (datosCompletosUsuario) => {
 
     } else if (rol.nombre === "Empleado") {
       // Lógica similar para crear un Empleado si el rol es "Empleado"
-      // Asegúrate que la tabla Empleado tenga idUsuario, los campos necesarios y las asociaciones en los modelos.
-      if (!nombre || !tipoDocumento || !numeroDocumento || !fechaNacimiento /* || !datosCompletosUsuario.celular */) {
-        // Ajusta los campos requeridos para Empleado
+      // Ahora, Empleado tiene los mismos campos de información personal que Cliente
+      if (!nombre || !apellido || !telefono || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
         await transaction.rollback();
         throw new BadRequestError("Faltan campos obligatorios del perfil de empleado.");
       }
+      
       const empleadoConDocumento = await db.Empleado.findOne({ where: { numeroDocumento } });
       if (empleadoConDocumento) {
           await transaction.rollback();
           throw new ConflictError(`El número de documento '${numeroDocumento}' ya está registrado para un empleado.`);
       }
-      // Aquí crearías el empleado, asegurándote que el modelo Empleado y la tabla tengan idUsuario
+      
+      const empleadoConCorreo = await db.Empleado.findOne({ where: { correo } });
+      if (empleadoConCorreo) {
+          await transaction.rollback();
+          throw new ConflictError(`El correo '${correo}' ya está registrado para un perfil de empleado.`);
+      }
+
       await db.Empleado.create({
         idUsuario: nuevoUsuario.idUsuario,
         nombre,
-        // apellido: datosCompletosUsuario.apellido, // Si Empleado también usa apellido
+        apellido,       // Añadido
+        correo,         // Añadido
+        telefono,       // Añadido
         tipoDocumento,
         numeroDocumento,
         fechaNacimiento,
-        celular: datosCompletosUsuario.celular, // Si es específico de Empleado
         estado: true,
       }, { transaction });
     }
@@ -156,9 +162,20 @@ const crearUsuario = async (datosCompletosUsuario) => {
         throw error;
     }
     if (error.name === "SequelizeUniqueConstraintError") {
-      throw new ConflictError(
-        "Error de unicidad. El correo o número de documento ya podría estar registrado."
-      );
+      // Este bloque captura errores de unicidad que no fueron validados explícitamente antes,
+      // incluyendo correo o numero_documento si se intenta duplicar.
+      let mensajeConflicto =
+        "Uno de los datos proporcionados ya está en uso (correo o número de documento).";
+      if (error.fields) {
+        if (error.fields.correo && error.fields.correo === correo)
+          mensajeConflicto = `El correo electrónico '${correo}' ya está registrado.`;
+        if (
+          error.fields.numerodocumento &&
+          error.fields.numerodocumento === numeroDocumento
+        )
+          mensajeConflicto = `El número de documento '${numeroDocumento}' ya está registrado.`;
+      }
+      throw new ConflictError(mensajeConflicto);
     }
     // console.error("Error al crear el usuario y/o perfil en el servicio:", error.message); // Comentado
     throw new CustomError(`Error al crear el usuario: ${error.message}`, 500);
@@ -186,6 +203,7 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
             "idCliente",
             "nombre",
             "apellido",
+            "correo", // Añadido
             "telefono",
             "tipoDocumento",
             "numeroDocumento",
@@ -198,8 +216,10 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
           as: "empleadoInfo",
           attributes: [
             "idEmpleado",
-            "nombre", // O los campos relevantes de Empleado
-            "celular",
+            "nombre",
+            "apellido", // Añadido
+            "correo",   // Añadido
+            "telefono", // Reemplaza a "celular"
             "tipoDocumento",
             "numeroDocumento",
             "fechaNacimiento",
@@ -236,6 +256,7 @@ const obtenerUsuarioPorId = async (idUsuario) => {
             "idCliente",
             "nombre",
             "apellido",
+            "correo", // Añadido
             "telefono",
             "tipoDocumento",
             "numeroDocumento",
@@ -249,7 +270,9 @@ const obtenerUsuarioPorId = async (idUsuario) => {
           attributes: [
             "idEmpleado",
             "nombre",
-            "celular",
+            "apellido", // Añadido
+            "correo",   // Añadido
+            "telefono", // Reemplaza a "celular"
             "tipoDocumento",
             "numeroDocumento",
             "fechaNacimiento",
@@ -301,9 +324,15 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
     if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaPerfilCliente.fechaNacimiento = datosActualizar.fechaNacimiento;
     // if (datosActualizar.hasOwnProperty('direccion')) datosParaPerfilCliente.direccion = datosActualizar.direccion;
 
-    // Campos de perfil Empleado (ejemplo)
-    // if (datosActualizar.hasOwnProperty('celular')) datosParaPerfilEmpleado.celular = datosActualizar.celular;
-    // ... otros campos de empleado
+    // Campos de perfil Empleado (ahora con los mismos campos que Cliente)
+    // Se asume que estos datos vendrán directamente en datosActualizar si el usuario es un empleado.
+    if (datosActualizar.hasOwnProperty('nombre')) datosParaPerfilEmpleado.nombre = datosActualizar.nombre;
+    if (datosActualizar.hasOwnProperty('apellido')) datosParaPerfilEmpleado.apellido = datosActualizar.apellido;
+    if (datosActualizar.hasOwnProperty('correo')) datosParaPerfilEmpleado.correo = datosActualizar.correo; // Correo en el perfil de Empleado
+    if (datosActualizar.hasOwnProperty('telefono')) datosParaPerfilEmpleado.telefono = datosActualizar.telefono;
+    if (datosActualizar.hasOwnProperty('tipoDocumento')) datosParaPerfilEmpleado.tipoDocumento = datosActualizar.tipoDocumento;
+    if (datosActualizar.hasOwnProperty('numeroDocumento')) datosParaPerfilEmpleado.numeroDocumento = datosActualizar.numeroDocumento;
+    if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaPerfilEmpleado.fechaNacimiento = datosActualizar.fechaNacimiento;
 
     // Validaciones (como en tu código original)
     if (datosParaUsuario.correo && datosParaUsuario.correo !== usuario.correo) {
@@ -334,8 +363,10 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
         await usuario.update(datosParaUsuario, { transaction });
     }
 
+    // Obtener el rol actual del usuario para saber qué perfil actualizar
+    const rolActual = await db.Rol.findByPk(usuario.idRol, { transaction }); 
+
     // Actualizar Perfil Cliente si hay datos y el usuario tiene este perfil
-    const rolActual = await db.Rol.findByPk(usuario.idRol, { transaction }); // Obtener el rol actual para saber qué perfil buscar
     if (rolActual && rolActual.nombre === "Cliente" && Object.keys(datosParaPerfilCliente).length > 0) {
       const cliente = await db.Cliente.findOne({ where: { idUsuario }, transaction });
       if (cliente) {
@@ -350,18 +381,51 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
                 throw new ConflictError(`El número de documento '${datosParaPerfilCliente.numeroDocumento}' ya está registrado para otro cliente.`);
             }
         }
+        // Validar unicidad de correo del cliente si se está cambiando
+        if (datosParaPerfilCliente.correo && datosParaPerfilCliente.correo !== cliente.correo) {
+          const otroClienteConCorreo = await db.Cliente.findOne({ 
+              where: { correo: datosParaPerfilCliente.correo, idCliente: { [Op.ne]: cliente.idCliente } }, 
+              transaction 
+          });
+          if (otroClienteConCorreo) {
+              await transaction.rollback();
+              throw new ConflictError(`El correo '${datosParaPerfilCliente.correo}' ya está registrado para otro cliente.`);
+          }
+        }
         await cliente.update(datosParaPerfilCliente, { transaction });
       } else {
         // Opcional: ¿Crear perfil de cliente si no existe pero el rol es Cliente y se envían datos de perfil?
         // Esto dependerá de la lógica de negocio. Por ahora, solo actualizamos si existe.
       }
     }
+    
     // Lógica similar para actualizar Empleado si rolActual.nombre === "Empleado"
     if (rolActual && rolActual.nombre === "Empleado" && Object.keys(datosParaPerfilEmpleado).length > 0) {
         const empleado = await db.Empleado.findOne({ where: { idUsuario }, transaction });
         if (empleado) {
-            // Aquí puedes agregar validaciones de unicidad para el Empleado si las necesitas
-            // (ej. numeroDocumento si se actualiza)
+            // Validar unicidad de numeroDocumento del empleado si se está cambiando
+            if (datosParaPerfilEmpleado.numeroDocumento && datosParaPerfilEmpleado.numeroDocumento !== empleado.numeroDocumento) {
+                const otroEmpleadoConDocumento = await db.Empleado.findOne({ 
+                    where: { numeroDocumento: datosParaPerfilEmpleado.numeroDocumento, idEmpleado: { [Op.ne]: empleado.idEmpleado } }, 
+                    transaction 
+                });
+                if (otroEmpleadoConDocumento) {
+                    await transaction.rollback();
+                    throw new ConflictError(`El número de documento '${datosParaPerfilEmpleado.numeroDocumento}' ya está registrado para otro empleado.`);
+                }
+            }
+            // Validar unicidad de correo del empleado si se está cambiando
+            if (datosParaPerfilEmpleado.correo && datosParaPerfilEmpleado.correo !== empleado.correo) {
+              const otroEmpleadoConCorreo = await db.Empleado.findOne({ 
+                  where: { correo: datosParaPerfilEmpleado.correo, idEmpleado: { [Op.ne]: empleado.idEmpleado } }, 
+                  transaction 
+              });
+              if (otroEmpleadoConCorreo) {
+                  await transaction.rollback();
+                  throw new ConflictError(`El correo '${datosParaPerfilEmpleado.correo}' ya está registrado para otro empleado.`);
+              }
+            }
+
             await empleado.update(datosParaPerfilEmpleado, { transaction });
         }
     }
@@ -384,7 +448,7 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
     if ( error instanceof NotFoundError || error instanceof ConflictError || error instanceof BadRequestError) throw error;
     if (error.name === "SequelizeUniqueConstraintError") {
       // Esta validación de correo duplicado ya está arriba, pero puede capturar otras restricciones únicas
-      throw new ConflictError(`Error de unicidad. El correo o número de documento ya podría estar registrado.`);
+      throw new ConflictError(`Error de unicidad. Un dato único ya existe.`);
     }
     // console.error(`Error al actualizar el usuario con ID ${idUsuario} en el servicio:`, error.message); // Comentado
     throw new CustomError(`Error al actualizar el usuario: ${error.message}`, 500);
