@@ -50,7 +50,7 @@ const obtenerVentaCompletaPorIdInterno = async (
       {
         model: db.Servicio,
         as: "serviciosVendidos",
-        attributes: ["idServicio", "nombre", "descripcion", "precio"],
+        attributes: ["idServicio", "nombre", "descripcion", "precio", "duracionEstimadaMin"], // Corregido: duracionEstimadaMin
         through: {
           model: db.VentaXServicio,
           as: "detalleServicioVenta",
@@ -202,7 +202,7 @@ const crearVenta = async (datosVenta) => {
       if (
         estadoVentaBooleano && // Venta general está activa
         (estadoProcesoVenta.nombreEstado === "Completado" || // Y el proceso está en un estado que descuenta stock
-         estadoProcesoVenta.nombreEstado === "En proceso") 
+          estadoProcesoVenta.nombreEstado === "En proceso") 
       ) {
         await itemP.dbInstance.decrement("existencia", {
           by: itemP.cantidad,
@@ -343,7 +343,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
         {
           model: db.Servicio,
           as: "serviciosVendidos",
-          attributes: ["idServicio", "nombre"],
+          attributes: ["idServicio", "nombre", "duracionEstimadaMin"], // Corregido: duracionEstimadaMin
           through: {
             model: db.VentaXServicio,
             as: "detalleServicioVenta",
@@ -460,7 +460,7 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
         for (const productoId of productosAfectadosParaAlerta) {
             const productoActualizado = await db.Producto.findByPk(productoId);
             if (productoActualizado) {
-                 await checkAndSendStockAlert(productoActualizado, `tras actualizar estado de venta ID ${idVenta}`);
+                await checkAndSendStockAlert(productoActualizado, `tras actualizar estado de venta ID ${idVenta}`);
             }
         }
     }
@@ -502,7 +502,8 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
 
         await enviarCorreoVenta({
           correoCliente: venta.cliente.correo,
-          nombreCliente: venta.cliente.nombre || "Cliente Estimado",
+          nombreCliente:
+            venta.cliente.nombre || "Cliente Estimado",
           ventaInfo: {
             idVenta: venta.idVenta,
             accion: accionCorreo,
@@ -521,9 +522,9 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
               valorServicio: s.detalleServicioVenta.valorServicio,
               descripcion: s.descripcion,
             })),
-            total: totalCorreo,
-            iva: ivaCorreo,
             subtotal: subtotalGeneralCorreo,
+            iva: ivaCorreo,
+            total: totalCorreo,
             tasaIvaAplicada: TASA_IVA_POR_DEFECTO,
           },
         });

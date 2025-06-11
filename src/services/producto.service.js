@@ -55,7 +55,7 @@ const crearProducto = async (datosProducto) => {
 
   if (categoriaProductoId) {
     const categoria = await db.CategoriaProducto.findOne({
-      where: { idCategoria: categoriaProductoId, estado: true },
+      where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Corregido: idCategoria a idCategoriaProducto
     });
     if (!categoria) {
       throw new BadRequestError(
@@ -95,8 +95,9 @@ const obtenerTodosLosProductos = async (filtros = {}) => {
   const { estado, categoriaId, tipoUso, busqueda } = filtros;
   
   const where = {};
-  if (estado) where.estado = estado === "true";
-  if (categoriaId) where.Categoria_producto_idCategoria = categoriaId;
+  if (estado !== undefined) { // Usar undefined para verificar si el filtro existe
+    where.estado = estado; // El controlador ya convierte a booleano
+  }
   if (busqueda) {
     where.nombre = { [Op.iLike]: `%${busqueda}%` };
   }
@@ -104,18 +105,24 @@ const obtenerTodosLosProductos = async (filtros = {}) => {
   // 2. Creamos una opción de 'include' para poder filtrar por el modelo asociado.
   const includeOptions = [
     {
-      model: CategoriaProducto,
-      as: "categoriaProducto",
+      model: db.CategoriaProducto, // Corregido: Usar db.CategoriaProducto
+      as: "categoria", // Corregido: Alias definido en Producto.model.js
+      attributes: ["idCategoriaProducto", "nombre", "tipoUso"], // Atributos a traer
+      required: false, // Usar required: false para LEFT JOIN y poder filtrar incluso si no tienen categoría
       where: {} // Objeto 'where' para la categoría
     },
   ];
 
-  // 3. Si se proporciona 'tipoUso', lo aplicamos al 'where' de la categoría.
+  // 3. Si se proporciona 'categoriaId', lo aplicamos al 'where' del include
+  if (categoriaId) {
+    includeOptions[0].where.idCategoriaProducto = categoriaId; // Corregido: idCategoria a idCategoriaProducto
+  }
+  // 3. Si se proporciona 'tipoUso', lo aplicamos al 'where' del include de la categoría.
   if (tipoUso) {
     includeOptions[0].where.tipoUso = tipoUso;
   }
 
-  const { count, rows } = await Producto.findAndCountAll({
+  const { count, rows } = await db.Producto.findAndCountAll({ // Corregido: Usar db.Producto
     where,
     include: includeOptions, // 4. Aplicamos el 'include' con el filtro.
     order: [["nombre", "ASC"]],
@@ -133,8 +140,8 @@ const obtenerProductoPorId = async (idProducto) => {
       include: [
         {
           model: db.CategoriaProducto,
-          as: "categoriaProducto",
-          attributes: ["idCategoria", "nombre"],
+          as: "categoria", // Corregido: 'categoria' es el alias en Producto.model.js
+          attributes: ["idCategoriaProducto", "nombre"], // Corregido: idCategoria a idCategoriaProducto
         },
       ],
     });
@@ -186,7 +193,7 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
         datosActualizar.categoriaProductoId = null;
       } else {
         const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoria: categoriaProductoId, estado: true },
+          where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Corregido: idCategoria a idCategoriaProducto
         });
         if (!categoria) {
           throw new BadRequestError(

@@ -1,4 +1,4 @@
-// src/shared/src_api/services/usuario.service.js
+// src/services/usuario.service.js
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const { Op } = db.Sequelize;
@@ -357,6 +357,14 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
       }
     }
     // Lógica similar para actualizar Empleado si rolActual.nombre === "Empleado"
+    if (rolActual && rolActual.nombre === "Empleado" && Object.keys(datosParaPerfilEmpleado).length > 0) {
+        const empleado = await db.Empleado.findOne({ where: { idUsuario }, transaction });
+        if (empleado) {
+            // Aquí puedes agregar validaciones de unicidad para el Empleado si las necesitas
+            // (ej. numeroDocumento si se actualiza)
+            await empleado.update(datosParaPerfilEmpleado, { transaction });
+        }
+    }
 
     await transaction.commit();
 
@@ -414,35 +422,49 @@ const habilitarUsuario = async (idUsuario) => {
  * Eliminar un usuario físicamente de la base de datos.
  */
 const eliminarUsuarioFisico = async (idUsuario) => {
-  try {
-    const usuario = await db.Usuario.findByPk(idUsuario);
-    if (!usuario) {
-      throw new NotFoundError(
-        "Usuario no encontrado para eliminar físicamente."
-      );
-    }
-    // Considerar la lógica de eliminación en cascada o restricciones de FK
-    // antes de la eliminación física.
-    await db.Cliente.destroy({ where: { idUsuario }, transaction: null }); // Ejemplo: eliminar cliente asociado
-    await db.Empleado.destroy({ where: { idUsuario }, transaction: null }); // Ejemplo: eliminar empleado asociado
+    const transaction = await db.sequelize.transaction(); // Iniciar transacción
+    try {
+        const usuario = await db.Usuario.findByPk(idUsuario, { transaction });
+        if (!usuario) {
+            await transaction.rollback();
+            throw new NotFoundError("Usuario no encontrado para eliminar físicamente.");
+        }
 
-    const filasEliminadas = await db.Usuario.destroy({
-      where: { idUsuario },
-    });
-    return filasEliminadas > 0; // Devuelve true si se eliminó, false si no.
-  } catch (error) {
-    if (error instanceof NotFoundError) throw error;
-    if (error.name === "SequelizeForeignKeyConstraintError") {
-      throw new ConflictError(
-        "No se puede eliminar el usuario porque está siendo referenciado por otras entidades. Considere anularlo primero."
-      );
+        // Verificar si el usuario está asociado a un perfil de cliente (onDelete: 'RESTRICT')
+        const clienteAsociado = await db.Cliente.findOne({ where: { idUsuario: usuario.idUsuario }, transaction });
+        if (clienteAsociado) {
+            await transaction.rollback();
+            throw new ConflictError("No se puede eliminar el usuario porque está asociado a un perfil de cliente.");
+        }
+
+        // Verificar si el usuario está asociado a un perfil de empleado (onDelete: 'RESTRICT')
+        const empleadoAsociado = await db.Empleado.findOne({ where: { idUsuario: usuario.idUsuario }, transaction });
+        if (empleadoAsociado) {
+            await transaction.rollback();
+            throw new ConflictError("No se puede eliminar el usuario porque está asociado a un perfil de empleado.");
+        }
+
+        // Si no hay restricciones, proceder con la eliminación del usuario
+        const filasEliminadas = await db.Usuario.destroy({
+            where: { idUsuario },
+            transaction,
+        });
+        await transaction.commit();
+        return filasEliminadas > 0;
+    } catch (error) {
+        await transaction.rollback();
+        if (error instanceof NotFoundError || error instanceof ConflictError) {
+            throw error;
+        }
+        // Capturar cualquier SequelizeForeignKeyConstraintError que pueda haber fallado en las comprobaciones previas
+        if (error.name === "SequelizeForeignKeyConstraintError") {
+            throw new ConflictError(
+                "No se puede eliminar el usuario debido a una restricción de clave foránea. Asegúrate de que no haya dependencias como tokens de recuperación o perfiles asociados."
+            );
+        }
+        console.error(`Error al eliminar físicamente el usuario con ID ${idUsuario}:`, error.message);
+        throw new CustomError(`Error al eliminar físicamente el usuario: ${error.message}`, 500);
     }
-    // console.error(`Error al eliminar físicamente el usuario con ID ${idUsuario} en el servicio:`, error.message); // Comentado
-    throw new CustomError(
-      `Error al eliminar físicamente el usuario: ${error.message}`,
-      500
-    );
-  }
 };
 
 module.exports = {

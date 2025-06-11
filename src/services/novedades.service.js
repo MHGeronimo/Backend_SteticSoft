@@ -98,7 +98,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.Empleado,
-          as: "empleadoConNovedad",
+          as: "empleado", // Corregido: 'empleado' es el alias en Novedades.model.js
           attributes: ["idEmpleado", "nombre"],
         },
       ],
@@ -125,7 +125,7 @@ const obtenerNovedadPorId = async (idNovedades) => {
       include: [
         {
           model: db.Empleado,
-          as: "empleadoConNovedad",
+          as: "empleado", // Corregido: 'empleado' es el alias en Novedades.model.js
           attributes: ["idEmpleado", "nombre"],
         },
       ],

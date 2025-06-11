@@ -34,7 +34,7 @@ const crearServicio = async (datosServicio) => {
     nombre,
     descripcion,
     precio,
-    duracionEstimada,
+    duracionEstimada, // Este es el nombre en el DTO/entrada
     estado,
     categoriaServicioId,
     especialidadId,
@@ -70,7 +70,7 @@ const crearServicio = async (datosServicio) => {
       nombre,
       descripcion: descripcion || null,
       precio: parseFloat(precio).toFixed(2),
-      duracionEstimada:
+      duracionEstimadaMin: // Corregido: Mapeo a duracionEstimadaMin del modelo
         duracionEstimada !== undefined ? Number(duracionEstimada) : null,
       estado: typeof estado === "boolean" ? estado : true,
       categoriaServicioId,
@@ -108,12 +108,12 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.CategoriaServicio,
-          as: "categoriaServicio",
+          as: "categoria", // Corregido: 'categoria' es el alias en Servicio.model.js
           attributes: ["idCategoriaServicio", "nombre"],
         },
         {
           model: db.Especialidad,
-          as: "especialidadRequerida",
+          as: "especialidad", // Corregido: 'especialidad' es el alias en Servicio.model.js
           attributes: ["idEspecialidad", "nombre"],
           required: false,
         },
@@ -136,10 +136,10 @@ const obtenerServicioPorId = async (idServicio) => {
   try {
     const servicio = await db.Servicio.findByPk(idServicio, {
       include: [
-        { model: db.CategoriaServicio, as: "categoriaServicio" },
+        { model: db.CategoriaServicio, as: "categoria" }, // Corregido
         {
           model: db.Especialidad,
-          as: "especialidadRequerida",
+          as: "especialidad", // Corregido
           required: false,
         },
       ],
@@ -227,12 +227,13 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
       datosActualizar.precio = parseFloat(datosActualizar.precio).toFixed(2);
     }
     if (
-      datosActualizar.hasOwnProperty("duracionEstimada") &&
+      datosActualizar.hasOwnProperty("duracionEstimada") && // Propiedad de entrada
       datosActualizar.duracionEstimada !== null
     ) {
-      datosActualizar.duracionEstimada = Number(
+      datosActualizar.duracionEstimadaMin = Number( // Corregido: Mapeo a duracionEstimadaMin del modelo
         datosActualizar.duracionEstimada
       );
+      delete datosActualizar.duracionEstimada; // Eliminar la propiedad original para evitar errores
     }
 
     await servicio.update(datosActualizar);

@@ -1,5 +1,4 @@
-// RUTA: src/shared/src_api/services/compra.service.js
-// DESCRIPCIÓN: Código completo con la función 'actualizarCompra' y 'anularCompra' corregidas.
+// src/services/compra.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -16,7 +15,6 @@ const TASA_IVA = 0.19;
  * Crear una nueva compra y sus detalles.
  */
 const crearCompra = async (datosCompra) => {
-  // ... tu función crearCompra se mantiene igual ...
   const {
     fecha,
     proveedorId,
@@ -134,7 +132,6 @@ const crearCompra = async (datosCompra) => {
 
 
 const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
-  // ... tu función obtenerTodasLasCompras se mantiene igual ...
   try {
     return await db.Compra.findAll({
       where: opcionesDeFiltro,
@@ -173,7 +170,6 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
 
 
 const obtenerCompraPorId = async (idCompra) => {
-  // ... tu función obtenerCompraPorId se mantiene igual ...
   try {
     const compra = await db.Compra.findByPk(idCompra, {
       include: [
@@ -322,7 +318,6 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
 
 
 const eliminarCompraFisica = async (idCompra) => {
-  // ... tu función eliminarCompraFisica se mantiene igual ...
   const transaction = await db.sequelize.transaction();
   const productosAfectadosParaAlerta = new Set();
   let compraOriginalEstado = null;
@@ -405,7 +400,6 @@ const eliminarCompraFisica = async (idCompra) => {
 };
 
 
-// ===================== INICIO DE LA FUNCIÓN ANULAR CORREGIDA =====================
 /**
  * Anula una compra y revierte el stock de los productos asociados de forma segura.
  * @param {string} idCompra - El ID de la compra a anular.
@@ -418,7 +412,12 @@ const anularCompra = async (idCompra) => {
         const compra = await db.Compra.findByPk(idCompra, {
             include: [{
                 model: db.Producto,
-                as: 'productosComprados'
+                as: 'productosComprados',
+                through: { // Necesitamos la cantidad de la tabla de unión
+                    model: db.CompraXProducto,
+                    as: 'detalleCompra', // Usar el alias definido en el modelo
+                    attributes: ['cantidad']
+                }
             }],
             transaction
         });
@@ -431,11 +430,15 @@ const anularCompra = async (idCompra) => {
             throw new ConflictError('Esta compra ya ha sido anulada previamente.');
         }
 
+        const productosAfectadosParaAlerta = new Set();
+
         // 2. Iterar sobre cada producto y REVERTIR el stock
         for (const productoComprado of compra.productosComprados) {
-            const cantidadRevertir = productoComprado.CompraXProducto.cantidad;
+            // Acceder a la cantidad a través de la tabla de unión con el alias 'detalleCompra'
+            const cantidadRevertir = productoComprado.detalleCompra.cantidad;
 
             // CORRECCIÓN CLAVE: Buscar el producto por su ID para bloquearlo y actualizarlo de forma segura.
+            // Sequelize ya maneja la transacción si se pasa el objeto `transaction`
             const productoEnStock = await db.Producto.findByPk(productoComprado.idProducto, {
                 transaction,
                 lock: transaction.LOCK.UPDATE // Bloquea la fila para la actualización
@@ -443,9 +446,14 @@ const anularCompra = async (idCompra) => {
 
             if (productoEnStock) {
                 // Al anular una compra, la existencia del producto DEBE DISMINUIR.
-                productoEnStock.existencia -= cantidadRevertir;
-                await productoEnStock.save({ transaction });
+                await productoEnStock.decrement("existencia", {
+                    by: cantidadRevertir,
+                    transaction,
+                });
+                productosAfectadosParaAlerta.add(productoEnStock.idProducto);
             } else {
+                // Si por alguna razón el producto no se encuentra, la transacción se revertirá
+                // y se lanzará un error. Esto es importante para mantener la consistencia.
                 throw new Error(`El producto con ID ${productoComprado.idProducto} no fue encontrado en el inventario durante la anulación.`);
             }
         }
@@ -455,6 +463,15 @@ const anularCompra = async (idCompra) => {
         await compra.save({ transaction });
 
         await transaction.commit();
+        
+        // Ejecutar alertas de stock después de la transacción
+        for (const productoId of productosAfectadosParaAlerta) {
+            const productoActualizado = await db.Producto.findByPk(productoId);
+            if (productoActualizado) {
+                await checkAndSendStockAlert(productoActualizado, `tras anulación de compra ID ${idCompra}`);
+            }
+        }
+
         return compra;
 
     } catch (error) {
@@ -474,7 +491,6 @@ const habilitarCompra = async (idCompra) => {
     // Por simplicidad, se mantiene la llamada a actualizarCompra.
     return actualizarCompra(idCompra, { estado: true });
 };
-// ====================== FIN DE LA FUNCIÓN ANULAR CORREGIDA =======================
 
 
 module.exports = {

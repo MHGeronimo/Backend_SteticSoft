@@ -1,4 +1,4 @@
-// src/shared/src_api/services/empleado.service.js
+// src/services/empleado.service.js
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const { Op } = db.Sequelize;
@@ -38,18 +38,14 @@ const cambiarEstadoEmpleado = async (idEmpleado, nuevoEstado) => {
 const crearEmpleado = async (datosCompletosEmpleado) => {
   const {
     // Datos para Usuario
-    correo,         // Correo para la cuenta de Usuario
-    contrasena,     // Contraseña para la nueva cuenta de Usuario
-    // estadoUsuario (opcional, por defecto true para Usuario)
-
-    // Datos para Empleado
-    nombre,         // Nombre del empleado (podría necesitar apellido si tu modelo Empleado lo tiene)
+    correo,           // Correo para la cuenta de Usuario
+    contrasena,       // Contraseña para la nueva cuenta de Usuario
+    nombre,           // Nombre del empleado (podría necesitar apellido si tu modelo Empleado lo tiene)
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
     celular,
     estadoEmpleado, // Estado para el perfil de Empleado (opcional, por defecto true)
-                    // Asegúrate que tu modelo Empleado tenga 'apellido' si es necesario
   } = datosCompletosEmpleado;
 
   // Validaciones previas
@@ -88,7 +84,6 @@ const crearEmpleado = async (datosCompletosEmpleado) => {
     const nuevoEmpleado = await db.Empleado.create({
       idUsuario: nuevoUsuario.idUsuario,
       nombre, // Si Empleado tiene nombre y apellido separados, ajústalo. Tu modelo actual solo tiene 'nombre'.
-      // apellido: datosCompletosEmpleado.apellido, // Si Empleado.model.js tiene 'apellido'
       tipoDocumento,
       numeroDocumento,
       fechaNacimiento,
@@ -163,7 +158,7 @@ const obtenerEmpleadoPorId = async (idEmpleado) => {
           model: db.Usuario,
           as: "cuentaUsuario",
           attributes: ["idUsuario", "correo", "estado", "idRol"],
-           include: [{
+            include: [{
             model: db.Rol,
             as: "rol",
             attributes: ["nombre"]
@@ -200,7 +195,6 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
 
     // Campos directos de Empleado
     if (datosActualizar.hasOwnProperty('nombre')) datosParaEmpleado.nombre = datosActualizar.nombre;
-    // if (datosActualizar.hasOwnProperty('apellido')) datosParaEmpleado.apellido = datosActualizar.apellido; // Si Empleado tiene apellido
     if (datosActualizar.hasOwnProperty('tipoDocumento')) datosParaEmpleado.tipoDocumento = datosActualizar.tipoDocumento;
     if (datosActualizar.hasOwnProperty('numeroDocumento')) datosParaEmpleado.numeroDocumento = datosActualizar.numeroDocumento;
     if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaEmpleado.fechaNacimiento = datosActualizar.fechaNacimiento;

@@ -15,8 +15,8 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
               s.precio || 0
             ).toFixed(2)}
               ${
-                s.duracion_estimada
-                  ? `<span style="font-size:0.9em; color: #777;"> (Duración: ${s.duracion_estimada} min)</span>`
+                s.duracionEstimadaMin // Corregido: Usar duracionEstimadaMin
+                  ? `<span style="font-size:0.9em; color: #777;"> (Duración: ${s.duracionEstimadaMin} min)</span>`
                   : ""
               }
               ${

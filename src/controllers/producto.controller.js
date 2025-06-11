@@ -27,13 +27,26 @@ const listarProductos = async (req, res, next) => {
       opcionesDeFiltro.estado = true;
     } else if (req.query.estado === "false") {
       opcionesDeFiltro.estado = false;
+    } else if (req.query.estado === undefined) {
+      // Si no se especifica estado, por defecto mostrar activos
+      opcionesDeFiltro.estado = true; 
     }
+    
     if (req.query.categoriaProductoId) {
       const idCategoria = Number(req.query.categoriaProductoId);
       if (!isNaN(idCategoria) && idCategoria > 0) {
-        opcionesDeFiltro.categoriaProductoId = idCategoria;
+        opcionesDeFiltro.categoriaId = idCategoria; // Cambiado a categoriaId para coincidir con el servicio
       }
     }
+
+    if (req.query.tipoUso) { // Nuevo filtro añadido
+      opcionesDeFiltro.tipoUso = req.query.tipoUso;
+    }
+
+    if (req.query.busqueda) {
+      opcionesDeFiltro.busqueda = req.query.busqueda;
+    }
+
     const productos = await productoService.obtenerTodosLosProductos(
       opcionesDeFiltro
     );

@@ -19,7 +19,8 @@ const calcularDuracionTotalParaCorreo = (serviciosProgramados) => {
   if (serviciosProgramados && serviciosProgramados.length > 0) {
     duracionTotal = serviciosProgramados.reduce(
       (sum, s) => {
-        const duracion = s.dataValues ? s.dataValues.duracion_estimada : s.duracion_estimada;
+        // Corregido: Usar duracionEstimadaMin
+        const duracion = s.dataValues ? s.dataValues.duracionEstimadaMin : s.duracionEstimadaMin;
         return sum + (Number(duracion) || 0);
       },
       0
@@ -55,7 +56,7 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
           "nombre",
           "precio",
           "descripcion",
-          "duracion_estimada",
+          "duracionEstimadaMin", // Corregido: Propiedad del modelo
         ],
         through: { attributes: [] },
       },
@@ -79,7 +80,7 @@ const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
                 { model: db.Cliente, as: 'cliente', attributes: ['nombre', 'correo'] },
                 { model: db.Empleado, as: 'empleado', attributes: ['nombre'], required: false },
                 { model: db.Estado, as: 'estadoDetalle' },
-                { model: db.Servicio, as: 'serviciosProgramados', attributes: ["idServicio", "nombre", "precio", "descripcion", "duracion_estimada"], through: { attributes: [] } }
+                { model: db.Servicio, as: 'serviciosProgramados', attributes: ["idServicio", "nombre", "precio", "descripcion", "duracionEstimadaMin"], through: { attributes: [] } } // Corregido
             ],
             transaction
         });
@@ -123,7 +124,7 @@ const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
                         fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
                         empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
                         estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : (nuevoEstadoBooleano ? 'Pendiente' : 'Cancelada'),
-                        servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
+                        servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })), // Corregido aquí y debajo
                         total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
                         duracionTotalEstimada: duracionTotalParaCorreo,
                     }
@@ -196,44 +197,69 @@ const crearCita = async (datosCita) => {
     serviciosConsultados.push(...serviciosDB);
   }
 
-  if (empleado && serviciosConsultados.length > 0) {
-    const fechaHoraInicioMoment = moment(fechaHora);
-    let duracionTotalCitaMinutos = 0;
-    serviciosConsultados.forEach((s) => {
-      duracionTotalCitaMinutos += s.duracion_estimada || 0;
-    });
-    const fechaHoraFinMoment = fechaHoraInicioMoment
-      .clone()
-      .add(duracionTotalCitaMinutos, "minutes");
+  const transaction = await db.sequelize.transaction(); // Mover la inicialización de la transacción
 
-    const citasSuperpuestas = await db.Cita.findOne({
-      where: {
-        empleadoId: empleado.idEmpleado,
-        estado: true, 
-        idCita: { [Op.ne]: null }, 
-        [Op.or]: [
-            { // Cita existente comienza durante la nueva cita
-                fechaHora: {
-                    [Op.lt]: fechaHoraFinMoment.toDate(),
-                    [Op.gte]: fechaHoraInicioMoment.toDate(),
-                }
-            },
-            // Para una validación completa, también necesitarías verificar si la nueva cita comienza
-            // durante una cita existente. Esto se complica.
-            // Una forma más robusta es verificar si:
-            // (startA < endB) and (endA > startB)
-        ]
-      },
-    });
-    if (citasSuperpuestas) {
-      throw new ConflictError(
-        `El empleado ${empleado.nombre} ya tiene una cita programada que se superpone con el horario solicitado.`
-      );
-    }
-  }
-
-  const transaction = await db.sequelize.transaction();
   try {
+    if (empleado && serviciosConsultados.length > 0) {
+        const fechaHoraInicioMoment = moment(fechaHora);
+        let duracionTotalCitaMinutos = 0;
+        serviciosConsultados.forEach((s) => {
+            duracionTotalCitaMinutos += s.duracionEstimadaMin || 0; // Corregido: duracionEstimadaMin
+        });
+        const fechaHoraFinMoment = fechaHoraInicioMoment
+            .clone()
+            .add(duracionTotalCitaMinutos, "minutes");
+
+        // Lógica de superposición de citas mejorada
+        // Se buscan citas del empleado que se superpongan con el nuevo rango [fechaHoraInicioMoment, fechaHoraFinMoment]
+        const citasSuperpuestas = await db.Cita.findAll({
+            where: {
+                empleadoId: empleado.idEmpleado,
+                estado: true, // Considerar solo citas activas
+                [Op.and]: [
+                    {
+                        fechaHora: { [Op.lt]: fechaHoraFinMoment.toDate() },
+                    },
+                    {
+                        fechaHora: { [Op.lt]: fechaHoraFinMoment.toDate(), [Op.gte]: fechaHoraInicioMoment.toDate() },
+                    },
+                    {
+                    }
+                ]
+            },
+             // Incluye los servicios para calcular la duración de las citas existentes
+            include: [{
+                model: db.Servicio,
+                as: "serviciosProgramados",
+                attributes: ["duracionEstimadaMin"], // Solo necesitamos la duración
+                through: { attributes: [] }
+            }],
+            transaction
+        });
+
+        // Lógica de superposición mejorada (post-consulta)
+        const nuevaCitaStart = fechaHoraInicioMoment.toDate();
+        const nuevaCitaEnd = fechaHoraFinMoment.toDate();
+
+        for (const citaExistente of citasSuperpuestas) {
+            let duracionExistenteMinutos = 0;
+            if (citaExistente.serviciosProgramados && citaExistente.serviciosProgramados.length > 0) {
+                duracionExistenteMinutos = citaExistente.serviciosProgramados.reduce((sum, s) => sum + (Number(s.duracionEstimadaMin) || 0), 0);
+            }
+            const citaExistenteStart = moment(citaExistente.fechaHora).toDate();
+            const citaExistenteEnd = moment(citaExistente.fechaHora).add(duracionExistenteMinutos, 'minutes').toDate();
+
+            // Check for overlap: (start1 < end2) && (end1 > start2)
+            if (nuevaCitaStart < citaExistenteEnd && nuevaCitaEnd > citaExistenteStart) {
+                await transaction.rollback();
+                throw new ConflictError(
+                    `El empleado ${empleado.nombre} ya tiene una cita programada (${formatDateTime(citaExistenteStart)} - ${formatDateTime(citaExistenteEnd)}) que se superpone con el horario solicitado (${formatDateTime(nuevaCitaStart)} - ${formatDateTime(nuevaCitaEnd)}).`
+                );
+            }
+        }
+    }
+
+
     const nuevaCita = await db.Cita.create(
       {
         fechaHora,
@@ -274,7 +300,7 @@ const crearCita = async (datosCita) => {
           nombre: s.nombre,
           precio: s.precio,
           descripcion: s.descripcion,
-          duracion_estimada: s.duracion_estimada
+          duracion_estimada: s.duracionEstimadaMin // Corregido
         })),
         total: citaCreadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
         duracionTotalEstimada: duracionTotalParaCorreo,
@@ -329,7 +355,7 @@ const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
         { model: db.Cliente, as: "cliente", attributes: ["idCliente", "nombre", "apellido"] },
         { model: db.Empleado, as: "empleado", attributes: ["idEmpleado", "nombre"], required: false },
         { model: db.Estado, as: "estadoDetalle", attributes: ["idEstado", "nombreEstado"] },
-        { model: db.Servicio, as: "serviciosProgramados", attributes: ["idServicio", "nombre", "precio", "duracion_estimada"], through: { attributes: [] } },
+        { model: db.Servicio, as: "serviciosProgramados", attributes: ["idServicio", "nombre", "precio", "duracionEstimadaMin"], through: { attributes: [] } }, // Corregido
       ],
       order: [["fechaHora", "ASC"]],
     });
@@ -362,7 +388,7 @@ const actualizarCita = async (idCita, datosActualizar) => {
       if (!clienteNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo cliente con ID ${datosActualizar.clienteId} no encontrado o inactivo.`); }
       clienteParaCorreo = clienteNuevo;
     }
-     if (datosActualizar.empleadoId && datosActualizar.empleadoId !== cita.empleadoId) {
+      if (datosActualizar.empleadoId && datosActualizar.empleadoId !== cita.empleadoId) {
         const empleadoNuevo = await db.Empleado.findOne({ where: {idEmpleado: datosActualizar.empleadoId, estado: true}, transaction});
         if(!empleadoNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo empleado con ID ${datosActualizar.empleadoId} no encontrado o inactivo.`);}
     }
@@ -390,7 +416,7 @@ const actualizarCita = async (idCita, datosActualizar) => {
               fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
               empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
               estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-              servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
+              servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })), // Corregido
               total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
               duracionTotalEstimada: duracionTotalParaCorreo,
               mensajeAdicional: 'Los detalles de tu cita han sido actualizados.'
@@ -449,7 +475,7 @@ const agregarServiciosACita = async (idCita, idServicios) => {
     if (!cita) { await transaction.rollback(); throw new NotFoundError("Cita no encontrada para agregar servicios."); }
     if (!cita.estado) { await transaction.rollback(); throw new BadRequestError("No se pueden agregar servicios a una cita anulada.");}
     
-    const serviciosDB = await db.Servicio.findAll({ where: { idServicio: idServicios, estado: true }, transaction });
+    const serviciosDB = await db.Servicio.findAll({ where: { idServicios, estado: true }, transaction });
     if (serviciosDB.length !== idServicios.length) {
       await transaction.rollback();
       const idsEncontrados = serviciosDB.map((s) => s.idServicio);
@@ -473,7 +499,7 @@ const agregarServiciosACita = async (idCita, idServicios) => {
                     fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
                     empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
                     estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
+                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })), // Corregido
                     total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
                     duracionTotalEstimada: duracionTotalParaCorreo,
                     mensajeAdicional: 'Se han añadido nuevos servicios a tu cita.'
@@ -518,7 +544,7 @@ const quitarServiciosDeCita = async (idCita, idServicios) => {
                     fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
                     empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
                     estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracion_estimada })),
+                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })), // Corregido
                     total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
                     duracionTotalEstimada: duracionTotalParaCorreo,
                     mensajeAdicional: 'Se han quitado servicios de tu cita.'

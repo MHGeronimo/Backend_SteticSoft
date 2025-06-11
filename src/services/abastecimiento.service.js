@@ -108,12 +108,12 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.Producto,
-          as: "productoAbastecido",
+          as: "producto", 
           attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
         },
         {
           model: db.Empleado,
-          as: "empleadoResponsable",
+          as: "empleado", 
           attributes: ["idEmpleado", "nombre"],
           required: false,
         },
@@ -139,8 +139,8 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   try {
     const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento, {
       include: [
-        { model: db.Producto, as: "productoAbastecido", attributes: ["idProducto", "nombre", "stockMinimo", "existencia"] },
-        { model: db.Empleado, as: "empleadoResponsable", required: false },
+        { model: db.Producto, as: "producto", attributes: ["idProducto", "nombre", "stockMinimo", "existencia"] }, // Corregido
+        { model: db.Empleado, as: "empleado", required: false }, // Corregido
       ],
     });
     if (!abastecimiento)
