@@ -1,9 +1,9 @@
-// src/validators/categoriaProducto.validators.js 
+// src/validators/categoriaProducto.validators.js
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
-const db = require("../models");
+const db = require("../models"); // Asegúrate de que esto esté bien importado
 
 const tiposDeUsoPermitidos = ["Interno", "Externo"];
 
@@ -82,7 +82,8 @@ const actualizarCategoriaProductoValidators = [
         const categoriaExistente = await db.CategoriaProducto.findOne({
           where: {
             nombre: value,
-            idCategoria: { [db.Sequelize.Op.ne]: idCategoria },
+            // CAMBIO CLAVE: Se usaba 'idCategoria' aquí, ahora es 'idCategoriaProducto'
+            idCategoriaProducto: { [db.Sequelize.Op.ne]: idCategoria },
           },
         });
         if (categoriaExistente) {
@@ -131,7 +132,6 @@ const idCategoriaProductoValidator = [
   handleValidationErrors,
 ];
 
-// Nuevo validador para cambiar el estado
 const cambiarEstadoCategoriaProductoValidators = [
   param("idCategoria")
     .isInt({ gt: 0 })
@@ -152,5 +152,5 @@ module.exports = {
   crearCategoriaProductoValidators,
   actualizarCategoriaProductoValidators,
   idCategoriaProductoValidator,
-  cambiarEstadoCategoriaProductoValidators, // <-- Exportar nuevo validador
+  cambiarEstadoCategoriaProductoValidators,
 };
