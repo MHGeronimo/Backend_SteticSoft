@@ -14,7 +14,7 @@ const {
 
 const commonOptions = {
   dialect: DB_DIALECT || "postgres",
-  logging: IS_PRODUCTION ? false : console.log,
+  logging: console.log,
   define: {
     timestamps: false,
     freezeTableName: true,
