@@ -1,3 +1,4 @@
+// src/models/Producto.model.js 
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -50,7 +51,8 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: 'estado'
       },
-      categoriaProductoId: { // CAMBIO: 'idCategoriaProducto' a 'categoriaProductoId'
+      // ASEGÚRATE DE QUE SOLO EXISTA ESTA VERSIÓN
+      categoriaProductoId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: 'id_categoria_producto', 
@@ -70,7 +72,7 @@ module.exports = (sequelize, DataTypes) => {
   Producto.associate = (models) => {
     // Un Producto pertenece a una CategoriaProducto.
     Producto.belongsTo(models.CategoriaProducto, {
-      foreignKey: 'categoriaProductoId', // CAMBIO: 'idCategoriaProducto' a 'categoriaProductoId'
+      foreignKey: 'categoriaProductoId', // Clave foránea correcta y única
       as: 'categoria'
     });
     
@@ -92,7 +94,7 @@ module.exports = (sequelize, DataTypes) => {
     
     // Un Producto puede tener muchos registros de Abastecimiento.
     Producto.hasMany(models.Abastecimiento, {
-      foreignKey: 'idProducto', // Se refiere al atributo en el modelo Abastecimiento.
+      foreignKey: 'idProducto',
       as: 'abastecimientos'
     });
   };
