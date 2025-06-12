@@ -1,4 +1,3 @@
-// src/models/Producto.model.js
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -51,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: 'estado'
       },
-      idCategoriaProducto: { 
+      categoriaProductoId: { // CAMBIO: 'idCategoriaProducto' a 'categoriaProductoId'
         type: DataTypes.INTEGER,
         allowNull: true,
         field: 'id_categoria_producto', 
@@ -71,7 +70,7 @@ module.exports = (sequelize, DataTypes) => {
   Producto.associate = (models) => {
     // Un Producto pertenece a una CategoriaProducto.
     Producto.belongsTo(models.CategoriaProducto, {
-      foreignKey: 'idCategoriaProducto', // Se refiere al atributo en este modelo.
+      foreignKey: 'categoriaProductoId', // CAMBIO: 'idCategoriaProducto' a 'categoriaProductoId'
       as: 'categoria'
     });
     
@@ -86,8 +85,8 @@ module.exports = (sequelize, DataTypes) => {
     // Un Producto puede estar en muchas Ventas.
     Producto.belongsToMany(models.Venta, {
       through: 'producto_x_venta', 
-      foreignKey: 'id_producto',   
-      otherKey: 'id_venta',       
+      foreignKey: 'id_producto',  
+      otherKey: 'id_venta',        
       as: 'ventas'
     });
     
