@@ -1,4 +1,4 @@
-// src/shared/src_api/services/cliente.service.js
+// src/shared/src_api/services/cliente.service.js 
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const { Op } = db.Sequelize;

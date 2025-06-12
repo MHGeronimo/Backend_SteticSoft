@@ -1,5 +1,5 @@
 // src/models/Cliente.model.js
-"use strict";
+"use strict"; 
 
 module.exports = (sequelize, DataTypes) => {
   const Cliente = sequelize.define(
