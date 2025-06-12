@@ -68,12 +68,15 @@ const crearProductoValidators = [
     )
     .custom(async (value) => {
       if (value) {
-        const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoria: value, estado: true },
-        });
+        // src/validators/producto.validators.js
+        // CORRECCIÓN APLICADA AQUÍ
+        const categoria = await db.CategoriaProducto.findByPk(value);
         if (!categoria) {
-          return Promise.reject(
-            "La categoría de producto especificada no existe o no está activa."
+          throw new Error("La categoría de producto especificada no existe.");
+        }
+        if (!categoria.estado) {
+          throw new Error(
+            "La categoría de producto especificada no está activa."
           );
         }
       }
@@ -152,12 +155,16 @@ const actualizarProductoValidators = [
             "El ID de la categoría de producto debe ser un entero positivo o null."
           );
         }
-        const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoria: value, estado: true },
-        });
+        // CORRECCIÓN APLICADA AQUÍ
+        const categoria = await db.CategoriaProducto.findByPk(value);
         if (!categoria) {
-          return Promise.reject(
-            "La categoría de producto especificada para actualizar no existe o no está activa."
+          throw new Error(
+            "La categoría de producto especificada para actualizar no existe."
+          );
+        }
+        if (!categoria.estado) {
+          throw new Error(
+            "La categoría de producto especificada para actualizar no está activa."
           );
         }
       }
@@ -179,7 +186,7 @@ const cambiarEstadoProductoValidators = [
     .isInt({ gt: 0 })
     .withMessage("El ID del producto debe ser un entero positivo."),
   body("estado")
-    .exists({ checkFalsy: false })
+    .exists({ checkFalsy: false }) // 'checkFalsy: false' permite que el valor 'false' sea válido.
     .withMessage(
       "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
     )
