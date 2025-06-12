@@ -1,4 +1,4 @@
-// src/routes/categoriaProducto.routes.js
+// src/routes/categoriaProducto.routes.js 
 const express = require("express");
 const router = express.Router();
 const categoriaProductoController = require("../controllers/categoriaProducto.controller.js");

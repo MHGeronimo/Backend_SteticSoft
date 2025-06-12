@@ -1,4 +1,4 @@
-// src/models/CategoriaProducto.model.js
+// src/models/CategoriaProducto.model.js 
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {

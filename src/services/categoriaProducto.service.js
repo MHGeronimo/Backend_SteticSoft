@@ -1,4 +1,4 @@
-// src/services/categoriaProducto.service.js
+// src/services/categoriaProducto.service.js 
 const db = require("../models");
 const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");

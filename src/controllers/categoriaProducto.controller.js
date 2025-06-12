@@ -1,4 +1,4 @@
-// src/controllers/categoriaProducto.controller.js
+// src/controllers/categoriaProducto.controller.js 
 const categoriaProductoService = require("../services/categoriaProducto.service.js");
 
 /**
