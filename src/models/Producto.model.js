@@ -1,101 +1,106 @@
-// src/models/Producto.model.js 
-'use strict';
+// src/models/Producto.model.js
+"use strict";
 
 module.exports = (sequelize, DataTypes) => {
   const Producto = sequelize.define(
-    'Producto',
+    "Producto",
     {
       idProducto: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: 'id_producto' 
+        field: "id_producto",
       },
       nombre: {
-        type: DataTypes.STRING(100), 
+        type: DataTypes.STRING(100),
         allowNull: false,
-        field: 'nombre'
+        field: "nombre",
       },
       descripcion: {
         type: DataTypes.TEXT,
-        field: 'descripcion'
+        field: "descripcion",
       },
       existencia: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         validate: { min: 0 },
-        field: 'existencia'
+        field: "existencia",
       },
       precio: {
-        type: DataTypes.DECIMAL(12, 2), 
+        type: DataTypes.DECIMAL(12, 2),
         defaultValue: 0.0,
-        field: 'precio'
+        field: "precio",
       },
       stockMinimo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        field: 'stock_minimo' 
+        field: "stock_minimo",
       },
       stockMaximo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        field: 'stock_maximo' 
+        field: "stock_maximo",
       },
       imagen: {
         type: DataTypes.TEXT,
-        field: 'imagen'
+        field: "imagen",
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
-        field: 'estado'
+        field: "estado",
       },
       // ASEGÚRATE DE QUE SOLO EXISTA ESTA VERSIÓN
       categoriaProductoId: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: 'id_categoria_producto', 
+        field: "id_categoria_producto",
         references: {
-          model: 'categoria_producto',
-          key: 'id_categoria_producto' 
+          model: "categoria_producto",
+          key: "id_categoria_producto",
         },
-        onDelete: 'RESTRICT' 
-      }
+        onDelete: "RESTRICT",
+      },
     },
     {
-      tableName: 'producto',
-      timestamps: false
+      tableName: "producto",
+      timestamps: false,
     }
+  );
+
+  console.log(
+    "ATRIBUTOS DEFINIDOS EN EL MODELO PRODUCTO:",
+    Object.keys(Producto.getAttributes())
   );
 
   Producto.associate = (models) => {
     // Un Producto pertenece a una CategoriaProducto.
     Producto.belongsTo(models.CategoriaProducto, {
-      foreignKey: 'categoriaProductoId', // Clave foránea correcta y única
-      as: 'categoria'
+      foreignKey: "categoriaProductoId", // Clave foránea correcta y única
+      as: "categoria",
     });
-    
+
     // Un Producto puede estar en muchas Compras.
     Producto.belongsToMany(models.Compra, {
-      through: 'compra_x_producto', 
-      foreignKey: 'id_producto',    
-      otherKey: 'id_compra',        
-      as: 'compras'
+      through: "compra_x_producto",
+      foreignKey: "id_producto",
+      otherKey: "id_compra",
+      as: "compras",
     });
 
     // Un Producto puede estar en muchas Ventas.
     Producto.belongsToMany(models.Venta, {
-      through: 'producto_x_venta', 
-      foreignKey: 'id_producto',  
-      otherKey: 'id_venta',        
-      as: 'ventas'
+      through: "producto_x_venta",
+      foreignKey: "id_producto",
+      otherKey: "id_venta",
+      as: "ventas",
     });
-    
+
     // Un Producto puede tener muchos registros de Abastecimiento.
     Producto.hasMany(models.Abastecimiento, {
-      foreignKey: 'idProducto',
-      as: 'abastecimientos'
+      foreignKey: "idProducto",
+      as: "abastecimientos",
     });
   };
 
