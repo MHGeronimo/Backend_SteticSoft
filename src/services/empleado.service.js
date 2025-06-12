@@ -37,27 +37,36 @@ const cambiarEstadoEmpleado = async (idEmpleado, nuevoEstado) => {
  */
 const crearEmpleado = async (datosCompletosEmpleado) => {
   const {
-    // Datos para Usuario
-    correo,           // Correo para la cuenta de Usuario
+    // Datos para Usuario y Empleado (compartidos)
+    correo,           // Correo para la cuenta de Usuario y el perfil del Empleado
     contrasena,       // Contraseña para la nueva cuenta de Usuario
-    nombre,           // Nombre del empleado (podría necesitar apellido si tu modelo Empleado lo tiene)
+    nombre,           // Nombre del empleado
+    apellido,         // Nuevo campo añadido
+    telefono,         // Nuevo campo añadido (reemplaza a celular)
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
-    celular,
-    estadoEmpleado, // Estado para el perfil de Empleado (opcional, por defecto true)
+    estadoEmpleado,   // Estado para el perfil de Empleado (opcional, por defecto true)
   } = datosCompletosEmpleado;
 
   // Validaciones previas
-  if (!correo || !contrasena || !nombre || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
-    throw new BadRequestError("Faltan campos obligatorios para crear el empleado y su cuenta de usuario (correo, contraseña, nombre, tipo/número doc, fecha nacimiento).");
+  if (!correo || !contrasena || !nombre || !apellido || !telefono || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
+    throw new BadRequestError("Faltan campos obligatorios para crear el empleado y su cuenta de usuario.");
   }
 
+  // Verificar unicidad del correo en la tabla Usuario
   let usuarioExistente = await db.Usuario.findOne({ where: { correo } });
   if (usuarioExistente) {
     throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para una cuenta de Usuario.`);
   }
 
+  // Verificar unicidad del correo en la tabla Empleado
+  let empleadoExistenteCorreo = await db.Empleado.findOne({ where: { correo } });
+  if (empleadoExistenteCorreo) {
+    throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para otro perfil de empleado.`);
+  }
+
+  // Verificar unicidad del número de documento en la tabla Empleado
   let empleadoExistenteNumeroDoc = await db.Empleado.findOne({ where: { numeroDocumento } });
   if (empleadoExistenteNumeroDoc) {
     throw new ConflictError(`El número de documento '${numeroDocumento}' ya está registrado para otro empleado.`);
@@ -80,26 +89,27 @@ const crearEmpleado = async (datosCompletosEmpleado) => {
     }, { transaction });
 
     // 2. Crear el Empleado, vinculándolo al nuevo Usuario
-    // Asegúrate que los campos coincidan con tu modelo Empleado.model.js
     const nuevoEmpleado = await db.Empleado.create({
       idUsuario: nuevoUsuario.idUsuario,
-      nombre, // Si Empleado tiene nombre y apellido separados, ajústalo. Tu modelo actual solo tiene 'nombre'.
+      nombre,
+      apellido, // Added
+      correo,   // Added
+      telefono, // Added
       tipoDocumento,
       numeroDocumento,
       fechaNacimiento,
-      celular: celular || null,
       estado: datosCompletosEmpleado.estadoEmpleado !== undefined ? datosCompletosEmpleado.estadoEmpleado : true,
     }, { transaction });
 
     await transaction.commit();
     
-    // Devolver el empleado con su cuenta de usuario asociada
+    // Return the employee with their associated user account
     return db.Empleado.findByPk(nuevoEmpleado.idEmpleado, {
         include: [{ 
             model: db.Usuario, 
-            as: "cuentaUsuario", // Alias de Empleado.model.js
+            as: "cuentaUsuario", // Alias from Empleado.model.js
             attributes: ["idUsuario", "correo", "estado", "idRol"],
-            include: [{ model: db.Rol, as: "rol", attributes: ["nombre"]}] // Alias de Usuario.model.js
+            include: [{ model: db.Rol, as: "rol", attributes: ["nombre"]}] // Alias from Usuario.model.js
         }]
     });
 
@@ -109,8 +119,18 @@ const crearEmpleado = async (datosCompletosEmpleado) => {
       throw error;
     }
     if (error.name === "SequelizeUniqueConstraintError") {
-      const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "un campo único";
-      throw new ConflictError(`Ya existe un registro con el mismo valor para '${constraintField}'.`);
+      let mensajeConflicto =
+        "Uno de los datos proporcionados ya está en uso (correo o número de documento).";
+      if (error.fields) {
+        if (error.fields.correo && error.fields.correo === correo)
+          mensajeConflicto = `El correo electrónico '${correo}' ya está registrado.`;
+        if (
+          error.fields.numerodocumento &&
+          error.fields.numerodocumento === numeroDocumento
+        )
+          mensajeConflicto = `El número de documento '${numeroDocumento}' ya está registrado.`;
+      }
+      throw new ConflictError(mensajeConflicto);
     }
     // console.error("Error al crear el empleado y usuario en el servicio:", error.message, error.stack); // Comentado
     throw new CustomError(`Error al crear el empleado: ${error.message}`, 500);
@@ -118,7 +138,7 @@ const crearEmpleado = async (datosCompletosEmpleado) => {
 };
 
 /**
- * Obtener todos los empleados, incluyendo la información de su cuenta de Usuario.
+ * Get all employees, including their User account information.
  */
 const obtenerTodosLosEmpleados = async (opcionesDeFiltro = {}) => {
   try {
@@ -127,18 +147,18 @@ const obtenerTodosLosEmpleados = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.Usuario,
-          as: "cuentaUsuario", // Alias definido en Empleado.model.js
+          as: "cuentaUsuario", // Alias defined in Empleado.model.js
           attributes: ["idUsuario", "correo", "estado", "idRol"],
-          include: [{ // Anidar para obtener el nombre del rol
+          include: [{ // Nested to get role name
             model: db.Rol,
-            as: "rol", // Alias definido en Usuario.model.js
+            as: "rol", // Alias defined in Usuario.model.js
             attributes: ["nombre"]
           }]
         },
-        // Podrías incluir otras asociaciones de Empleado aquí si es necesario, como Especialidades
-        // { model: db.Especialidad, as: "especialidades", through: { attributes: [] } /* Para no traer la tabla intermedia */ }
+        // You could include other Employee associations here if needed, like Specialties
+        // { model: db.Especialidad, as: "especialidades", through: { attributes: [] } /* To avoid bringing the intermediate table */ }
       ],
-      order: [["nombre", "ASC"]], // O por apellido si lo tuvieras separado en Empleado
+      order: [["apellido", "ASC"], ["nombre", "ASC"]], // Order by apellido then nombre
     });
     return empleados;
   } catch (error) {
@@ -148,7 +168,7 @@ const obtenerTodosLosEmpleados = async (opcionesDeFiltro = {}) => {
 };
 
 /**
- * Obtener un empleado por su ID, incluyendo la información de su cuenta de Usuario.
+ * Get an employee by their ID, including their User account information.
  */
 const obtenerEmpleadoPorId = async (idEmpleado) => {
   try {
@@ -179,7 +199,7 @@ const obtenerEmpleadoPorId = async (idEmpleado) => {
 };
 
 /**
- * Actualizar un empleado existente y, opcionalmente, su cuenta de Usuario asociada.
+ * Update an existing employee and, optionally, their associated User account.
  */
 const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
   const transaction = await db.sequelize.transaction();
@@ -193,23 +213,25 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
     const datosParaEmpleado = {};
     const datosParaUsuario = {};
 
-    // Campos directos de Empleado
+    // Direct Employee profile fields
     if (datosActualizar.hasOwnProperty('nombre')) datosParaEmpleado.nombre = datosActualizar.nombre;
+    if (datosActualizar.hasOwnProperty('apellido')) datosParaEmpleado.apellido = datosActualizar.apellido; // Added
+    if (datosActualizar.hasOwnProperty('telefono')) datosParaEmpleado.telefono = datosActualizar.telefono; // Added
     if (datosActualizar.hasOwnProperty('tipoDocumento')) datosParaEmpleado.tipoDocumento = datosActualizar.tipoDocumento;
     if (datosActualizar.hasOwnProperty('numeroDocumento')) datosParaEmpleado.numeroDocumento = datosActualizar.numeroDocumento;
     if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaEmpleado.fechaNacimiento = datosActualizar.fechaNacimiento;
-    if (datosActualizar.hasOwnProperty('celular')) datosParaEmpleado.celular = datosActualizar.celular;
     if (datosActualizar.hasOwnProperty('estadoEmpleado')) datosParaEmpleado.estado = datosActualizar.estadoEmpleado;
 
-    // Campos que podrían afectar a la tabla Usuario
-    // El correo de un empleado podría ser un correo corporativo y diferente al de login,
-    // o ser el mismo. Define tu lógica. Aquí asumimos que se puede actualizar el correo del Usuario.
-    if (datosActualizar.hasOwnProperty('correo')) datosParaUsuario.correo = datosActualizar.correo;
+    // Fields that might affect the User table
+    if (datosActualizar.hasOwnProperty('correo')) {
+      datosParaEmpleado.correo = datosActualizar.correo; // Update email in Employee profile
+      datosParaUsuario.correo = datosActualizar.correo; // Mark to update email in User
+    }
     if (datosActualizar.hasOwnProperty('estadoUsuario')) datosParaUsuario.estado = datosActualizar.estadoUsuario;
-    // No se maneja cambio de contraseña ni de rol aquí directamente. Esas serían operaciones separadas.
+    // Password or role changes are not handled directly here. These would be separate operations.
 
 
-    // Validaciones de unicidad para Empleado
+    // Uniqueness validations for Employee
     if (datosParaEmpleado.numeroDocumento && datosParaEmpleado.numeroDocumento !== empleado.numeroDocumento) {
       const otroEmpleadoConDocumento = await db.Empleado.findOne({ where: { numeroDocumento: datosParaEmpleado.numeroDocumento, idEmpleado: { [Op.ne]: idEmpleado } }, transaction });
       if (otroEmpleadoConDocumento) {
@@ -217,19 +239,28 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
         throw new ConflictError(`El número de documento '${datosParaEmpleado.numeroDocumento}' ya está registrado para otro empleado.`);
       }
     }
+    if (datosParaEmpleado.correo && datosParaEmpleado.correo !== empleado.correo) {
+      const otroEmpleadoConCorreo = await db.Empleado.findOne({ where: { correo: datosParaEmpleado.correo, idEmpleado: { [Op.ne]: idEmpleado } }, transaction });
+      if (otroEmpleadoConCorreo) {
+        await transaction.rollback();
+        throw new ConflictError(`El correo electrónico '${datosParaEmpleado.correo}' ya está registrado para otro perfil de empleado.`);
+      }
+    }
     
-    // Actualizar Empleado si hay datos para ello
+    // Update Employee if there are data for it
     if (Object.keys(datosParaEmpleado).length > 0) {
       await empleado.update(datosParaEmpleado, { transaction });
     }
 
-    // Actualizar Usuario asociado si hay datos para ello y existe idUsuario
+    // Update associated User if there are data for it and idUsuario exists
     if (empleado.idUsuario && Object.keys(datosParaUsuario).length > 0) {
       const usuario = await db.Usuario.findByPk(empleado.idUsuario, { transaction });
       if (usuario) {
-        // Validar unicidad de correo en Usuario si se está cambiando
+        // Validate email uniqueness in User if it's being changed
         if (datosParaUsuario.correo && datosParaUsuario.correo !== usuario.correo) {
-          const otroUsuarioConCorreo = await db.Usuario.findOne({ where: { correo: datosParaUsuario.correo, idUsuario: { [Op.ne]: empleado.idUsuario } }, transaction });
+          const otroUsuarioConCorreo = await db.Usuario.findOne({
+            where: { correo: datosParaUsuario.correo, idUsuario: { [Op.ne]: empleado.idUsuario } },
+          });
           if (otroUsuarioConCorreo) {
             await transaction.rollback();
             throw new ConflictError(`El correo electrónico '${datosParaUsuario.correo}' ya está en uso por otra cuenta de usuario.`);
@@ -240,28 +271,25 @@ const actualizarEmpleado = async (idEmpleado, datosActualizar) => {
     }
 
     await transaction.commit();
-    return obtenerEmpleadoPorId(empleado.idEmpleado); // Devuelve el empleado actualizado con su usuario
-
+    return obtenerEmpleadoPorId(empleado.idEmpleado); // Returns the updated employee with their user
   } catch (error) {
     await transaction.rollback();
     if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof BadRequestError || error instanceof CustomError) throw error;
     if (error.name === "SequelizeUniqueConstraintError") {
-      // Este error podría surgir si, por ejemplo, se intenta cambiar el correo del Usuario a uno ya existente
-      // y la validación de arriba no lo capturó por alguna razón.
-      const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "un campo único";
-      throw new ConflictError(`Error de unicidad. Ya existe un registro con el mismo valor para '${constraintField}'.`);
+      const constraintField = error.errors && error.errors[0] ? error.errors[0].path : "a unique field";
+      throw new ConflictError(`Uniqueness error. A record with the same value for '${constraintField}' already exists.`);
     }
-    // console.error(`Error al actualizar el empleado con ID ${idEmpleado} en el servicio:`, error.message, error.stack); // Comentado
+    // console.error(`Error al actualizar el empleado con ID ${idEmpleado} en el servicio:`, error.message, error.stack); // Commented
     throw new CustomError(`Error al actualizar el empleado: ${error.message}`, 500);
   }
 };
 
 /**
- * Anular un empleado (borrado lógico, establece estado = false en Empleado).
+ * Disable an employee (logical deletion, sets status = false in Employee).
  */
 const anularEmpleado = async (idEmpleado) => {
   try {
-    // Considera si anular un empleado también debe desactivar su cuenta de Usuario.
+    // Consider whether disabling an employee should also deactivate their User account.
     // const empleado = await db.Empleado.findByPk(idEmpleado);
     // if (empleado && empleado.idUsuario) {
     //   await db.Usuario.update({ estado: false }, { where: { idUsuario: empleado.idUsuario }});
@@ -269,17 +297,17 @@ const anularEmpleado = async (idEmpleado) => {
     return await cambiarEstadoEmpleado(idEmpleado, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    // console.error(`Error al anular el empleado con ID ${idEmpleado} en el servicio:`, error.message); // Comentado
+    // console.error(`Error al anular el empleado con ID ${idEmpleado} en el servicio:`, error.message); // Commented
     throw new CustomError(`Error al anular el empleado: ${error.message}`, 500);
   }
 };
 
 /**
- * Habilitar un empleado (cambia estado = true en Empleado).
+ * Enable an employee (changes status = true in Employee).
  */
 const habilitarEmpleado = async (idEmpleado) => {
   try {
-    // Considera si habilitar un empleado también debe activar su cuenta de Usuario.
+    // Consider whether enabling an employee should also activate their User account.
     // const empleado = await db.Empleado.findByPk(idEmpleado);
     // if (empleado && empleado.idUsuario) {
     //   await db.Usuario.update({ estado: true }, { where: { idUsuario: empleado.idUsuario }});
@@ -287,14 +315,14 @@ const habilitarEmpleado = async (idEmpleado) => {
     return await cambiarEstadoEmpleado(idEmpleado, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    // console.error(`Error al habilitar el empleado con ID ${idEmpleado} en el servicio:`, error.message); // Comentado
+    // console.error(`Error al habilitar el empleado con ID ${idEmpleado} en el servicio:`, error.message); // Commented
     throw new CustomError(`Error al habilitar el empleado: ${error.message}`, 500);
   }
 };
 
 /**
- * Eliminar un empleado físicamente de la base de datos.
- * La FK en Empleado.idUsuario tiene ON DELETE SET NULL, por lo que el Usuario no se borra.
+ * Physically delete an employee from the database.
+ * The FK in Empleado.idUsuario has ON DELETE SET NULL, so the User is not deleted.
  */
 const eliminarEmpleadoFisico = async (idEmpleado) => {
   try {
@@ -302,7 +330,7 @@ const eliminarEmpleadoFisico = async (idEmpleado) => {
     if (!empleado) {
       throw new NotFoundError("Empleado no encontrado para eliminar físicamente.");
     }
-    // Opcional: Si al eliminar un empleado también quieres eliminar su cuenta de usuario.
+    // Optional: If deleting an employee also means deleting their user account.
     // if (empleado.idUsuario) {
     //   await db.Usuario.destroy({ where: { idUsuario: empleado.idUsuario }});
     // }
@@ -311,9 +339,9 @@ const eliminarEmpleadoFisico = async (idEmpleado) => {
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
     if (error.name === "SequelizeForeignKeyConstraintError") {
-      throw new ConflictError("No se puede eliminar el empleado debido a referencias existentes (ej. Citas, Abastecimientos). Considere anularlo.");
+      throw new ConflictError("Cannot delete employee due to existing references (e.g., Appointments, Supplies). Consider disabling them instead.");
     }
-    // console.error(`Error al eliminar físicamente el empleado con ID ${idEmpleado} en el servicio:`, error.message); // Comentado
+    // console.error(`Error al eliminar físicamente el empleado con ID ${idEmpleado} en el servicio:`, error.message); // Commented
     throw new CustomError(`Error al eliminar físicamente el empleado: ${error.message}`, 500);
   }
 };

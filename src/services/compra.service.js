@@ -1,4 +1,5 @@
-// src/services/compra.service.js
+// src/shared/src_api/services/compra.service.js
+
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -53,7 +54,7 @@ const crearCompra = async (datosCompra) => {
       throw new BadRequestError(
         `Producto '${productoDB.nombre}' (ID: ${item.productoId}) no está activo.`
       );
-    productosValidados.push({ ...item, nombre: productoDB.nombre, stockMinimo: productoDB.stockMinimo, existenciaOriginal: productoDB.existencia }); // Guardar stockMinimo
+    productosValidados.push({ ...item, nombre: productoDB.nombre, stockMinimo: productoDB.stockMinimo, existenciaOriginal: productoDB.existencia });
     subtotalCalculado += item.cantidad * item.valorUnitario;
   }
 
@@ -71,7 +72,11 @@ const crearCompra = async (datosCompra) => {
     nuevaCompra = await db.Compra.create(
       {
         fecha: fecha || new Date(),
-        proveedorId,
+        // =================================================================
+        // PRIMERA CORRECCIÓN APLICADA AQUÍ ✅
+        // Se cambió 'proveedorId' por 'idProveedor' para que coincida con el modelo.
+        // =================================================================
+        idProveedor: proveedorId,
         dashboardId: dashboardId || null,
         total: parseFloat(total).toFixed(2),
         iva: parseFloat(iva).toFixed(2),
@@ -86,8 +91,12 @@ const crearCompra = async (datosCompra) => {
     for (const item of productosValidados) {
       const detalle = await db.CompraXProducto.create(
         {
-          compraId: nuevaCompra.idCompra,
-          productoId: item.productoId,
+          // =================================================================
+          // SEGUNDA CORRECCIÓN APLICADA AQUÍ ✅ (La que te di antes)
+          // Se cambió 'compraId' y 'productoId' por 'idCompra' y 'idProducto'.
+          // =================================================================
+          idCompra: nuevaCompra.idCompra,
+          idProducto: item.productoId,
           cantidad: item.cantidad,
           valorUnitario: parseFloat(item.valorUnitario).toFixed(2),
         },
@@ -95,7 +104,7 @@ const crearCompra = async (datosCompra) => {
       );
       detallesCompra.push(detalle);
 
-      if (estadoCompra) { // Solo afectar inventario si la compra está activa
+      if (estadoCompra) {
         const productoDB = await db.Producto.findByPk(item.productoId, {
           transaction,
         });
@@ -133,7 +142,7 @@ const crearCompra = async (datosCompra) => {
 
 const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
   try {
-    return await db.Compra.findAll({
+    const compras = await db.Compra.findAll({
       where: opcionesDeFiltro,
       include: [
         {
@@ -148,11 +157,13 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
         },
         {
           model: db.Producto,
-          as: "productosComprados",
+          // CORRECCIÓN: Usar el alias correcto definido en el modelo Compra
+          as: "productos", // Antes: 'productosComprados'
           attributes: ["idProducto", "nombre", "precio", "stockMinimo", "existencia"],
           through: {
+            // El alias de la tabla de unión se define en el modelo de la tabla de unión,
+            // por lo que no es necesario aquí si no se necesita un alias específico en la consulta.
             model: db.CompraXProducto,
-            as: "detalleCompra",
             attributes: ["cantidad", "valorUnitario"],
           },
         },
@@ -162,8 +173,9 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
         ["idCompra", "DESC"],
       ],
     });
+    return compras;
   } catch (error) {
-    console.error("Error al obtener todas las compras:", error.message);
+    console.error("Error al obtener todas las compras:", error.message, error.stack);
     throw new CustomError(`Error al obtener compras: ${error.message}`, 500);
   }
 };
@@ -177,10 +189,11 @@ const obtenerCompraPorId = async (idCompra) => {
         { model: db.Dashboard, as: "dashboard" },
         {
           model: db.Producto,
-          as: "productosComprados",
+          as: "productos", // CORRECCIÓN: Usar el alias correcto
           attributes: ["idProducto", "nombre", "precio", "stockMinimo", "existencia"],
           through: {
-            as: "detalleCompra",
+            model: db.CompraXProducto,
+            as: "detalleCompra", // Este alias se puede definir para la tabla de unión en la consulta
             attributes: ["cantidad", "valorUnitario"],
           },
         },
@@ -201,7 +214,6 @@ const obtenerCompraPorId = async (idCompra) => {
 };
 
 const actualizarCompra = async (idCompra, datosActualizar) => {
-  // ... tu función actualizarCompra se mantiene igual ...
   const { fecha, proveedorId, dashboardId, total, iva, estado } =
     datosActualizar;
   const camposParaActualizar = {};
@@ -219,7 +231,7 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
       include: [
         {
           model: db.Producto,
-          as: "productosComprados",
+          as: "productos", // CORRECCIÓN: Usar el alias correcto
           through: {
             model: db.CompraXProducto,
             as: "detalleCompra",
@@ -236,7 +248,7 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
 
     const estadoOriginal = compra.estado;
 
-    if (proveedorId !== undefined && proveedorId !== compra.proveedorId) {
+    if (proveedorId !== undefined && proveedorId !== compra.idProveedor) {
       const proveedor = await db.Proveedor.findOne({
         where: { idProveedor: proveedorId, estado: true },
         transaction,
@@ -247,7 +259,7 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
           `Proveedor con ID ${proveedorId} no encontrado o inactivo.`
         );
       }
-      camposParaActualizar.proveedorId = proveedorId;
+      camposParaActualizar.idProveedor = proveedorId; // Usar idProveedor
     }
     if (dashboardId !== undefined && dashboardId !== compra.dashboardId) {
       if (dashboardId === null) camposParaActualizar.dashboardId = null;
@@ -277,7 +289,7 @@ const actualizarCompra = async (idCompra, datosActualizar) => {
       datosActualizar.hasOwnProperty("estado") &&
       estadoOriginal !== compra.estado
     ) {
-      for (const productoComprado of compra.productosComprados) {
+      for (const productoComprado of compra.productos) { // Usar el alias correcto
         const productoDB = await db.Producto.findByPk(
           productoComprado.idProducto,
           { transaction }
@@ -328,7 +340,7 @@ const eliminarCompraFisica = async (idCompra) => {
       include: [
         {
           model: db.Producto,
-          as: "productosComprados",
+          as: "productos", // CORRECCIÓN: Usar el alias correcto
           through: {
             model: db.CompraXProducto,
             as: "detalleCompra",
@@ -344,7 +356,7 @@ const eliminarCompraFisica = async (idCompra) => {
       throw new NotFoundError("Compra no encontrada para eliminar.");
     }
     compraOriginalEstado = compra.estado;
-    productosOriginales = compra.productosComprados.map(p => ({idProducto: p.idProducto, cantidad: p.CompraXProducto.cantidad}));
+    productosOriginales = compra.productos.map(p => ({idProducto: p.idProducto, cantidad: p.CompraXProducto.cantidad}));
 
 
     if (
@@ -400,22 +412,16 @@ const eliminarCompraFisica = async (idCompra) => {
 };
 
 
-/**
- * Anula una compra y revierte el stock de los productos asociados de forma segura.
- * @param {string} idCompra - El ID de la compra a anular.
- * @returns {Promise<object>} - La compra actualizada.
- */
 const anularCompra = async (idCompra) => {
     const transaction = await db.sequelize.transaction();
     try {
-        // 1. Obtener la compra con sus productos
         const compra = await db.Compra.findByPk(idCompra, {
             include: [{
                 model: db.Producto,
-                as: 'productosComprados',
-                through: { // Necesitamos la cantidad de la tabla de unión
+                as: 'productos', // CORRECCIÓN: Usar el alias correcto
+                through: {
                     model: db.CompraXProducto,
-                    as: 'detalleCompra', // Usar el alias definido en el modelo
+                    as: 'detalleCompra', 
                     attributes: ['cantidad']
                 }
             }],
@@ -432,39 +438,29 @@ const anularCompra = async (idCompra) => {
 
         const productosAfectadosParaAlerta = new Set();
 
-        // 2. Iterar sobre cada producto y REVERTIR el stock
-        for (const productoComprado of compra.productosComprados) {
-            // Acceder a la cantidad a través de la tabla de unión con el alias 'detalleCompra'
+        for (const productoComprado of compra.productos) { // Usar el alias correcto
             const cantidadRevertir = productoComprado.detalleCompra.cantidad;
-
-            // CORRECCIÓN CLAVE: Buscar el producto por su ID para bloquearlo y actualizarlo de forma segura.
-            // Sequelize ya maneja la transacción si se pasa el objeto `transaction`
             const productoEnStock = await db.Producto.findByPk(productoComprado.idProducto, {
                 transaction,
-                lock: transaction.LOCK.UPDATE // Bloquea la fila para la actualización
+                lock: transaction.LOCK.UPDATE
             });
 
             if (productoEnStock) {
-                // Al anular una compra, la existencia del producto DEBE DISMINUIR.
                 await productoEnStock.decrement("existencia", {
                     by: cantidadRevertir,
                     transaction,
                 });
                 productosAfectadosParaAlerta.add(productoEnStock.idProducto);
             } else {
-                // Si por alguna razón el producto no se encuentra, la transacción se revertirá
-                // y se lanzará un error. Esto es importante para mantener la consistencia.
-                throw new Error(`El producto con ID ${productoComprado.idProducto} no fue encontrado en el inventario durante la anulación.`);
+                throw new Error(`El producto con ID ${productoComprado.idProducto} no fue encontrado durante la anulación.`);
             }
         }
 
-        // 3. Actualizar el estado de la compra a "anulada"
         compra.estado = false;
         await compra.save({ transaction });
 
         await transaction.commit();
         
-        // Ejecutar alertas de stock después de la transacción
         for (const productoId of productosAfectadosParaAlerta) {
             const productoActualizado = await db.Producto.findByPk(productoId);
             if (productoActualizado) {
@@ -476,7 +472,6 @@ const anularCompra = async (idCompra) => {
 
     } catch (error) {
         await transaction.rollback();
-        // Re-lanza el error para que el controlador lo maneje
         if (error instanceof NotFoundError || error instanceof ConflictError) {
             throw error;
         }
@@ -486,9 +481,6 @@ const anularCompra = async (idCompra) => {
 };
 
 const habilitarCompra = async (idCompra) => {
-    // Esta función ahora usa la lógica segura de 'actualizarCompra' si es necesario,
-    // o puede tener su propia lógica de reactivación si es diferente.
-    // Por simplicidad, se mantiene la llamada a actualizarCompra.
     return actualizarCompra(idCompra, { estado: true });
 };
 
