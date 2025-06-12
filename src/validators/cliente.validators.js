@@ -104,7 +104,7 @@ const actualizarClienteValidators = [
       }
     }),
   body("estadoUsuario").optional().isBoolean().withMessage("El estado de la cuenta de usuario debe ser un valor booleano."),
-  
+  //Mensaje para render v1.0
   // La validación para body("idUsuario") en actualización se mantiene como en tu archivo original,
   // permitiendo la desvinculación (con null) o la re-vinculación (con validaciones).
   body("idUsuario")
