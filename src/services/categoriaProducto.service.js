@@ -1,4 +1,4 @@
-// src/services/categoriaProducto.service.js 
+// src/services/categoriaProducto.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
@@ -139,7 +139,8 @@ const actualizarCategoriaProducto = async (idCategoria, datosActualizar) => {
       const categoriaConMismoNombre = await db.CategoriaProducto.findOne({
         where: {
           nombre: nombre,
-          idCategoria: { [Op.ne]: idCategoria },
+          // CAMBIO CLAVE: Referenciar la columna correcta 'idCategoriaProducto'
+          idCategoriaProducto: { [Op.ne]: idCategoria },
         },
       });
       if (categoriaConMismoNombre) {
@@ -227,7 +228,8 @@ const eliminarCategoriaProductoFisica = async (idCategoria) => {
     }
 
     const filasEliminadas = await db.CategoriaProducto.destroy({
-      where: { idCategoria },
+      // CAMBIO CLAVE: Referenciar la columna correcta 'idCategoriaProducto'
+      where: { idCategoriaProducto: idCategoria },
     });
     return filasEliminadas;
   } catch (error) {
