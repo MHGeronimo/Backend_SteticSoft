@@ -1,4 +1,4 @@
-// src/validators/producto.validators.js
+// src/validators/producto.validators.js 
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,

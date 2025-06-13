@@ -7,7 +7,7 @@ const {
   CustomError,
   BadRequestError,
 } = require("../errors");
-// No se necesita stockAlertHelper aquí, ya que el estado del producto no afecta directamente el stock.
+// No se necesita stockAlertHelper aquí, ya que el estado del producto no afecta directamente el stock. 
 
 /**
  * Helper interno para cambiar el estado de un producto.
