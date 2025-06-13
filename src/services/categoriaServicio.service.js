@@ -5,9 +5,6 @@ const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
 /**
  * Helper interno para cambiar el estado de una categoría de servicio.
- * @param {number} idCategoriaServicio - ID de la categoría.
- * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
- * @returns {Promise<object>} La categoría con el estado cambiado.
  */
 const cambiarEstadoCategoriaServicio = async (idCategoriaServicio, nuevoEstado) => {
   const categoria = await db.CategoriaServicio.findByPk(idCategoriaServicio);
@@ -205,8 +202,11 @@ const eliminarCategoriaServicioFisica = async (idCategoriaServicio) => {
     }
 
     const serviciosAsociados = await db.Servicio.count({
-      where: { categoriaServicioId: idCategoriaServicio },
+      // ✅ CORRECCIÓN APLICADA AQUÍ:
+      // Se cambió `categoriaServicioId` por `idCategoriaServicio` para que coincida con el modelo.
+      where: { idCategoriaServicio: idCategoriaServicio },
     });
+    
     if (serviciosAsociados > 0) {
       throw new ConflictError(
         `No se puede eliminar la categoría de servicio '${categoria.nombre}' porque tiene ${serviciosAsociados} servicio(s) asociado(s).`
@@ -244,5 +244,5 @@ module.exports = {
   anularCategoriaServicio,
   habilitarCategoriaServicio,
   eliminarCategoriaServicioFisica,
-  cambiarEstadoCategoriaServicio, 
+  cambiarEstadoCategoriaServicio,
 };
