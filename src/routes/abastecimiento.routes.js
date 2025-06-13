@@ -1,86 +1,83 @@
-// src/routes/abastecimiento.routes.js
+// src/shared/src_api/routes/abastecimiento.routes.js
 const express = require("express");
 const router = express.Router();
-const abastecimientoController = require("../controllers/abastecimiento.controller.js");
-const abastecimientoValidators = require("../validators/abastecimiento.validators.js");
 
-// Middlewares de seguridad
-const authMiddleware = require("../middlewares/auth.middleware.js");
+// Importar el controlador de abastecimiento
+const AbastecimientoController = require("../controllers/abastecimiento.controller");
+
+// Importar los middlewares de autenticación y autorización
+const authMiddleware = require("../middlewares/auth.middleware");
+const authorizationMiddleware = require("../middlewares/authorization.middleware");
+
+// Importar el middleware que maneja los errores de validación
+const validationMiddleware = require("../middlewares/validation.middleware");
+
+// Importar los validadores específicos para abastecimiento
 const {
-  checkPermission,
-} = require("../middlewares/authorization.middleware.js");
+  createAbastecimientoValidator,
+  updateAbastecimientoValidator,
+  idValidator,
+  toggleEstadoValidator,
+} = require("../validators/abastecimiento.validators");
 
-const PERMISO_MODULO_ABASTECIMIENTOS = "MODULO_ABASTECIMIENTOS_GESTIONAR";
+// --- Definición de Rutas para Abastecimiento ---
 
-// POST /api/abastecimientos - Crear un nuevo registro de abastecimiento
+// GET /api/abastecimientos - Obtener todos los registros
+router.get(
+  "/",
+  authMiddleware,
+  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
+  AbastecimientoController.getAbastecimientos
+);
+
+// GET /api/abastecimientos/:id - Obtener un registro por su ID
+router.get(
+  "/:id",
+  authMiddleware,
+  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
+  idValidator, // Valida que el ID en la URL sea un número
+  validationMiddleware, // Middleware que revisa si hubo errores de validación
+  AbastecimientoController.getAbastecimientoById
+);
+
+// POST /api/abastecimientos - Crear un nuevo registro
 router.post(
   "/",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.crearAbastecimientoValidators,
-  abastecimientoController.crearAbastecimiento
+  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
+  createAbastecimientoValidator, // Array de reglas de validación para la creación
+  validationMiddleware, // Middleware que revisa si hubo errores de validación
+  AbastecimientoController.createAbastecimiento
 );
 
-// GET /api/abastecimientos - Obtener todos los registros de abastecimiento
-router.get(
-  "/",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoController.listarAbastecimientos
-);
-
-// GET /api/abastecimientos/:idAbastecimiento - Obtener un registro de abastecimiento por ID
-router.get(
-  "/:idAbastecimiento",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.idAbastecimientoValidator,
-  abastecimientoController.obtenerAbastecimientoPorId
-);
-
-// PUT /api/abastecimientos/:idAbastecimiento - Actualizar un registro de abastecimiento por ID
+// PUT /api/abastecimientos/:id - Actualizar un registro existente
 router.put(
-  "/:idAbastecimiento",
+  "/:id",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.actualizarAbastecimientoValidators,
-  abastecimientoController.actualizarAbastecimiento
+  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
+  updateAbastecimientoValidator, // Array de reglas de validación para la actualización
+  validationMiddleware, // Middleware que revisa si hubo errores de validación
+  AbastecimientoController.updateAbastecimiento
 );
 
-// NUEVA RUTA: Cambiar el estado de un abastecimiento
+// PATCH /api/abastecimientos/:id/estado - Cambiar el estado (activar/desactivar)
 router.patch(
-  "/:idAbastecimiento/estado",
+  "/:id/estado",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.cambiarEstadoAbastecimientoValidators,
-  abastecimientoController.cambiarEstadoAbastecimiento
+  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
+  toggleEstadoValidator, // Validador para el cambio de estado
+  validationMiddleware, // Middleware que revisa si hubo errores de validación
+  AbastecimientoController.toggleEstadoAbastecimiento
 );
 
-// PATCH /api/abastecimientos/:idAbastecimiento/anular - Anular un registro de abastecimiento
-router.patch(
-  "/:idAbastecimiento/anular",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.idAbastecimientoValidator,
-  abastecimientoController.anularAbastecimiento
-);
-
-// PATCH /api/abastecimientos/:idAbastecimiento/habilitar - Habilitar un registro de abastecimiento
-router.patch(
-  "/:idAbastecimiento/habilitar",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.idAbastecimientoValidator,
-  abastecimientoController.habilitarAbastecimiento
-);
-
-// DELETE /api/abastecimientos/:idAbastecimiento - Eliminar FÍSICAMENTE un registro de abastecimiento
+// DELETE /api/abastecimientos/:id - Eliminar un registro (soft delete o físico)
 router.delete(
-  "/:idAbastecimiento",
+  "/:id",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_ABASTECIMIENTOS),
-  abastecimientoValidators.idAbastecimientoValidator,
-  abastecimientoController.eliminarAbastecimientoFisico
+  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
+  idValidator, // Valida que el ID en la URL sea un número
+  validationMiddleware, // Middleware que revisa si hubo errores de validación
+  AbastecimientoController.deleteAbastecimiento
 );
 
 module.exports = router;
