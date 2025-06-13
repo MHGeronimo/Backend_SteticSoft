@@ -69,11 +69,6 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  console.log(
-    "ATRIBUTOS DEFINIDOS EN EL MODELO PRODUCTO:",
-    Object.keys(Producto.getAttributes())
-  );
-
   Producto.associate = (models) => {
     // Un Producto pertenece a una CategoriaProducto.
     Producto.belongsTo(models.CategoriaProducto, {
