@@ -1,4 +1,4 @@
-// src/shared/src_api/routes/abastecimiento.routes.js
+// src/routes/abastecimiento.routes.js
 const express = require("express");
 const router = express.Router();
 
@@ -7,10 +7,15 @@ const AbastecimientoController = require("../controllers/abastecimiento.controll
 
 // Importar los middlewares de autenticación y autorización
 const authMiddleware = require("../middlewares/auth.middleware");
-const authorizationMiddleware = require("../middlewares/authorization.middleware");
+// CORRECCIÓN: Se desestructura para obtener la función `checkPermission` directamente.
+const {
+  checkPermission,
+} = require("../middlewares/authorization.middleware");
 
 // Importar el middleware que maneja los errores de validación
-const validationMiddleware = require("../middlewares/validation.middleware");
+const {
+  handleValidationErrors,
+} = require("../middlewares/validation.middleware.js");
 
 // Importar los validadores específicos para abastecimiento
 const {
@@ -26,58 +31,59 @@ const {
 router.get(
   "/",
   authMiddleware,
-  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
-  AbastecimientoController.getAbastecimientos
+  // CORRECCIÓN: Se usa `checkPermission` con el nombre del permiso como string.
+  checkPermission("MODULO_ABASTECIMIENTO"),
+  AbastecimientoController.listarAbastecimientos // Se cambia el nombre del controlador para que coincida
 );
 
 // GET /api/abastecimientos/:id - Obtener un registro por su ID
 router.get(
   "/:id",
   authMiddleware,
-  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
-  idValidator, // Valida que el ID en la URL sea un número
-  validationMiddleware, // Middleware que revisa si hubo errores de validación
-  AbastecimientoController.getAbastecimientoById
+  checkPermission("MODULO_ABASTECIMIENTO"),
+  idValidator,
+  handleValidationErrors, // Se usa el manejador de errores de validación
+  AbastecimientoController.obtenerAbastecimientoPorId
 );
 
 // POST /api/abastecimientos - Crear un nuevo registro
 router.post(
   "/",
   authMiddleware,
-  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
-  createAbastecimientoValidator, // Array de reglas de validación para la creación
-  validationMiddleware, // Middleware que revisa si hubo errores de validación
-  AbastecimientoController.createAbastecimiento
+  checkPermission("MODULO_ABASTECIMIENTO"),
+  createAbastecimientoValidator,
+  handleValidationErrors,
+  AbastecimientoController.crearAbastecimiento
 );
 
 // PUT /api/abastecimientos/:id - Actualizar un registro existente
 router.put(
   "/:id",
   authMiddleware,
-  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
-  updateAbastecimientoValidator, // Array de reglas de validación para la actualización
-  validationMiddleware, // Middleware que revisa si hubo errores de validación
-  AbastecimientoController.updateAbastecimiento
+  checkPermission("MODULO_ABASTECIMIENTO"),
+  updateAbastecimientoValidator,
+  handleValidationErrors,
+  AbastecimientoController.actualizarAbastecimiento
 );
 
 // PATCH /api/abastecimientos/:id/estado - Cambiar el estado (activar/desactivar)
 router.patch(
   "/:id/estado",
   authMiddleware,
-  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
-  toggleEstadoValidator, // Validador para el cambio de estado
-  validationMiddleware, // Middleware que revisa si hubo errores de validación
-  AbastecimientoController.toggleEstadoAbastecimiento
+  checkPermission("MODULO_ABASTECIMIENTO"),
+  toggleEstadoValidator,
+  handleValidationErrors,
+  AbastecimientoController.cambiarEstadoAbastecimiento
 );
 
 // DELETE /api/abastecimientos/:id - Eliminar un registro (soft delete o físico)
 router.delete(
   "/:id",
   authMiddleware,
-  authorizationMiddleware(["MODULO_ABASTECIMIENTO"]),
-  idValidator, // Valida que el ID en la URL sea un número
-  validationMiddleware, // Middleware que revisa si hubo errores de validación
-  AbastecimientoController.deleteAbastecimiento
+  checkPermission("MODULO_ABASTECIMIENTO"),
+  idValidator,
+  handleValidationErrors,
+  AbastecimientoController.eliminarAbastecimientoFisico
 );
 
 module.exports = router;
