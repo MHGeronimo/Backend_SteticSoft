@@ -5,19 +5,12 @@ const router = express.Router();
 // Importar el controlador de abastecimiento
 const AbastecimientoController = require("../controllers/abastecimiento.controller");
 
-// Importar los middlewares de autenticación y autorización
+// Importar los middlewares
 const authMiddleware = require("../middlewares/auth.middleware");
-// CORRECCIÓN: Se desestructura para obtener la función `checkPermission` directamente.
-const {
-  checkPermission,
-} = require("../middlewares/authorization.middleware");
+const { checkPermission } = require("../middlewares/authorization.middleware");
+const { handleValidationErrors } = require("../middlewares/validation.middleware.js");
 
-// Importar el middleware que maneja los errores de validación
-const {
-  handleValidationErrors,
-} = require("../middlewares/validation.middleware.js");
-
-// Importar los validadores específicos para abastecimiento
+// Importar los validadores
 const {
   createAbastecimientoValidator,
   updateAbastecimientoValidator,
@@ -25,24 +18,27 @@ const {
   toggleEstadoValidator,
 } = require("../validators/abastecimiento.validators");
 
-// --- Definición de Rutas para Abastecimiento ---
+
+// --- CORRECCIÓN CLAVE ---
+// El nombre del permiso ahora coincide con el de tu base de datos.
+const PERMISO_GESTION = 'MODULO_ABASTECIMIENTOS_GESTIONAR';
+
 
 // GET /api/abastecimientos - Obtener todos los registros
 router.get(
   "/",
   authMiddleware,
-  // CORRECCIÓN: Se usa `checkPermission` con el nombre del permiso como string.
-  checkPermission("MODULO_ABASTECIMIENTO"),
-  AbastecimientoController.listarAbastecimientos // Se cambia el nombre del controlador para que coincida
+  checkPermission(PERMISO_GESTION), // CORRECCIÓN
+  AbastecimientoController.listarAbastecimientos
 );
 
 // GET /api/abastecimientos/:id - Obtener un registro por su ID
 router.get(
   "/:id",
   authMiddleware,
-  checkPermission("MODULO_ABASTECIMIENTO"),
+  checkPermission(PERMISO_GESTION), // CORRECCIÓN
   idValidator,
-  handleValidationErrors, // Se usa el manejador de errores de validación
+  handleValidationErrors,
   AbastecimientoController.obtenerAbastecimientoPorId
 );
 
@@ -50,7 +46,7 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  checkPermission("MODULO_ABASTECIMIENTO"),
+  checkPermission(PERMISO_GESTION), // CORRECCIÓN
   createAbastecimientoValidator,
   handleValidationErrors,
   AbastecimientoController.crearAbastecimiento
@@ -60,7 +56,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  checkPermission("MODULO_ABASTECIMIENTO"),
+  checkPermission(PERMISO_GESTION), // CORRECCIÓN
   updateAbastecimientoValidator,
   handleValidationErrors,
   AbastecimientoController.actualizarAbastecimiento
@@ -70,17 +66,17 @@ router.put(
 router.patch(
   "/:id/estado",
   authMiddleware,
-  checkPermission("MODULO_ABASTECIMIENTO"),
+  checkPermission(PERMISO_GESTION), // CORRECCIÓN
   toggleEstadoValidator,
   handleValidationErrors,
   AbastecimientoController.cambiarEstadoAbastecimiento
 );
 
-// DELETE /api/abastecimientos/:id - Eliminar un registro (soft delete o físico)
+// DELETE /api/abastecimientos/:id - Eliminar un registro (físico)
 router.delete(
   "/:id",
   authMiddleware,
-  checkPermission("MODULO_ABASTECIMIENTO"),
+  checkPermission(PERMISO_GESTION), // CORRECCIÓN
   idValidator,
   handleValidationErrors,
   AbastecimientoController.eliminarAbastecimientoFisico
