@@ -16,6 +16,8 @@ const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // I
  * Ej: { productoId, cantidad, fechaIngreso?, empleadoAsignado?, estado? }
  * @returns {Promise<object>} El registro de abastecimiento creado.
  */
+// src/services/abastecimiento.service.js
+
 const crearAbastecimiento = async (datosAbastecimiento) => {
   const {
     productoId,
@@ -50,16 +52,15 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   }
 
   const estadoAbastecimiento = typeof estado === "boolean" ? estado : true;
-
   const transaction = await db.sequelize.transaction();
   let nuevoAbastecimiento;
   try {
     nuevoAbastecimiento = await db.Abastecimiento.create(
       {
-        productoId,
+        idProducto: productoId, 
+        idEmpleadoAsignado: empleadoAsignado || null, 
         cantidad: Number(cantidad),
         fechaIngreso: fechaIngreso || new Date(),
-        empleadoAsignado: empleadoAsignado || null,
         estaAgotado: false,
         estado: estadoAbastecimiento,
       },
@@ -75,12 +76,11 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
 
     await transaction.commit();
 
-    // Check stock after commit
     if (estadoAbastecimiento) {
-        const productoActualizado = await db.Producto.findByPk(productoId);
-        if (productoActualizado) {
-            await checkAndSendStockAlert(productoActualizado, `tras abastecimiento ID ${nuevoAbastecimiento.idAbastecimiento}`);
-        }
+      const productoActualizado = await db.Producto.findByPk(productoId);
+      if (productoActualizado) {
+        await checkAndSendStockAlert(productoActualizado, `tras abastecimiento ID ${nuevoAbastecimiento.idAbastecimiento}`);
+      }
     }
     return nuevoAbastecimiento;
 
