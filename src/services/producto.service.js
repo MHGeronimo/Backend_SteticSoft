@@ -90,45 +90,76 @@ const crearProducto = async (datosProducto) => {
 /**
  * Obtener todos los productos.
  */
-const obtenerTodosLosProductos = async (filtros = {}) => {
-  // 1. Añadimos 'tipoUso' a los filtros que podemos recibir.
-  const { estado, categoriaId, tipoUso, busqueda } = filtros;
-  
-  const where = {};
-  if (estado !== undefined) { // Usar undefined para verificar si el filtro existe
-    where.estado = estado; // El controlador ya convierte a booleano
-  }
-  if (busqueda) {
-    where.nombre = { [Op.iLike]: `%${busqueda}%` };
-  }
+const obtenerTodosLosProductos = async (filtros) => {
+  const {
+    page = 1,
+    limit = 10,
+    nombre,
+    estado,
+    idCategoria,
+    tipoUso, // Recibimos el tipo de uso
+  } = filtros;
 
-  // 2. Creamos una opción de 'include' para poder filtrar por el modelo asociado.
-  const includeOptions = [
+  const offset = (page - 1) * limit;
+  let whereCondition = {};
+
+  // Incluimos siempre las tablas asociadas
+  let includeCondition = [
     {
-      model: db.CategoriaProducto, // Corregido: Usar db.CategoriaProducto
-      as: "categoria", // Corregido: Alias definido en Producto.model.js
-      attributes: ["idCategoriaProducto", "nombre", "tipoUso"], // Atributos a traer
-      required: false, // Usar required: false para LEFT JOIN y poder filtrar incluso si no tienen categoría
-      where: {} // Objeto 'where' para la categoría
+      model: CategoriaProducto,
+      as: "categoria",
+      attributes: ["idCategoria", "nombre", "vidaUtilDias", "tipoUso"],
+    },
+    {
+      model: Proveedor,
+      as: "proveedor",
+      attributes: ["idProveedor", "nombre"],
     },
   ];
 
-  // 3. Si se proporciona 'categoriaId', lo aplicamos al 'where' del include
-  if (categoriaId) {
-    includeOptions[0].where.idCategoriaProducto = categoriaId; // Corregido: idCategoria a idCategoriaProducto
+  if (nombre) {
+    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
   }
-  // 3. Si se proporciona 'tipoUso', lo aplicamos al 'where' del include de la categoría.
-  if (tipoUso) {
-    includeOptions[0].where.tipoUso = tipoUso;
+  if (estado !== undefined) {
+    whereCondition.estado = estado === "true";
+  }
+  if (idCategoria) {
+    whereCondition.idCategoria = idCategoria;
   }
 
-  const { count, rows } = await db.Producto.findAndCountAll({ // Corregido: Usar db.Producto
-    where,
-    include: includeOptions, // 4. Aplicamos el 'include' con el filtro.
-    order: [["nombre", "ASC"]],
-  });
-  
-  return { data: rows, total: count };
+  // --- CORRECCIÓN CLAVE ---
+  // Si el filtro 'tipoUso' está presente, lo aplicamos a la condición
+  // del 'include' de CategoriaProducto, no a la condición principal.
+  if (tipoUso) {
+    // Buscamos el objeto de inclusión para CategoriaProducto y le añadimos la condición 'where'.
+    const categoriaInclude = includeCondition.find(
+      (inc) => inc.as === "categoria"
+    );
+    if (categoriaInclude) {
+      // Esto asegura que el filtro se aplique a la tabla correcta.
+      categoriaInclude.where = { tipoUso: tipoUso };
+    }
+  }
+
+  try {
+    const { count, rows } = await Producto.findAndCountAll({
+      where: whereCondition,
+      include: includeCondition,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["nombre", "ASC"]],
+    });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      productos: rows,
+    };
+  } catch (error) {
+    // console.error("Error al obtener productos con paginación:", error);
+    throw new Error("No se pudieron obtener los productos.");
+  }
 };
 
 /**
