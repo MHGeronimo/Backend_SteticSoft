@@ -1,113 +1,68 @@
-// src/shared/src_api/validators/abastecimiento.validators.js
+const { body } = require("express-validator");
+const { validationResult } = require("express-validator");
 
-const { body, param } = require("express-validator");
-const { Producto, Empleado } = require("../models"); // Importar modelos directamente
+// Middleware para manejar los errores de validación
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
 
-/**
- * @description Valida los datos para crear un nuevo registro de abastecimiento.
- */
+// Validador para la creación de un abastecimiento
 const createAbastecimientoValidator = [
   body("productoId")
-    .notEmpty()
-    .withMessage("El ID del producto es obligatorio.")
     .isInt({ gt: 0 })
-    .withMessage("El ID del producto debe ser un entero positivo.")
-    .custom(async (value) => {
-      const producto = await Producto.findOne({
-        where: { idProducto: value, estado: true },
-      });
-      if (!producto) {
-        return Promise.reject(
-          "El producto especificado no existe o no está activo."
-        );
-      }
-    }),
-
-  // Corregido: de 'empleadoAsignado' a 'empleadoId' para consistencia.
+    .withMessage("El ID del producto debe ser un número entero positivo."),
   body("empleadoId")
-    .notEmpty()
-    .withMessage("El ID del empleado es obligatorio.")
     .isInt({ gt: 0 })
-    .withMessage("El ID del empleado asignado debe ser un entero positivo.")
-    .custom(async (value) => {
-      const empleado = await Empleado.findOne({
-        where: { idEmpleado: value, estado: true },
-      });
-      if (!empleado) {
-        return Promise.reject(
-          "El empleado asignado especificado no existe o no está activo."
-        );
-      }
-    }),
-
+    .withMessage("El ID del empleado debe ser un número entero positivo."),
   body("cantidad")
-    .notEmpty()
-    .withMessage("La cantidad es obligatoria.")
     .isInt({ gt: 0 })
-    .withMessage("La cantidad debe ser un entero positivo.")
-    .toInt(),
-];
-
-/**
- * @description Valida los datos para actualizar un registro de abastecimiento existente.
- */
-const updateAbastecimientoValidator = [
-  // Corregido: El parámetro de la ruta es 'id'.
-  param("id")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del abastecimiento en la URL debe ser un entero positivo."),
-
-  body("cantidad")
+    .withMessage("La cantidad debe ser un número entero positivo."),
+  body("fechaIngreso")
     .optional()
-    .isInt({ gt: 0 })
-    .withMessage("La cantidad debe ser un entero positivo si se actualiza.")
-    .toInt(),
-  
-  // Se valida que si se marca como agotado, la razón sea obligatoria.
-  body("estaAgotado")
+    .isISO8601()
+    .withMessage("La fecha de ingreso debe tener un formato de fecha válido."),
+  body("estado")
     .optional()
     .isBoolean()
-    .withMessage('El campo "estaAgotado" debe ser un valor booleano.'),
+    .withMessage("El estado debe ser un valor booleano."),
 
-  body("razonAgotamiento")
-    .if(body("estaAgotado").equals("true")) // Condicional: solo si estaAgotado es true
-    .notEmpty({ ignore_whitespace: true })
-    .withMessage(
-      "La razón de agotamiento es obligatoria si el producto se marca como agotado."
-    )
-    .isString()
-    .withMessage("La razón de agotamiento debe ser texto."),
+  handleValidationErrors,
 ];
 
-/**
- * @description Valida que el parámetro de ID en la URL sea válido.
- */
-const idValidator = [
-  // Corregido: El parámetro de la ruta es 'id'.
-  param("id")
+// --- CORRECCIÓN CLAVE ---
+// Validador para la ACTUALIZACIÓN de un abastecimiento.
+// Hacemos que todos los campos sean OPCIONALES. Solo se validarán si se incluyen
+// en el cuerpo de la solicitud PUT.
+const updateAbastecimientoValidator = [
+  body("cantidad")
+    .optional() // <-- ESTA ES LA CORRECCIÓN
     .isInt({ gt: 0 })
-    .withMessage("El ID en la URL debe ser un entero positivo."),
-];
-
-/**
- * @description Valida los datos para cambiar el estado (soft-delete) de un registro.
- */
-const toggleEstadoValidator = [
-  // Corregido: El parámetro de la ruta es 'id'.
-  param("id")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del abastecimiento en la URL debe ser un entero positivo."),
+    .withMessage("La cantidad debe ser un número entero positivo."),
 
   body("estado")
-    .exists({ checkNull: true })
-    .withMessage("El campo 'estado' es obligatorio.")
+    .optional() // <-- ESTA ES LA CORRECCIÓN
     .isBoolean()
-    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+    .withMessage("El estado debe ser un valor booleano."),
+  
+  body("estaAgotado")
+    .optional() // <-- ESTA ES LA CORRECCIÓN
+    .isBoolean()
+    .withMessage("El campo 'estaAgotado' debe ser booleano."),
+
+  body("razonAgotamiento")
+    .optional({ nullable: true }) // <-- ESTA ES LA CORRECCIÓN
+    .isString()
+    .withMessage("La razón de agotamiento debe ser un texto."),
+
+  handleValidationErrors,
 ];
+
 
 module.exports = {
   createAbastecimientoValidator,
   updateAbastecimientoValidator,
-  idValidator,
-  toggleEstadoValidator,
 };
