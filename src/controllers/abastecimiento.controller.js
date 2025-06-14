@@ -5,28 +5,17 @@ const abastecimientoService = require("../services/abastecimiento.service.js");
  * Crea un nuevo registro de abastecimiento.
  */
 const crearAbastecimiento = async (req, res, next) => {
-  const transaction = await db.sequelize.transaction();
   try {
-    // --- CORRECCIÓN CLAVE ---
-    // Mapeamos el 'empleadoId' que viene del frontend al 'empleadoAsignado'
-    // que espera el servicio interno.
-    const datosAbastecimiento = {
-      ...req.body,
-      empleadoAsignado: req.body.empleadoId,
-    };
-
     const nuevoAbastecimiento = await abastecimientoService.crearAbastecimiento(
-      transaction,
-      datosAbastecimiento // Enviamos los datos adaptados
+      req.body
     );
 
-    await transaction.commit();
     res.status(201).json({
-      message: "Abastecimiento creado exitosamente",
+      success: true,
+      message: "Registro de abastecimiento creado exitosamente.",
       data: nuevoAbastecimiento,
     });
   } catch (error) {
-    if (transaction) await transaction.rollback();
     next(error);
   }
 };

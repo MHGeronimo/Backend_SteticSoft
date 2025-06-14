@@ -23,81 +23,55 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     productoId,
     cantidad,
     fechaIngreso,
-    empleadoAsignado,
+    empleadoId, // El frontend envía 'empleadoId'
     estado,
   } = datosAbastecimiento;
 
-  let producto = await db.Producto.findByPk(productoId);
-  if (!producto)
-    throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
-  if (!producto.estado)
-    throw new BadRequestError(
-      `Producto '${producto.nombre}' (ID: ${productoId}) no está activo.`
-    );
+  // El servicio ahora maneja la adaptación del nombre del campo
+  const idEmpleadoAsignado = empleadoId;
 
+  const producto = await db.Producto.findByPk(productoId);
+  if (!producto) throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
+  if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
   if (producto.existencia < cantidad) {
-    throw new ConflictError(
-      `No hay suficiente existencia para el producto '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`
-    );
+    throw new ConflictError(`No hay suficiente stock para '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`);
   }
 
-  if (empleadoAsignado) {
-    const empleado = await db.Empleado.findOne({
-      where: { idEmpleado: empleadoAsignado, estado: true },
-    });
-    if (!empleado)
-      throw new BadRequestError(
-        `Empleado asignado con ID ${empleadoAsignado} no encontrado o inactivo.`
-      );
+  if (idEmpleadoAsignado) {
+    const empleado = await db.Empleado.findOne({ where: { idEmpleado: idEmpleadoAsignado, estado: true } });
+    if (!empleado) throw new BadRequestError(`Empleado con ID ${idEmpleadoAsignado} no encontrado o inactivo.`);
   }
 
-  const estadoAbastecimiento = typeof estado === "boolean" ? estado : true;
   const transaction = await db.sequelize.transaction();
-  let nuevoAbastecimiento;
   try {
-    nuevoAbastecimiento = await db.Abastecimiento.create(
-      {
-        idProducto: productoId, 
-        idEmpleadoAsignado: empleadoAsignado || null, 
+    const nuevoAbastecimiento = await db.Abastecimiento.create({
+        // ======================= CORRECCIÓN FINAL =======================
+        // Los nombres de campo aquí deben coincidir EXACTAMENTE con el modelo Abastecimiento.model.js
+        idProducto: productoId,
+        idEmpleadoAsignado: idEmpleadoAsignado,
+        // ================================================================
         cantidad: Number(cantidad),
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
-        estado: estadoAbastecimiento,
-      },
-      { transaction }
-    );
+        estado: typeof estado === "boolean" ? estado : true,
+    }, { transaction });
 
-    if (estadoAbastecimiento) {
-      await producto.decrement("existencia", {
-        by: Number(cantidad),
-        transaction,
-      });
-    }
-
+    await producto.decrement("existencia", { by: Number(cantidad), transaction });
     await transaction.commit();
 
-    if (estadoAbastecimiento) {
-      const productoActualizado = await db.Producto.findByPk(productoId);
-      if (productoActualizado) {
+    const productoActualizado = await db.Producto.findByPk(productoId);
+    if (productoActualizado) {
         await checkAndSendStockAlert(productoActualizado, `tras abastecimiento ID ${nuevoAbastecimiento.idAbastecimiento}`);
-      }
     }
+
     return nuevoAbastecimiento;
 
   } catch (error) {
     await transaction.rollback();
-    console.error(
-      "Error al crear el abastecimiento:",
-      error.message,
-      error.stack
-    );
-    throw new CustomError(
-      `Error al crear el abastecimiento: ${error.message}`,
-      500
-    );
+    console.error("Error detallado al crear abastecimiento:", error);
+    throw new CustomError(`Error al crear el abastecimiento: ${error.message}`, 500);
   }
 };
-
 /**
  * Obtener todos los registros de abastecimiento.
  */
