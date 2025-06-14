@@ -97,26 +97,18 @@ const obtenerTodosLosProductos = async (filtros) => {
     nombre,
     estado,
     idCategoria,
-    tipoUso, // Recibimos el tipo de uso
+    tipoUso, // El filtro que nos interesa
   } = filtros;
 
+  // --- PASO DE DEPURACIÓN ---
+  // Este log se mostrará en la consola de tu *backend* (la terminal donde corres la API)
+  // Nos dirá si el filtro está llegando correctamente desde el frontend.
+  console.log("[Service:Producto] Filtros recibidos:", filtros);
+
   const offset = (page - 1) * limit;
+
+  // 1. Construimos la condición principal para la tabla 'Producto'
   let whereCondition = {};
-
-  // Incluimos siempre las tablas asociadas
-  let includeCondition = [
-    {
-      model: CategoriaProducto,
-      as: "categoria",
-      attributes: ["idCategoria", "nombre", "vidaUtilDias", "tipoUso"],
-    },
-    {
-      model: Proveedor,
-      as: "proveedor",
-      attributes: ["idProveedor", "nombre"],
-    },
-  ];
-
   if (nombre) {
     whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
   }
@@ -127,19 +119,23 @@ const obtenerTodosLosProductos = async (filtros) => {
     whereCondition.idCategoria = idCategoria;
   }
 
-  // --- CORRECCIÓN CLAVE ---
-  // Si el filtro 'tipoUso' está presente, lo aplicamos a la condición
-  // del 'include' de CategoriaProducto, no a la condición principal.
-  if (tipoUso) {
-    // Buscamos el objeto de inclusión para CategoriaProducto y le añadimos la condición 'where'.
-    const categoriaInclude = includeCondition.find(
-      (inc) => inc.as === "categoria"
-    );
-    if (categoriaInclude) {
-      // Esto asegura que el filtro se aplique a la tabla correcta.
-      categoriaInclude.where = { tipoUso: tipoUso };
-    }
-  }
+  // 2. Construimos la condición para la tabla asociada 'CategoriaProducto'
+  let includeCondition = [
+    {
+      model: CategoriaProducto,
+      as: "categoria",
+      attributes: ["idCategoria", "nombre", "vidaUtilDias", "tipoUso"],
+      // --- CORRECCIÓN CLAVE ---
+      // Aplicamos el filtro 'tipoUso' directamente aquí.
+      // Si 'tipoUso' no viene, la condición 'where' no se añade.
+      ...(tipoUso && { where: { tipoUso: tipoUso } }),
+    },
+    {
+      model: Proveedor,
+      as: "proveedor",
+      attributes: ["idProveedor", "nombre"],
+    },
+  ];
 
   try {
     const { count, rows } = await Producto.findAndCountAll({
@@ -157,10 +153,11 @@ const obtenerTodosLosProductos = async (filtros) => {
       productos: rows,
     };
   } catch (error) {
-    // console.error("Error al obtener productos con paginación:", error);
+    console.error("Error al obtener productos con paginación:", error);
     throw new Error("No se pudieron obtener los productos.");
   }
 };
+
 
 /**
  * Obtener un producto por su ID.
