@@ -2,15 +2,13 @@
 const express = require("express");
 const router = express.Router();
 
-// Importar el controlador de abastecimiento
+// Importar el controlador y los middlewares/validators
 const AbastecimientoController = require("../controllers/abastecimiento.controller");
-
-// Importar los middlewares
 const authMiddleware = require("../middlewares/auth.middleware");
 const { checkPermission } = require("../middlewares/authorization.middleware");
-const { handleValidationErrors } = require("../middlewares/validation.middleware.js");
-
-// Importar los validadores
+const {
+  handleValidationErrors,
+} = require("../middlewares/validation.middleware.js");
 const {
   createAbastecimientoValidator,
   updateAbastecimientoValidator,
@@ -18,68 +16,66 @@ const {
   toggleEstadoValidator,
 } = require("../validators/abastecimiento.validators");
 
+const PERMISO_GESTION = "MODULO_ABASTECIMIENTOS_GESTIONAR";
 
-// --- CORRECCIÓN CLAVE ---
-// El nombre del permiso ahora coincide con el de tu base de datos.
-const PERMISO_GESTION = 'MODULO_ABASTECIMIENTOS_GESTIONAR';
+// --- RUTAS SINCRONIZADAS ---
 
-
-// GET /api/abastecimientos - Obtener todos los registros
+// GET /api/abastecimientos
 router.get(
   "/",
   authMiddleware,
-  checkPermission(PERMISO_GESTION), // CORRECCIÓN
-  AbastecimientoController.listarAbastecimientos
+  checkPermission(PERMISO_GESTION),
+  AbastecimientoController.listarAbastecimientos // Coincide con el export del controller
 );
 
-// GET /api/abastecimientos/:id - Obtener un registro por su ID
+// GET /api/abastecimientos/:id
 router.get(
   "/:id",
   authMiddleware,
-  checkPermission(PERMISO_GESTION), // CORRECCIÓN
+  checkPermission(PERMISO_GESTION),
   idValidator,
   handleValidationErrors,
-  AbastecimientoController.obtenerAbastecimientoPorId
+  AbastecimientoController.obtenerAbastecimientoPorId // Coincide
 );
 
-// POST /api/abastecimientos - Crear un nuevo registro
+// POST /api/abastecimientos
 router.post(
   "/",
   authMiddleware,
-  checkPermission(PERMISO_GESTION), // CORRECCIÓN
+  checkPermission(PERMISO_GESTION),
   createAbastecimientoValidator,
   handleValidationErrors,
-  AbastecimientoController.crearAbastecimiento
+  AbastecimientoController.crearAbastecimiento // Coincide
 );
 
-// PUT /api/abastecimientos/:id - Actualizar un registro existente
+// PUT /api/abastecimientos/:id
 router.put(
   "/:id",
   authMiddleware,
-  checkPermission(PERMISO_GESTION), // CORRECCIÓN
+  checkPermission(PERMISO_GESTION),
   updateAbastecimientoValidator,
   handleValidationErrors,
-  AbastecimientoController.actualizarAbastecimiento
+  AbastecimientoController.actualizarAbastecimiento // Coincide
 );
 
-// PATCH /api/abastecimientos/:id/estado - Cambiar el estado (activar/desactivar)
+// PATCH /api/abastecimientos/:id/estado
 router.patch(
   "/:id/estado",
   authMiddleware,
-  checkPermission(PERMISO_GESTION), // CORRECCIÓN
+  checkPermission(PERMISO_GESTION),
   toggleEstadoValidator,
   handleValidationErrors,
-  AbastecimientoController.cambiarEstadoAbastecimiento
+  AbastecimientoController.cambiarEstadoAbastecimiento // Coincide
 );
 
-// DELETE /api/abastecimientos/:id - Eliminar un registro (físico)
+// DELETE /api/abastecimientos/:id
 router.delete(
   "/:id",
   authMiddleware,
-  checkPermission(PERMISO_GESTION), // CORRECCIÓN
+  checkPermission(PERMISO_GESTION),
   idValidator,
   handleValidationErrors,
-  AbastecimientoController.eliminarAbastecimientoFisico
+  AbastecimientoController.eliminarAbastecimientoFisico // Coincide
 );
 
 module.exports = router;

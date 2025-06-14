@@ -1,105 +1,52 @@
 // src/controllers/abastecimiento.controller.js
 const abastecimientoService = require("../services/abastecimiento.service.js");
+const { NotFoundError } = require("../errors");
 
-/**
- * Crea un nuevo registro de abastecimiento.
- */
+
 const crearAbastecimiento = async (req, res, next) => {
   try {
     const nuevoAbastecimiento = await abastecimientoService.crearAbastecimiento(
       req.body
     );
-
-    res.status(201).json({
-      success: true,
-      message: "Registro de abastecimiento creado exitosamente.",
-      data: nuevoAbastecimiento,
-    });
+    res.status(201).json(nuevoAbastecimiento);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Obtiene una lista de todos los registros de abastecimiento.
- */
+
 const listarAbastecimientos = async (req, res, next) => {
   try {
-    const opcionesDeFiltro = {};
-    if (req.query.productoId) {
-      const idProducto = Number(req.query.productoId);
-      if (!isNaN(idProducto) && idProducto > 0) {
-        opcionesDeFiltro.productoId = idProducto;
-      }
-    }
-    if (req.query.empleadoAsignado) {
-      const idEmpleado = Number(req.query.empleadoAsignado);
-      if (!isNaN(idEmpleado) && idEmpleado > 0) {
-        opcionesDeFiltro.empleadoAsignado = idEmpleado;
-      }
-    }
-    if (req.query.estado === "true") {
-      opcionesDeFiltro.estado = true;
-    } else if (req.query.estado === "false") {
-      opcionesDeFiltro.estado = false;
-    }
     const abastecimientos =
-      await abastecimientoService.obtenerTodosLosAbastecimientos(
-        opcionesDeFiltro
-      );
-    res.status(200).json({
-      success: true,
-      data: abastecimientos,
-    });
+      await abastecimientoService.obtenerTodosLosAbastecimientos(req.query);
+    res.status(200).json(abastecimientos);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Obtiene un registro de abastecimiento específico por su ID.
- */
+
 const obtenerAbastecimientoPorId = async (req, res, next) => {
   try {
-    const { idAbastecimiento } = req.params;
-    const abastecimiento =
-      await abastecimientoService.obtenerAbastecimientoPorId(
-        Number(idAbastecimiento)
-      );
-    res.status(200).json({
-      success: true,
-      data: abastecimiento,
-    });
+    // --- CORRECCIÓN ---
+    // Usamos req.params.id para que coincida con el nombre en el archivo de rutas.
+    const { id } = req.params;
+    const abastecimiento = await abastecimientoService.obtenerAbastecimientoPorId(id);
+    res.status(200).json(abastecimiento);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Actualiza un registro de abastecimiento existente por su ID.
- */
+
 const actualizarAbastecimiento = async (req, res, next) => {
   try {
-    const { idAbastecimiento } = req.params;
-
-    // --- CORRECCIÓN CLAVE ---
-    // Se añade una validación para asegurar que el ID es un número válido.
-    // Esto hace que la API sea más segura y previene el error 'NaN'.
-    const numericId = parseInt(idAbastecimiento, 10);
-    if (isNaN(numericId)) {
-      return res
-        .status(400)
-        .json({
-          message: "El ID del abastecimiento proporcionado no es válido.",
-        });
-    }
-    // --- FIN DE LA CORRECCIÓN ---
-
-    const datosActualizar = req.body;
+    // --- CORRECCIÓN ---
+    const { id } = req.params;
     const abastecimientoActualizado =
       await abastecimientoService.actualizarAbastecimiento(
-        numericId, // Pasamos el ID ya validado y convertido a número
-        datosActualizar
+        id,
+        req.body
       );
     res.status(200).json(abastecimientoActualizado);
   } catch (error) {
@@ -107,24 +54,19 @@ const actualizarAbastecimiento = async (req, res, next) => {
   }
 };
 
-/**
- * Cambia el estado (activo/inactivo) de un registro de abastecimiento.
- * Esta función llamará a la lógica de servicio que también maneja el inventario.
- */
 const cambiarEstadoAbastecimiento = async (req, res, next) => {
   try {
-    const { idAbastecimiento } = req.params;
-    const { estado } = req.body; // Se espera un booleano
-
-    // El servicio actualizarAbastecimiento maneja la lógica de cambio de estado e inventario
+    // --- CORRECCIÓN ---
+    const { id } = req.params;
+    const { estado } = req.body;
     const abastecimientoActualizado =
       await abastecimientoService.actualizarAbastecimiento(
-        Number(idAbastecimiento),
-        { estado } // Solo pasamos el campo estado para esta operación específica
+        id,
+        { estado }
       );
     res.status(200).json({
       success: true,
-      message: `Estado del abastecimiento ID ${idAbastecimiento} cambiado a ${estado} exitosamente. Inventario ajustado si aplica.`,
+      message: `Estado del abastecimiento ID ${id} cambiado a ${estado}.`,
       data: abastecimientoActualizado,
     });
   } catch (error) {
@@ -132,60 +74,16 @@ const cambiarEstadoAbastecimiento = async (req, res, next) => {
   }
 };
 
-/**
- * Anula un registro de abastecimiento (estado booleano = false y ajusta inventario).
- */
-const anularAbastecimiento = async (req, res, next) => {
-  try {
-    const { idAbastecimiento } = req.params;
-    const abastecimientoAnulado =
-      await abastecimientoService.anularAbastecimiento(
-        // Llama a la función de servicio específica
-        Number(idAbastecimiento)
-      );
-    res.status(200).json({
-      success: true,
-      message:
-        "Abastecimiento anulado exitosamente. El inventario ha sido ajustado.",
-      data: abastecimientoAnulado,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
-/**
- * Habilita un registro de abastecimiento (estado booleano = true y ajusta inventario).
- */
-const habilitarAbastecimiento = async (req, res, next) => {
-  try {
-    const { idAbastecimiento } = req.params;
-    const abastecimientoHabilitado =
-      await abastecimientoService.habilitarAbastecimiento(
-        // Llama a la función de servicio específica
-        Number(idAbastecimiento)
-      );
-    res.status(200).json({
-      success: true,
-      message:
-        "Abastecimiento habilitado exitosamente. El inventario ha sido ajustado.",
-      data: abastecimientoHabilitado,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Elimina físicamente un registro de abastecimiento por su ID.
- */
 const eliminarAbastecimientoFisico = async (req, res, next) => {
   try {
-    const { idAbastecimiento } = req.params;
-    await abastecimientoService.eliminarAbastecimientoFisico(
-      Number(idAbastecimiento)
-    );
-    res.status(204).send();
+    // --- CORRECCIÓN ---
+    const { id } = req.params;
+    const resultado = await abastecimientoService.eliminarAbastecimientoFisico(id);
+    if (resultado === 0) {
+        throw new NotFoundError(`No se encontró un abastecimiento con el ID ${id} para eliminar.`);
+    }
+    res.status(204).send(); // 204 No Content es una respuesta común para DELETE exitoso.
   } catch (error) {
     next(error);
   }
@@ -196,8 +94,6 @@ module.exports = {
   listarAbastecimientos,
   obtenerAbastecimientoPorId,
   actualizarAbastecimiento,
-  anularAbastecimiento,
-  habilitarAbastecimiento,
-  eliminarAbastecimientoFisico,
-  cambiarEstadoAbastecimiento, // <-- Nueva función exportada
+  cambiarEstadoAbastecimiento,
+  eliminarAbastecimientoFisico
 };
