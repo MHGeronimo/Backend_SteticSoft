@@ -81,16 +81,27 @@ const obtenerAbastecimientoPorId = async (req, res, next) => {
 const actualizarAbastecimiento = async (req, res, next) => {
   try {
     const { idAbastecimiento } = req.params;
+
+    // --- CORRECCIÓN CLAVE ---
+    // Se añade una validación para asegurar que el ID es un número válido.
+    // Esto hace que la API sea más segura y previene el error 'NaN'.
+    const numericId = parseInt(idAbastecimiento, 10);
+    if (isNaN(numericId)) {
+      return res
+        .status(400)
+        .json({
+          message: "El ID del abastecimiento proporcionado no es válido.",
+        });
+    }
+    // --- FIN DE LA CORRECCIÓN ---
+
+    const datosActualizar = req.body;
     const abastecimientoActualizado =
       await abastecimientoService.actualizarAbastecimiento(
-        Number(idAbastecimiento),
-        req.body
+        numericId, // Pasamos el ID ya validado y convertido a número
+        datosActualizar
       );
-    res.status(200).json({
-      success: true,
-      message: "Registro de abastecimiento actualizado exitosamente.",
-      data: abastecimientoActualizado,
-    });
+    res.status(200).json(abastecimientoActualizado);
   } catch (error) {
     next(error);
   }
