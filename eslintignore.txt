@@ -1,4 +1,0 @@
-node_modules/
-dist/
-coverage/
-# Add any other files or directories to ignore
