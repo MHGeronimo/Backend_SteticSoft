@@ -1,0 +1,155 @@
+**Documentación de la API SteticSoft para Instructores y Desarrolladores**
+
+**1. Resumen del Proyecto**
+
+SteticSoft API es un sistema backend robusto diseñado para servir como la columna vertebral de una aplicación de gestión integral para negocios del sector de la estética y belleza. Su propósito es centralizar la lógica de negocio y la persistencia de datos, ofreciendo una interfaz programática para que aplicaciones cliente (web, móviles) puedan interactuar con los recursos del sistema. La API está construida principalmente sobre el stack tecnológico de Node.js, utilizando el framework Express.js para el enrutamiento y manejo de peticiones HTTP, Sequelize como ORM para la interacción con una base de datos PostgreSQL, y JSON Web Tokens (JWT) para la autenticación.
+
+**2. Objetivos de la API**
+
+*   Proveer una interfaz RESTful clara, consistente y bien documentada para todas las operaciones del negocio.
+*   Garantizar la seguridad de los datos mediante mecanismos de autenticación y autorización basados en roles y permisos.
+*   Asegurar la integridad y consistencia de los datos a través de validaciones robustas y una gestión adecuada de la base de datos.
+*   Ofrecer una arquitectura modular y escalable que facilite el mantenimiento y la adición de nuevas funcionalidades.
+*   Servir como un ejemplo práctico y educativo de una aplicación backend completa, ilustrando patrones de diseño y buenas prácticas en el desarrollo de software.
+
+**3. Arquitectura y Diseño**
+
+La API SteticSoft se ha diseñado siguiendo principios de modularidad y separación de responsabilidades, aproximándose a una arquitectura en capas.
+
+*   **Stack Tecnológico Principal:**
+    *   **Node.js:** Entorno de ejecución JavaScript del lado del servidor.
+    *   **Express.js:** Framework web minimalista para Node.js, utilizado para definir rutas y manejar middlewares.
+    *   **Sequelize:** ORM (Object-Relational Mapper) para Node.js, que facilita la interacción con la base de datos PostgreSQL de forma orientada a objetos.
+    *   **PostgreSQL:** Sistema de gestión de bases de datos relacional objeto-relacional.
+    *   **JSON Web Tokens (JWT):** Estándar abierto (RFC 7519) para crear tokens de acceso que permiten la autenticación stateless.
+    *   **bcrypt.js:** Librería para el hashing seguro de contraseñas.
+    *   **Helmet:** Middleware para Express que ayuda a asegurar las aplicaciones configurando diversas cabeceras HTTP relacionadas con la seguridad.
+    *   **express-validator:** Conjunto de middlewares para Express que facilitan la validación de datos de entrada basados en `validator.js`.
+    *   **Nodemailer:** Módulo para el envío de correos electrónicos desde Node.js.
+    *   **node-cron:** Módulo para la programación de tareas (cron jobs) directamente en Node.js.
+
+*   **Patrón de Diseño:**
+    La API sigue una estructura que se asemeja a una arquitectura en capas:
+    1.  **Rutas (`src/routes/`):** Definen los endpoints de la API y los métodos HTTP aceptados. Delegan el manejo de la lógica a los controladores y aplican middlewares de autenticación, autorización y validación.
+    2.  **Controladores (`src/controllers/`):** Reciben las peticiones HTTP (a través de las rutas), extraen datos de la solicitud (parámetros, cuerpo, query) y orquestan la respuesta. Invocan a los servicios para ejecutar la lógica de negocio.
+    3.  **Servicios (`src/services/`):** Encapsulan la lógica de negocio principal. Interactúan con los modelos para acceder y modificar datos, y pueden realizar operaciones más complejas que involucran múltiples modelos o lógica específica del dominio.
+    4.  **Modelos (`src/models/`):** Definen la estructura de los datos (esquemas de tablas) y las relaciones entre entidades utilizando Sequelize. Son responsables de la interacción directa con la base de datos.
+
+*   **Estructura del Proyecto:**
+    El código fuente está organizado en directorios con responsabilidades claras:
+    *   `src/config/`: Archivos de configuración para la base de datos, variables de entorno, Sequelize, etc.
+    *   `src/controllers/`: Lógica de manejo de peticiones HTTP para cada módulo.
+    *   `src/errors/`: Clases de error personalizadas para un manejo de errores más semántico.
+    *   `src/middlewares/`: Funciones intermediarias para autenticación, autorización, manejo de errores global y validación.
+    *   `src/models/`: Definiciones de los modelos de Sequelize y sus asociaciones.
+    *   `src/routes/`: Definición de las rutas de la API utilizando `express.Router`.
+    *   `src/services/`: Lógica de negocio y orquestación de operaciones con la base de datos.
+    *   `src/utils/`: Utilidades varias (ej. plantillas de correo, helpers).
+    *   `src/validators/`: Reglas de validación para los datos de entrada de cada módulo.
+
+*   **Manejo de Rutas:** Se utiliza `express.Router()` para modularizar las rutas, agrupando los endpoints por entidad o funcionalidad principal (ej. `auth.routes.js`, `usuario.routes.js`). El archivo `src/routes/index.js` actúa como enrutador principal, consolidando todos los demás.
+
+*   **Validación de Datos:** La validación de los datos de entrada (cuerpo de la petición, parámetros de ruta, query params) se realiza utilizando `express-validator`. Se definen conjuntos de reglas de validación específicas para cada endpoint que lo requiera en el directorio `src/validators/`. Un middleware (`validation.middleware.js`) centraliza el manejo de los errores de validación, devolviendo respuestas HTTP 400 o 422 con detalles de los errores.
+
+*   **Seguridad:**
+    *   **Autenticación:** Se implementa un sistema de autenticación basado en JSON Web Tokens (JWT). El flujo típico es:
+        1.  El usuario envía credenciales (correo y contraseña) al endpoint de login (`/api/auth/login`).
+        2.  El servidor verifica las credenciales. Si son válidas, genera un JWT firmado que contiene información del usuario (ej. ID, rol).
+        3.  El JWT se devuelve al cliente, quien debe incluirlo en la cabecera `Authorization` (como `Bearer <token>`) en las solicitudes a endpoints protegidos.
+        4.  Un middleware (`auth.middleware.js`) intercepta las solicitudes a rutas protegidas, verifica la validez del JWT y extrae la información del usuario, adjuntándola al objeto `req`.
+    *   **Autorización:** Se utiliza un sistema de Roles y Permisos.
+        *   Las tablas `rol`, `permisos`, y la tabla de unión `permisos_x_rol` definen los roles y qué permisos tiene cada uno.
+        *   El middleware `auth.middleware.js` carga los permisos del usuario autenticado.
+        *   El middleware `authorization.middleware.js` (`checkPermission`) verifica si el usuario tiene el permiso específico requerido para acceder a una ruta o ejecutar una acción.
+    *   **Otros:**
+        *   Las contraseñas de los usuarios se almacenan hasheadas utilizando `bcrypt.js`.
+        *   Se utiliza `helmet` para agregar cabeceras HTTP que mejoran la seguridad (ej. XSS protection, no-sniff, etc.).
+        *   El uso de Sequelize como ORM ayuda a prevenir vulnerabilidades de inyección SQL al parametrizar las consultas.
+
+*   **Gestión de la Base de Datos:**
+    *   **ORM:** Sequelize es el ORM utilizado para interactuar con la base de datos PostgreSQL, abstrayendo las consultas SQL y permitiendo un manejo de datos más orientado a objetos.
+    *   **Esquema:** El esquema de la base de datos está definido por los modelos de Sequelize en `src/models/`. Aunque no se proporciona un script SQL de creación único en el código fuente analizado, los modelos definen las tablas, columnas, tipos de datos, claves primarias, claves foráneas y relaciones.
+    *   **Migraciones y Seeders:** Se utiliza `sequelize-cli` para gestionar las migraciones de esquema (evolución de la estructura de la base de datos) y los seeders (población inicial de datos). Los comandos `sequelize db:migrate` y `sequelize db:seed:all` son fundamentales en este proceso.
+
+*   **Manejo de Errores:**
+    *   Se utiliza un middleware global de manejo de errores (`src/middlewares/errorHandler.middleware.js`) que centraliza la respuesta a errores ocurridos durante el procesamiento de las peticiones.
+    *   Se han definido clases de error personalizadas (ej. `NotFoundError`, `BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError` en `src/errors/`) que heredan de la clase `Error` base, permitiendo un manejo más específico y semántico de los errores en los servicios y controladores.
+    *   Los errores de Sequelize (ej. `SequelizeValidationError`, `SequelizeUniqueConstraintError`) también son capturados y transformados en respuestas HTTP apropiadas.
+
+*   **Configuración:**
+    *   La configuración sensible y específica del entorno (credenciales de base de datos, secretos de JWT, configuración de email) se gestiona mediante variables de entorno almacenadas en un archivo `.env` en la raíz del proyecto (no versionado).
+    *   El archivo `src/config/env.config.js` carga estas variables de entorno.
+    *   Otros archivos en `src/config/` (como `database.config.js`, `mailer.config.js`, `sequelize.config.js`) utilizan estas variables para configurar los diferentes aspectos de la aplicación.
+
+**4. Funcionalidades Destacadas (Módulos Clave y su Implementación)**
+
+La API implementa una variedad de módulos que cubren las necesidades de un sistema de gestión de estéticas:
+
+*   **Autenticación y Gestión de Usuarios/Perfiles:**
+    *   Registro de usuarios (clientes por defecto, empleados/administradores a través de endpoints protegidos).
+    *   Login con JWT.
+    *   Recuperación de contraseña.
+    *   Gestión CRUD completa para perfiles de Usuario, Cliente y Empleado.
+    *   Asociación de especialidades a empleados.
+*   **Gestión de Catálogos:**
+    *   CRUD para Roles, Permisos, Estados, Categorías de Productos y Categorías de Servicios.
+    *   Asignación de permisos a roles.
+*   **Gestión de Inventario y Servicios:**
+    *   CRUD para Productos, incluyendo campos de stock.
+    *   CRUD para Servicios.
+*   **Gestión de Citas:**
+    *   Programación, actualización y cancelación de citas.
+    *   Asociación de múltiples servicios a una cita.
+    *   Notificaciones por correo electrónico para eventos de citas (creación, cancelación, recordatorios - implementado en servicios).
+*   **Transacciones:**
+    *   Registro de Compras a proveedores, con detalle de productos y actualización de stock.
+    *   Registro de Ventas, con detalle de productos y/o servicios, y actualización de stock de productos.
+*   **Tareas Programadas:**
+    *   Se utiliza `node-cron` para tareas como la verificación de stock mínimo de productos y el envío de alertas por correo electrónico (lógica en `src/utils/stockAlertHelper.js` y `src/services/producto.service.js`).
+
+*   **Flujo Típico (Ej. Creación de Cliente con Usuario):**
+    1.  Una petición POST llega a `/api/auth/registrar` (auto-registro) o a `/api/clientes/` (creación administrativa).
+    2.  Los validadores correspondientes (`auth.validators.js` o `cliente.validators.js`) verifican los datos de entrada.
+    3.  El controlador (`auth.controller.js` o `cliente.controller.js`) llama al servicio respectivo (`auth.service.js` o `cliente.service.js`).
+    4.  El servicio:
+        *   Hashea la contraseña usando `bcrypt`.
+        *   Crea el registro de `Usuario` en la base de datos (asignando un rol por defecto, ej. "Cliente").
+        *   Crea el registro de `Cliente` en la base de datos, asociándolo con el `idUsuario` recién creado.
+        *   Ambas operaciones (creación de Usuario y Cliente) se manejan dentro de una transacción de Sequelize para garantizar la atomicidad.
+        *   Devuelve el usuario y cliente creados (y un token JWT en caso de auto-registro).
+    5.  El controlador genera la respuesta JSON.
+
+**5. Posibles Extensiones o Puntos de Discusión Académica**
+
+Este proyecto sirve como una excelente base para discutir diversos temas avanzados de ingeniería de software:
+
+*   **Escalabilidad:**
+    *   Discutir estrategias para escalar la API, como balanceo de carga, microservicios (aunque podría ser excesivo para este dominio inicialmente), y optimización de la base de datos (réplicas de lectura, sharding).
+    *   Analizar el uso de Node.js en un entorno de un solo hilo y cómo manejar operaciones de larga duración o bloqueantes (ej. offloading a workers, colas de mensajes).
+*   **Pruebas:**
+    *   El `package.json` actual no especifica un framework de testing robusto (como Jest, Mocha, Chai). Se podría discutir la importancia de:
+        *   **Pruebas Unitarias:** Para servicios, helpers y lógica de negocio compleja.
+        *   **Pruebas de Integración:** Para verificar la interacción entre capas (controlador-servicio-modelo) y con la base de datos.
+        *   **Pruebas End-to-End (E2E):** Para simular flujos de usuario completos a través de los endpoints de la API.
+*   **Optimización de Consultas y Rendimiento:**
+    *   Análisis de consultas generadas por Sequelize (uso de `EXPLAIN`).
+    *   Estrategias de indexación en PostgreSQL.
+    *   Técnicas de caching (ej. Redis) para datos frecuentemente accedidos.
+*   **Estrategias de Despliegue y CI/CD:**
+    *   El proyecto menciona su despliegue en Render. Se puede discutir el proceso de CI/CD (Integración Continua/Despliegue Continuo) usando herramientas como GitHub Actions, GitLab CI, Jenkins para automatizar pruebas y despliegues.
+    *   Contenerización con Docker y orquestación (ej. Kubernetes, Docker Swarm) para entornos más complejos.
+*   **Seguridad Avanzada:**
+    *   Implementación de Rate Limiting para prevenir abuso.
+    *   Mecanismos de auditoría detallados (logging de acciones críticas).
+    *   Pruebas de penetración y análisis de vulnerabilidades.
+    *   OAuth 2.0 para escenarios de autenticación más complejos o delegados.
+*   **Alternativas Tecnológicas y Justificación:**
+    *   Discutir por qué se eligió Node.js/Express en lugar de otros stacks (Python/Django, Ruby/Rails, Java/Spring).
+    *   Comparar PostgreSQL con otras bases de datos (MySQL, MongoDB) para este tipo de aplicación.
+    *   Analizar alternativas a Sequelize (ej. TypeORM, Knex.js).
+*   **Manejo de Transacciones Complejas:** Analizar cómo se gestionan las transacciones en Sequelize para operaciones que involucran múltiples modelos (ej. creación de venta con actualización de stock).
+*   **WebSockets:** Para funcionalidades en tiempo real (ej. notificaciones instantáneas en la app de administración).
+
+**6. Conclusión**
+
+La API de SteticSoft es un proyecto de backend bien estructurado que demuestra la aplicación de patrones de diseño comunes y tecnologías modernas en el ecosistema Node.js. Proporciona una base sólida para una aplicación de gestión completa y sirve como un valioso recurso educativo para entender los componentes y la arquitectura de una API RESTful del mundo real. Su modularidad, enfoque en la seguridad y la separación de responsabilidades la convierten en un buen punto de partida para desarrollos más avanzados o como un caso de estudio en cursos de ingeniería de software.

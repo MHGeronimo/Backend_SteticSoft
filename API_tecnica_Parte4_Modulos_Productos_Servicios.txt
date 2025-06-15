@@ -1,0 +1,304 @@
+### CategoriaProducto
+
+Este módulo administra las categorías para los productos, permitiendo agruparlos y definir propiedades comunes como la vida útil y el tipo de uso.
+
+#### Modelo de Datos Asociado
+
+1.  **`CategoriaProducto`**
+    *   **Tabla SQL:** `categoria_producto`
+    *   **Campos Principales:**
+        *   `idCategoriaProducto` (INTEGER, PK, autoIncrement, `id_categoria_producto`)
+        *   `nombre` (STRING(100), allowNull: false, unique: true)
+        *   `descripcion` (TEXT, allowNull: true)
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true)
+        *   `vidaUtilDias` (INTEGER, allowNull: true, `vida_util_dias`) - Vida útil estimada en días.
+        *   `tipoUso` (STRING(10), allowNull: false, `validate: { isIn: [["Interno", "Externo"]] }`) - Define si el producto es para uso "Interno" (consumido en la empresa) o "Externo" (para la venta).
+    *   **Relaciones Principales:**
+        *   `hasMany(models.Producto, { foreignKey: 'categoriaProductoId', as: 'productos' })`
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+
+1.  **Crear Nueva Categoría de Producto**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/categorias-producto/`
+    *   **Descripción:** Crea una nueva categoría para productos.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "nombre": "Shampoos Caninos",
+          "descripcion": "Categoría para shampoos de uso veterinario en caninos (opcional)",
+          "vidaUtilDias": 730, // Opcional
+          "tipoUso": "Externo", // "Interno" o "Externo"
+          "estado": true // Opcional, por defecto true
+        }
+        ```
+    *   **Validaciones:**
+        *   `nombre`: obligatorio, string, 3-45 caracteres, único.
+        *   `descripcion`: opcional, string, máx 45 caracteres (revisar si el modelo es TEXT y el validador es 45).
+        *   `vidaUtilDias`: opcional, entero no negativo.
+        *   `tipoUso`: obligatorio, debe ser "Interno" o "Externo".
+        *   `estado`: opcional, boolean.
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Categoría de producto creada.", "data": { /* ...datos... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `409 Conflict`.
+
+2.  **Listar Categorías de Producto**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/categorias-producto/`
+    *   **Descripción:** Obtiene una lista de categorías de producto. Permite filtrar por `estado` y `tipoUso`.
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional).
+        *   `tipoUso` (STRING, opcional): "Interno" o "Externo".
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`.
+
+3.  **Obtener Categoría de Producto por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/categorias-producto/:idCategoria`
+    *   **Parámetros de Solicitud (`params`):** `idCategoria` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+4.  **Actualizar Categoría de Producto**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/categorias-producto/:idCategoria`
+    *   **Parámetros de Solicitud (`params`):** `idCategoria` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** (Campos opcionales como en la creación).
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`, `409`.
+
+5.  **Cambiar Estado de Categoría de Producto**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/categorias-producto/:idCategoria/estado`
+    *   **Parámetros de Solicitud (`params`):** `idCategoria` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}`.
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+6.  **Anular Categoría de Producto**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/categorias-producto/:idCategoria/anular`
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+7.  **Habilitar Categoría de Producto**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/categorias-producto/:idCategoria/habilitar`
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+8.  **Eliminar Categoría de Producto Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/categorias-producto/:idCategoria`
+    *   **Descripción:** Elimina físicamente. El servicio debe validar que no esté en uso por Productos.
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `204 No Content`, `400`, `401`, `403`, `404`, `409`.
+
+---
+
+### CategoriaServicio
+
+Este módulo administra las categorías para los servicios ofrecidos por la empresa.
+
+#### Modelo de Datos Asociado
+
+1.  **`CategoriaServicio`**
+    *   **Tabla SQL:** `categoria_servicio`
+    *   **Campos Principales:**
+        *   `idCategoriaServicio` (INTEGER, PK, autoIncrement, `id_categoria_servicio`)
+        *   `nombre` (STRING(100), allowNull: false, unique: true)
+        *   `descripcion` (TEXT, allowNull: true)
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true)
+    *   **Relaciones Principales:**
+        *   `hasMany(models.Servicio, { foreignKey: 'idCategoriaServicio', as: 'servicios' })`
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+
+1.  **Crear Nueva Categoría de Servicio**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/categorias-servicio/`
+    *   **Descripción:** Crea una nueva categoría para servicios.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "nombre": "Peluquería Canina",
+          "descripcion": "Servicios de estética y peluquería para perros (opcional)",
+          "estado": true // Opcional, por defecto true
+        }
+        ```
+    *   **Validaciones:**
+        *   `nombre`: obligatorio, string, 3-45 caracteres, único.
+        *   `descripcion`: opcional, string, máx 45 caracteres (revisar si el modelo es TEXT y el validador es 45).
+        *   `estado`: opcional, boolean.
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Categoría de servicio creada.", "data": { /* ...datos... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `409 Conflict`.
+
+2.  **Listar Categorías de Servicio**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/categorias-servicio/`
+    *   **Descripción:** Obtiene una lista de categorías de servicio. Permite filtrar por `estado`.
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional).
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`.
+
+3.  **Obtener Categoría de Servicio por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/categorias-servicio/:idCategoriaServicio`
+    *   **Parámetros de Solicitud (`params`):** `idCategoriaServicio` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+4.  **Actualizar Categoría de Servicio**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/categorias-servicio/:idCategoriaServicio`
+    *   **Parámetros de Solicitud (`params`):** `idCategoriaServicio` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** (Campos opcionales como en la creación).
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`, `409`.
+
+5.  **Cambiar Estado de Categoría de Servicio**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/categorias-servicio/:idCategoriaServicio/estado`
+    *   **Parámetros de Solicitud (`params`):** `idCategoriaServicio` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}`.
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+6.  **Anular Categoría de Servicio**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/categorias-servicio/:idCategoriaServicio/anular`
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+7.  **Habilitar Categoría de Servicio**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/categorias-servicio/:idCategoriaServicio/habilitar`
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+8.  **Eliminar Categoría de Servicio Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/categorias-servicio/:idCategoriaServicio`
+    *   **Descripción:** Elimina físicamente. El servicio debe validar que no esté en uso por Servicios.
+    *   **Permisos Requeridos:** `MODULO_CATEGORIAS_SERVICIOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `204 No Content`, `400`, `401`, `403`, `404`, `409`.
+
+### Producto
+
+Este módulo gestiona los productos de la empresa, incluyendo detalles de inventario, precios y categorización.
+
+#### Modelo de Datos Asociado
+
+1.  **`Producto`**
+    *   **Tabla SQL:** `producto`
+    *   **Campos Principales:**
+        *   `idProducto` (INTEGER, PK, autoIncrement, `id_producto`)
+        *   `nombre` (STRING(100), allowNull: false)
+        *   `descripcion` (TEXT, allowNull: true)
+        *   `existencia` (INTEGER, defaultValue: 0, `validate: { min: 0 }`) - Cantidad actual en stock.
+        *   `precio` (DECIMAL(12, 2), defaultValue: 0.00)
+        *   `stockMinimo` (INTEGER, defaultValue: 0, `stock_minimo`)
+        *   `stockMaximo` (INTEGER, defaultValue: 0, `stock_maximo`)
+        *   `imagen` (TEXT, allowNull: true) - URL o path a la imagen del producto.
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true)
+        *   `categoriaProductoId` (INTEGER, allowNull: true, FK a `categoria_producto`, `id_categoria_producto`, onDelete: 'RESTRICT')
+    *   **Relaciones Principales:**
+        *   `belongsTo(models.CategoriaProducto, { foreignKey: 'categoriaProductoId', as: 'categoria' })`
+        *   `belongsToMany(models.Compra, { through: 'compra_x_producto', foreignKey: 'id_producto', otherKey: 'id_compra', as: 'compras' })`
+        *   `belongsToMany(models.Venta, { through: 'producto_x_venta', foreignKey: 'id_producto', otherKey: 'id_venta', as: 'ventas' })`
+        *   `hasMany(models.Abastecimiento, { foreignKey: 'idProducto', as: 'abastecimientos' })`
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_PRODUCTOS_GESTIONAR`.
+
+1.  **Crear Nuevo Producto**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/productos/`
+    *   **Descripción:** Crea un nuevo producto en el sistema.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "nombre": "Producto Ejemplo",
+          "descripcion": "Descripción detallada del producto (opcional)",
+          "existencia": 100, // Opcional, default 0
+          "precio": 19.99, // Opcional, default 0.00
+          "stockMinimo": 10, // Opcional, default 0
+          "stockMaximo": 200, // Opcional, default 0
+          "imagen": "https://example.com/imagen.jpg", // Opcional, URL válida
+          "estado": true, // Opcional, default true
+          "categoriaProductoId": 1 // Opcional, ID de una CategoriaProducto activa existente
+        }
+        ```
+    *   **Validaciones:**
+        *   `nombre`: obligatorio, string, 3-45 caracteres.
+        *   `existencia`, `stockMinimo`, `stockMaximo`: opcionales, enteros no negativos. `stockMaximo` >= `stockMinimo`.
+        *   `precio`: opcional, número no negativo.
+        *   `imagen`: opcional, URL válida.
+        *   `categoriaProductoId`: opcional, si se provee debe ser ID de una `CategoriaProducto` activa.
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Producto creado.", "data": { /* ...datos del producto... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`.
+
+2.  **Listar Productos**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/productos/`
+    *   **Descripción:** Obtiene una lista de productos. Permite filtrar por `estado`, `categoriaProductoId`, `tipoUso` (de la categoría) y `busqueda` (en nombre o descripción). Por defecto, lista productos activos.
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional): `true` para activos, `false` para inactivos. Si no se envía, por defecto es `true`.
+        *   `categoriaProductoId` (INTEGER, opcional): ID de la categoría de producto.
+        *   `tipoUso` (STRING, opcional): "Interno" o "Externo" (filtra por el tipo de uso de la categoría).
+        *   `busqueda` (STRING, opcional): Término a buscar en nombre y descripción del producto.
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`.
+
+3.  **Obtener Producto por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/productos/:idProducto`
+    *   **Parámetros de Solicitud (`params`):** `idProducto` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+4.  **Actualizar Producto**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/productos/:idProducto`
+    *   **Parámetros de Solicitud (`params`):** `idProducto` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** (Campos opcionales como en la creación).
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`, `409`.
+
+5.  **Cambiar Estado de Producto**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/productos/:idProducto/estado`
+    *   **Parámetros de Solicitud (`params`):** `idProducto` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}`.
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+6.  **Anular Producto**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/productos/:idProducto/anular`
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+7.  **Habilitar Producto**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/productos/:idProducto/habilitar`
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+8.  **Eliminar Producto Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/productos/:idProducto`
+    *   **Descripción:** Elimina físicamente. El servicio debe verificar que no esté en uso (ej. en Compras, Ventas, Abastecimientos).
+    *   **Permisos Requeridos:** `MODULO_PRODUCTOS_GESTIONAR`.
+    *   **Respuestas Comunes:** `204 No Content`, `400`, `401`, `403`, `404`, `409`.

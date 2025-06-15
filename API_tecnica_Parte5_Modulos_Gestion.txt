@@ -1,0 +1,605 @@
+### Proveedor
+
+Este módulo se encarga de la gestión de proveedores de productos o servicios para la empresa.
+
+#### Modelo de Datos Asociado
+
+1.  **`Proveedor`**
+    *   **Tabla SQL:** `proveedor`
+    *   **Campos Principales:**
+        *   `idProveedor` (INTEGER, PK, autoIncrement, `id_proveedor`)
+        *   `nombre` (STRING(100), allowNull: false)
+        *   `tipo` (STRING(50), allowNull: false) - Ej: "Natural", "Jurídico".
+        *   `tipoDocumento` (STRING(50), allowNull: true, `tipo_documento`)
+        *   `numeroDocumento` (STRING(45), allowNull: true, `numero_documento`)
+        *   `nitEmpresa` (STRING(45), allowNull: true, unique: true, `nit_empresa`)
+        *   `telefono` (STRING(20), allowNull: false)
+        *   `correo` (STRING(100), allowNull: false, unique: true, `validate: { isEmail: true }`)
+        *   `direccion` (TEXT, allowNull: false)
+        *   `nombrePersonaEncargada` (STRING(100), allowNull: true, `nombre_persona_encargada`)
+        *   `telefonoPersonaEncargada` (STRING(20), allowNull: true, `telefono_persona_encargada`)
+        *   `emailPersonaEncargada` (STRING(100), allowNull: true, `validate: { isEmail: true }`, `email_persona_encargada`)
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true)
+    *   **Índices:**
+        *   Unique en (`nombre`, `tipo`)
+    *   **Relaciones Principales:**
+        *   `hasMany(models.Compra, { foreignKey: 'idProveedor', as: 'compras' })`
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_PROVEEDORES_GESTIONAR`.
+
+1.  **Crear Nuevo Proveedor**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/proveedores/`
+    *   **Descripción:** Crea un nuevo proveedor en el sistema.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "nombre": "Nombre del Proveedor S.A.S.",
+          "tipo": "Jurídico", // o "Natural"
+          "telefono": "3001234567",
+          "correo": "contacto@proveedor.com",
+          "direccion": "Calle Falsa 123, Ciudad",
+          "tipoDocumento": "NIT", // Opcional si es "Natural", ej: "Cédula de Ciudadanía"
+          "numeroDocumento": null, // Opcional si es "Jurídico"
+          "nitEmpresa": "900123456-7", // Opcional si es "Natural", único
+          "nombrePersonaEncargada": "Juan Encargado (opcional)",
+          "telefonoPersonaEncargada": "3109876543 (opcional)",
+          "emailPersonaEncargada": "juan.encargado@proveedor.com (opcional)",
+          "estado": true // Opcional, por defecto true
+        }
+        ```
+    *   **Validaciones:**
+        *   `nombre`, `tipo`, `telefono`, `correo`, `direccion` son obligatorios.
+        *   `correo` y `nitEmpresa` (si se proporciona) deben ser únicos.
+        *   Los campos de persona encargada son opcionales.
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Proveedor creado.", "data": { /* ...datos del proveedor... */ }}`
+        *   `400 Bad Request`: Error de validación.
+        *   `401 Unauthorized`.
+        *   `403 Forbidden`.
+        *   `409 Conflict` (si `correo` o `nitEmpresa` ya existen).
+
+2.  **Listar Proveedores**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/proveedores/`
+    *   **Descripción:** Obtiene una lista de proveedores. Permite filtrar por `estado` y `tipo`.
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional): Filtrar por proveedores activos (`true`) o inactivos (`false`).
+        *   `tipo` (STRING, opcional): Filtrar por tipo de proveedor (ej. "Natural", "Jurídico").
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `200 OK`: `{"success": true, "data": [/* ...lista de proveedores... */]}`
+        *   `401 Unauthorized`.
+        *   `403 Forbidden`.
+
+3.  **Obtener Proveedor por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/proveedores/:idProveedor`
+    *   **Descripción:** Obtiene un proveedor por su ID.
+    *   **Parámetros de Solicitud (`params`):** `idProveedor` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `200 OK`: `{"success": true, "data": { /* ...datos del proveedor... */ }}`
+        *   `400 Bad Request`.
+        *   `401 Unauthorized`.
+        *   `403 Forbidden`.
+        *   `404 Not Found`.
+
+4.  **Actualizar Proveedor**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/proveedores/:idProveedor`
+    *   **Descripción:** Actualiza un proveedor por su ID.
+    *   **Parámetros de Solicitud (`params`):** `idProveedor` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** (Campos opcionales similares a la creación).
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `200 OK`: `{"success": true, "message": "Proveedor actualizado.", "data": { /* ...datos actualizados... */ }}`
+        *   `400 Bad Request`.
+        *   `401 Unauthorized`.
+        *   `403 Forbidden`.
+        *   `404 Not Found`.
+        *   `409 Conflict`.
+
+5.  **Cambiar Estado de Proveedor**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/proveedores/:idProveedor/estado`
+    *   **Descripción:** Cambia el estado (activo/inactivo) de un proveedor.
+    *   **Parámetros de Solicitud (`params`):** `idProveedor` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}` (o `true`).
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `200 OK`: `{"success": true, "message": "Estado del proveedor cambiado.", "data": { /* ...proveedor actualizado... */ }}`
+        *   `400 Bad Request`.
+        *   `401 Unauthorized`.
+        *   `403 Forbidden`.
+        *   `404 Not Found`.
+
+6.  **Anular Proveedor (Borrado Lógico)**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/proveedores/:idProveedor/anular`
+    *   **Descripción:** Establece `estado = false` para un proveedor.
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`, `404`.
+
+7.  **Habilitar Proveedor**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/proveedores/:idProveedor/habilitar`
+    *   **Descripción:** Establece `estado = true` para un proveedor.
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`, `404`.
+
+8.  **Eliminar Proveedor Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/proveedores/:idProveedor`
+    *   **Descripción:** Elimina físicamente un proveedor. El servicio debe verificar que no esté en uso (ej. en Compras).
+    *   **Permisos Requeridos:** `MODULO_PROVEEDORES_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `204 No Content`.
+        *   `401 Unauthorized`.
+        *   `403 Forbidden`.
+        *   `404 Not Found`.
+        *   `409 Conflict` (si está en uso).
+
+---
+
+### Compra
+
+Este módulo gestiona las compras de productos a proveedores, incluyendo el registro de los productos adquiridos, cantidades, costos y el manejo del inventario.
+
+#### Modelo de Datos Asociado
+
+1.  **`Compra`**
+    *   **Tabla SQL:** `compra`
+    *   **Campos Principales:**
+        *   `idCompra` (INTEGER, PK, autoIncrement, `id_compra`)
+        *   `fecha` (DATEONLY, defaultValue: DataTypes.NOW) - Fecha de la compra.
+        *   `total` (DECIMAL(12, 2), defaultValue: 0.00) - Total monetario de la compra.
+        *   `iva` (DECIMAL(12, 2), defaultValue: 0.00) - IVA total de la compra.
+        *   `idProveedor` (INTEGER, allowNull: true, FK a `proveedor`, onDelete: 'RESTRICT')
+        *   `idDashboard` (INTEGER, allowNull: true, FK a `dashboard`, onDelete: 'SET NULL') - Opcionalmente asociada a un dashboard.
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true) - `true` para activa/confirmada, `false` para anulada.
+    *   **Relaciones Principales:**
+        *   `belongsTo(models.Proveedor, { foreignKey: 'idProveedor', as: 'proveedor' })`
+        *   `belongsTo(models.Dashboard, { foreignKey: 'idDashboard', as: 'dashboard' })`
+        *   `belongsToMany(models.Producto, { through: 'compra_x_producto', foreignKey: 'id_compra',     otherKey: 'id_producto',     as: 'productos' })`
+
+2.  **`CompraXProducto`** (Detalle de la Compra)
+    *   **Tabla SQL:** `compra_x_producto`
+    *   **Campos Principales:**
+        *   `idCompraXProducto` (INTEGER, PK, autoIncrement, `id_compra_x_producto`)
+        *   `cantidad` (INTEGER, defaultValue: 1)
+        *   `valorUnitario` (DECIMAL(12, 2), defaultValue: 0.00, `valor_unitario`)
+        *   `idCompra` (INTEGER, allowNull: false, FK a `compra`, onDelete: 'CASCADE')
+        *   `idProducto` (INTEGER, allowNull: false, FK a `producto`, onDelete: 'RESTRICT')
+    *   **Relaciones Principales:**
+        *   `belongsTo(models.Compra, { foreignKey: 'idCompra', as: 'compra' })`
+        *   `belongsTo(models.Producto, { foreignKey: 'idProducto', as: 'producto' })`
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_COMPRAS_GESTIONAR`.
+
+1.  **Crear Nueva Compra**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/compras/`
+    *   **Descripción:** Registra una nueva compra. El servicio calcula el `total` e `iva` basados en los productos y actualiza el stock de los productos si la compra se crea en estado activo.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "fecha": "YYYY-MM-DD", // Opcional, por defecto fecha actual
+          "proveedorId": 1, // ID de un Proveedor activo
+          "dashboardId": null, // Opcional, ID de un Dashboard existente
+          "estado": true, // Opcional, por defecto true. Si es true, afecta inventario.
+          "total": 150.00, // Opcional, el servicio puede calcularlo.
+          "iva": 23.96,    // Opcional, el servicio puede calcularlo.
+          "productos": [
+            {
+              "productoId": 1, // ID de un Producto existente
+              "cantidad": 10,
+              "valorUnitario": 12.00
+            },
+            {
+              "productoId": 2,
+              "cantidad": 5,
+              "valorUnitario": 6.00
+            }
+          ]
+        }
+        ```
+    *   **Validaciones:**
+        *   `proveedorId`: obligatorio, debe ser un Proveedor activo.
+        *   `dashboardId`: opcional, si se provee, debe existir.
+        *   `productos`: array obligatorio, al menos un producto. Cada ítem debe tener `productoId` (Producto existente y activo), `cantidad` (entero > 0), `valorUnitario` (número >= 0).
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Compra creada.", "data": { /* ...datos de la compra y sus detalles... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found` (si Proveedor o Producto no existen).
+
+2.  **Listar Compras**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/compras/`
+    *   **Descripción:** Obtiene una lista de compras. Permite filtrar por `estado`, `proveedorId`, `dashboardId`.
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional).
+        *   `proveedorId` (INTEGER, opcional).
+        *   `dashboardId` (INTEGER, opcional).
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`.
+
+3.  **Obtener Compra por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/compras/:idCompra`
+    *   **Descripción:** Obtiene los detalles de una compra, incluyendo productos asociados, proveedor y dashboard.
+    *   **Parámetros de Solicitud (`params`):** `idCompra` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+4.  **Actualizar Compra (Cabecera/Estado)**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/compras/:idCompra`
+    *   **Descripción:** Actualiza campos de la cabecera de la compra (ej. `fecha`, `proveedorId`, `dashboardId`, `estado`). **No permite modificar los productos de la compra**. Si se cambia el `estado` (ej. de anulada a activa o viceversa), el servicio debe ajustar el inventario.
+    *   **Parámetros de Solicitud (`params`):** `idCompra` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "fecha": "YYYY-MM-DD", // Opcional
+          "proveedorId": 2, // Opcional
+          "dashboardId": 1, // Opcional, puede ser null
+          "estado": true // Opcional
+        }
+        ```
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+5.  **Cambiar Estado de Compra**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/compras/:idCompra/estado`
+    *   **Descripción:** Cambia específicamente el estado booleano de una compra. El servicio ajusta el inventario según el cambio de estado (si pasa de anulada a activa, incrementa stock; si pasa de activa a anulada, decrementa stock).
+    *   **Parámetros de Solicitud (`params`):** `idCompra` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}` (o `true`).
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `200 OK`: `{"success": true, "message": "Estado de la compra cambiado. Inventario ajustado si aplica.", "data": { /* ...compra actualizada... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`.
+
+6.  **Anular Compra**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/compras/:idCompra/anular`
+    *   **Descripción:** Establece `estado = false` para una compra y revierte el efecto de la compra en el inventario de los productos asociados (decrementa stock).
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+7.  **Habilitar Compra (Re-activar)**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/compras/:idCompra/habilitar`
+    *   **Descripción:** Establece `estado = true` para una compra previamente anulada y ajusta el inventario de los productos (incrementa stock).
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+8.  **Eliminar Compra Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/compras/:idCompra`
+    *   **Descripción:** Elimina físicamente una compra y sus detalles (`CompraXProducto` por `onDelete: CASCADE`). **Importante:** Esta operación NO revierte el stock de los productos. Se recomienda anular la compra si se necesita ajustar inventario.
+    *   **Permisos Requeridos:** `MODULO_COMPRAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `204 No Content`, `400`, `401`, `403`, `404`.
+
+---
+
+### Venta
+
+Este módulo gestiona las ventas de productos y/o servicios a los clientes. Incluye el registro de los ítems vendidos, cálculo de totales, manejo de estados de la venta (tanto del proceso como del registro en sí) y la afectación del inventario de productos.
+
+#### Modelo de Datos Asociado
+
+1.  **`Venta`**
+    *   **Tabla SQL:** `venta`
+    *   **Campos Principales:**
+        *   `idVenta` (INTEGER, PK, autoIncrement, `id_venta`)
+        *   `fecha` (DATEONLY, defaultValue: NOW) - Fecha de la venta.
+        *   `total` (DECIMAL(12, 2), defaultValue: 0.00) - Calculado por el sistema.
+        *   `iva` (DECIMAL(12, 2), defaultValue: 0.00) - Calculado por el sistema.
+        *   `idCliente` (INTEGER, allowNull: true, FK a `cliente`, onDelete: 'RESTRICT') - Cliente asociado (puede ser null para ventas genéricas).
+        *   `idDashboard` (INTEGER, allowNull: true, FK a `dashboard`, onDelete: 'SET NULL') - Opcionalmente asociada a un dashboard.
+        *   `idEstado` (INTEGER, allowNull: false, FK a `estado`, onDelete: 'RESTRICT') - Estado del proceso de la venta (ej. "Pagada", "Pendiente Envio", "Completada").
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true) - Estado general del registro de venta (`true` activa, `false` anulada). La anulación revierte stock.
+    *   **Relaciones Principales:**
+        *   `belongsTo(models.Cliente, { foreignKey: 'idCliente', as: 'cliente' })`
+        *   `belongsTo(models.Dashboard, { foreignKey: 'idDashboard', as: 'dashboard' })`
+        *   `belongsTo(models.Estado, { foreignKey: 'idEstado', as: 'estadoDetalle' })`
+        *   `belongsToMany(models.Producto, { through: 'producto_x_venta', foreignKey: 'id_venta', otherKey: 'id_producto', as: 'productos' })`
+        *   `belongsToMany(models.Servicio, { through: 'venta_x_servicio', foreignKey: 'id_venta', otherKey: 'id_servicio', as: 'servicios' })`
+
+2.  **`ProductoXVenta`** (Detalle de Productos Vendidos)
+    *   **Tabla SQL:** `producto_x_venta`
+    *   **Campos Principales:**
+        *   `idProductoXVenta` (INTEGER, PK, autoIncrement)
+        *   `cantidad` (INTEGER, defaultValue: 1)
+        *   `valorUnitario` (DECIMAL(12, 2), defaultValue: 0.00) - Precio del producto al momento de la venta.
+        *   `idProducto` (INTEGER, allowNull: false, FK a `producto`, onDelete: 'RESTRICT')
+        *   `idVenta` (INTEGER, allowNull: false, FK a `venta`, onDelete: 'CASCADE')
+        *   `idDashboard` (INTEGER, allowNull: true, FK a `dashboard`, onDelete: 'SET NULL')
+    *   **Relaciones:** Pertenece a `Producto`, `Venta`, y opcionalmente a `Dashboard`.
+
+3.  **`VentaXServicio`** (Detalle de Servicios Vendidos)
+    *   **Tabla SQL:** `venta_x_servicio`
+    *   **Campos Principales:**
+        *   `idVentaXServicio` (INTEGER, PK, autoIncrement)
+        *   `valorServicio` (DECIMAL(12, 2), defaultValue: 0.00) - Precio del servicio al momento de la venta.
+        *   `idServicio` (INTEGER, allowNull: false, FK a `servicio`, onDelete: 'RESTRICT')
+        *   `idCita` (INTEGER, allowNull: true, FK a `cita`, onDelete: 'SET NULL') - Si el servicio vendido proviene de una cita.
+        *   `idVenta` (INTEGER, allowNull: false, FK a `venta`, onDelete: 'CASCADE')
+    *   **Relaciones:** Pertenece a `Servicio`, `Venta`, y opcionalmente a `Cita`.
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_VENTAS_GESTIONAR`.
+
+1.  **Crear Nueva Venta**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/ventas/`
+    *   **Descripción:** Registra una nueva venta. El servicio calcula `total` e `iva`. Si la venta se crea con `estado: true` (general) y un `idEstado` (de proceso) que implique finalización, el stock de los productos es decrementado.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "fecha": "YYYY-MM-DD", // Opcional, default fecha actual
+          "clienteId": 1, // ID de un Cliente activo
+          "dashboardId": null, // Opcional
+          "estadoVentaId": 1, // ID de un Estado de proceso de venta (ej. "Pagada")
+          "estado": true, // Opcional, default true. Estado general de la venta.
+          "productos": [ // Opcional, pero debe haber al menos productos o servicios
+            {
+              "productoId": 1,
+              "cantidad": 2,
+              "valorUnitario": 25.50 // Precio al momento de la venta
+            }
+          ],
+          "servicios": [ // Opcional
+            {
+              "servicioId": 1,
+              "valorServicio": 50.00, // Precio al momento de la venta
+              "citaId": null // Opcional, si está ligado a una cita
+            }
+          ]
+        }
+        ```
+    *   **Validaciones:**
+        *   `clienteId`, `estadoVentaId` son obligatorios.
+        *   Debe proveerse al menos un producto en `productos` o un servicio en `servicios`.
+        *   Para cada producto: `productoId` (existente y activo), `cantidad` (>0), `valorUnitario` (>=0).
+        *   Para cada servicio: `servicioId` (existente y activo), `valorServicio` (>=0), `citaId` (opcional, si existe).
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Venta creada.", "data": { /* ...datos de la venta y sus detalles... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found` (Cliente, Estado, Producto o Servicio no encontrado/activo).
+
+2.  **Listar Ventas**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/ventas/`
+    *   **Descripción:** Obtiene una lista de ventas. Permite filtrar por `estado` (general), `clienteId`, `dashboardId`, `estadoVentaId` (estado de proceso).
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional).
+        *   `clienteId` (INTEGER, opcional).
+        *   `dashboardId` (INTEGER, opcional).
+        *   `estadoVentaId` (INTEGER, opcional).
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`.
+
+3.  **Obtener Venta por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/ventas/:idVenta`
+    *   **Descripción:** Obtiene los detalles de una venta, incluyendo productos y servicios asociados.
+    *   **Parámetros de Solicitud (`params`):** `idVenta` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+4.  **Actualizar Estado de Proceso y/o Estado General de Venta**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/ventas/:idVenta/estado-proceso`
+    *   **Descripción:** Actualiza el `idEstado` (estado del proceso, ej. "Enviada", "Completada") y/o el `estado` booleano (activa/anulada) de una venta. El servicio puede ajustar inventario basado en estos cambios.
+    *   **Parámetros de Solicitud (`params`):** `idVenta` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "estadoVentaId": 2, // Opcional, nuevo ID del Estado de proceso
+          "estado": true // Opcional, nuevo estado booleano general
+        }
+        ```
+    *   **Validaciones:** Debe proveerse al menos `estadoVentaId` o `estado`. `estadoVentaId` debe ser un ID de Estado válido.
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+5.  **Cambiar Estado General de Venta (Activa/Anulada)**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/ventas/:idVenta/estado`
+    *   **Descripción:** Cambia el estado booleano general de una venta. Si se anula (`estado: false`), el stock de productos se revierte (incrementa). Si se habilita (`estado: true`) una venta previamente anulada, el stock se descuenta (decrementa).
+    *   **Parámetros de Solicitud (`params`):** `idVenta` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}` (o `true`).
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+6.  **Anular Venta**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/ventas/:idVenta/anular`
+    *   **Descripción:** Establece el `estado` general de la venta a `false` y revierte el stock de los productos asociados (lo incrementa). Es la forma recomendada de cancelar una venta para mantener la integridad del inventario.
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+7.  **Habilitar Venta (Re-activar)**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/ventas/:idVenta/habilitar`
+    *   **Descripción:** Establece el `estado` general de la venta a `true` (si estaba anulada) y descuenta el stock de los productos asociados.
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+8.  **Eliminar Venta Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/ventas/:idVenta`
+    *   **Descripción:** Elimina físicamente una venta y sus detalles (`ProductoXVenta`, `VentaXServicio` por `onDelete: CASCADE`). **Importante:** Esta operación NO revierte el stock de los productos. Se recomienda anular la venta si se necesita ajustar inventario.
+    *   **Permisos Requeridos:** `MODULO_VENTAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `204 No Content`, `400`, `401`, `403`, `404`.
+
+---
+
+### Cita
+
+Este módulo gestiona la programación de citas para servicios, asociando clientes, empleados (opcionalmente), y los servicios a realizar. También maneja diferentes estados del proceso de la cita y el estado general del registro de la cita.
+
+#### Modelo de Datos Asociado
+
+1.  **`Cita`**
+    *   **Tabla SQL:** `cita`
+    *   **Campos Principales:**
+        *   `idCita` (INTEGER, PK, autoIncrement, `id_cita`)
+        *   `fechaHora` (DATETIME, allowNull: false, `fecha_hora`) - Fecha y hora programada para la cita.
+        *   `idCliente` (INTEGER, allowNull: false, FK a `cliente`, onDelete: 'CASCADE') - Cliente que agenda la cita.
+        *   `idEmpleado` (INTEGER, allowNull: true, FK a `empleado`, onDelete: 'SET NULL') - Empleado asignado (opcional).
+        *   `idEstado` (INTEGER, allowNull: false, FK a `estado`, onDelete: 'RESTRICT') - Estado del proceso de la cita (ej. "Programada", "Confirmada", "Completada", "Cancelada").
+        *   `estado` (BOOLEAN, allowNull: false, defaultValue: true) - Estado general del registro de la cita (`true` activa, `false` anulada/cancelada).
+    *   **Relaciones Principales:**
+        *   `belongsTo(models.Cliente, { foreignKey: 'idCliente', as: 'cliente' })`
+        *   `belongsTo(models.Empleado, { foreignKey: 'idEmpleado', as: 'empleado' })`
+        *   `belongsTo(models.Estado, { foreignKey: 'idEstado', as: 'estadoDetalle' })`
+        *   `belongsToMany(models.Servicio, { through: 'servicio_x_cita', foreignKey: 'id_cita',      otherKey: 'id_servicio',    as: 'serviciosProgramados' })`
+        *   `hasMany(models.VentaXServicio, { foreignKey: 'idCita', as: 'detallesVenta' })` (Indica que una cita puede estar vinculada a detalles de una venta de servicios)
+
+2.  **`ServicioXCita`** (Servicios Programados en la Cita)
+    *   **Tabla SQL:** `servicio_x_cita`
+    *   **Campos Principales:**
+        *   `idServicioXCita` (INTEGER, PK, autoIncrement)
+        *   `idServicio` (INTEGER, allowNull: false, FK a `servicio`, onDelete: 'CASCADE')
+        *   `idCita` (INTEGER, allowNull: false, FK a `cita`, onDelete: 'CASCADE')
+    *   **Índices:**
+        *   Unique en (`id_servicio`, `id_cita`)
+    *   **Relaciones:** Pertenece a `Servicio` y `Cita`.
+
+#### Endpoints
+
+Todos los endpoints de este módulo requieren el permiso `MODULO_CITAS_GESTIONAR`.
+
+1.  **Crear Nueva Cita**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/citas/`
+    *   **Descripción:** Programa una nueva cita. El servicio puede enviar notificaciones por correo.
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "fechaHora": "YYYY-MM-DDTHH:mm:ssZ", // Formato ISO8601, ej. "2024-08-15T14:30:00-05:00"
+          "clienteId": 1, // ID de un Cliente activo
+          "empleadoId": 1, // Opcional, ID de un Empleado activo
+          "estadoCitaId": 1, // ID de un Estado de proceso de cita (ej. "Programada")
+          "estado": true, // Opcional, default true
+          "servicios": [1, 2] // Opcional, array de IDs de Servicios activos
+        }
+        ```
+    *   **Validaciones:**
+        *   `fechaHora`: obligatoria, formato ISO8601, no en el pasado.
+        *   `clienteId`: obligatorio, Cliente activo.
+        *   `empleadoId`: opcional, si se provee, Empleado activo.
+        *   `estadoCitaId`: obligatorio, Estado existente.
+        *   `servicios`: opcional, array de IDs de Servicios válidos y activos.
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:**
+        *   `201 Created`: `{"success": true, "message": "Cita creada.", "data": { /* ...datos de la cita y servicios... */ }}`
+        *   `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`.
+
+2.  **Listar Citas**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/citas/`
+    *   **Descripción:** Obtiene una lista de citas. Permite filtrar por `estado` (general), `clienteId`, `empleadoId`, `estadoCitaId` (estado de proceso), y `fecha`.
+    *   **Parámetros de Solicitud (`query`):**
+        *   `estado` (BOOLEAN, opcional).
+        *   `clienteId` (INTEGER, opcional).
+        *   `empleadoId` (INTEGER, opcional).
+        *   `estadoCitaId` (INTEGER, opcional).
+        *   `fecha` (STRING YYYY-MM-DD, opcional) - Para filtrar citas en una fecha específica.
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `401`, `403`.
+
+3.  **Obtener Cita por ID**
+    *   **Método HTTP:** `GET`
+    *   **Path:** `/api/citas/:idCita`
+    *   **Descripción:** Obtiene detalles de una cita, incluyendo cliente, empleado y servicios programados.
+    *   **Parámetros de Solicitud (`params`):** `idCita` (INTEGER).
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+4.  **Actualizar Cita**
+    *   **Método HTTP:** `PUT`
+    *   **Path:** `/api/citas/:idCita`
+    *   **Descripción:** Actualiza campos de la cita como `fechaHora`, `clienteId`, `empleadoId`, `estadoCitaId`, `estado` (general). No gestiona la lista de servicios (usar endpoints dedicados).
+    *   **Parámetros de Solicitud (`params`):** `idCita` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** (Campos opcionales como en la creación, excepto `servicios`).
+        ```json
+        {
+          "fechaHora": "YYYY-MM-DDTHH:mm:ssZ",
+          "clienteId": 1,
+          "empleadoId": null, // Para desasignar empleado
+          "estadoCitaId": 2, // Ej. "Confirmada"
+          "estado": true
+        }
+        ```
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+5.  **Cambiar Estado General de Cita**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/citas/:idCita/estado`
+    *   **Descripción:** Cambia el estado booleano general de una cita (activa/anulada). Puede disparar notificaciones.
+    *   **Parámetros de Solicitud (`params`):** `idCita` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):** `{"estado": false}` (o `true`).
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+6.  **Anular Cita**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/citas/:idCita/anular`
+    *   **Descripción:** Establece el estado general de la cita a `false`. Envía notificación de cancelación.
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+7.  **Habilitar Cita (Re-activar)**
+    *   **Método HTTP:** `PATCH`
+    *   **Path:** `/api/citas/:idCita/habilitar`
+    *   **Descripción:** Establece el estado general de la cita a `true`. Envía notificación de reactivación.
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+8.  **Eliminar Cita Físicamente**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/citas/:idCita`
+    *   **Descripción:** Elimina físicamente una cita y sus asociaciones en `ServicioXCita` (`onDelete: CASCADE`).
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `204 No Content`, `400`, `401`, `403`, `404`.
+
+9.  **Agregar Servicios a Cita**
+    *   **Método HTTP:** `POST`
+    *   **Path:** `/api/citas/:idCita/servicios`
+    *   **Descripción:** Asocia uno o más servicios a una cita existente.
+    *   **Parámetros de Solicitud (`params`):** `idCita` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "idServicios": [3, 4] // Array de IDs de Servicios existentes y activos
+        }
+        ```
+    *   **Validaciones:** `idServicios` debe ser un array de IDs de Servicios válidos.
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.
+
+10. **Quitar Servicios de Cita**
+    *   **Método HTTP:** `DELETE`
+    *   **Path:** `/api/citas/:idCita/servicios`
+    *   **Descripción:** Desasocia uno o más servicios de una cita.
+    *   **Parámetros de Solicitud (`params`):** `idCita` (INTEGER).
+    *   **Parámetros de Solicitud (`body`):**
+        ```json
+        {
+          "idServicios": [1, 2] // Array de IDs de Servicios a quitar de la cita
+        }
+        ```
+    *   **Validaciones:** `idServicios` debe ser un array de IDs de Servicios.
+    *   **Permisos Requeridos:** `MODULO_CITAS_GESTIONAR`.
+    *   **Respuestas Comunes:** `200 OK`, `400`, `401`, `403`, `404`.

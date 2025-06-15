@@ -1,0 +1,85 @@
+**¡Hola equipo! Entendiendo nuestra API de SteticSoft**
+
+Este documento es para explicar de forma sencilla qué es esa "API" de la que a veces hablamos y por qué es importante para SteticSoft. ¡No te preocupes, no usaremos palabras raras!
+
+**1. ¿Qué es esta API?**
+
+Imagina que SteticSoft es una casa muy organizada. La API (que son las siglas de "Interfaz de Programación de Aplicaciones") es como el **administrador general** de esa casa. Su trabajo principal es asegurarse de que toda la información de nuestro negocio (clientes, citas, productos, ventas, etc.) se guarde de forma ordenada y se pueda usar correctamente cuando las aplicaciones (como la página web o la app móvil) la necesiten.
+
+En resumen, la API de SteticSoft es el corazón que permite que todas nuestras herramientas digitales funcionen y "hablen" entre sí.
+
+**2. ¿Cómo Funciona a Grandes Rasgos?**
+
+Pensemos en un **restaurante**:
+
+*   **Tú (el usuario de la app SteticSoft)**: Eres el cliente que llega al restaurante.
+*   **La Aplicación (web o móvil)**: Es el menú que usas para ver qué hay y hacer tu pedido.
+*   **Nuestra API**: Es el **mesero amable y eficiente**. Tú le dices al mesero (a través de la app) qué necesitas: "quiero ver mis citas de mañana" o "quiero agendar un nuevo servicio".
+*   **El Sistema Interno (Backend y Base de Datos)**: Es la **cocina del restaurante**. El mesero (la API) lleva tu pedido a la cocina. Allí, los chefs (el sistema) preparan lo que pediste (buscan la información o guardan datos nuevos).
+*   **La Respuesta**: El mesero (la API) regresa de la cocina con tu pedido: te muestra tus citas en la pantalla o te confirma que tu nuevo servicio fue agendado.
+
+Así funciona básicamente:
+1.  La aplicación que usas (web o móvil) necesita algo (ej. mostrar la lista de servicios).
+2.  La aplicación le pide esa información a nuestra API.
+3.  La API recibe la petición, la entiende y va a buscar o guardar los datos necesarios en nuestro sistema.
+4.  La API le devuelve la respuesta a la aplicación, para que te la pueda mostrar.
+
+**3. Módulos Principales (¿Qué cosas puede hacer la API?)**
+
+Nuestra API es muy capaz y maneja diferentes partes de nuestro negocio. Es como si el administrador general (la API) tuviera diferentes asistentes especializados:
+
+*   **Usuarios y Seguridad:**
+    *   Permite que cada persona (cliente, empleado, administrador) pueda **entrar a la aplicación** con su cuenta.
+    *   Se asegura de que cada tipo de cuenta solo pueda ver y hacer lo que le corresponde. Por ejemplo, un cliente no puede ver la información de configuración de un administrador.
+
+*   **Clientes:**
+    *   Guarda toda la **información importante de nuestros clientes**: sus nombres, datos de contacto, etc.
+    *   Lleva un registro de las **citas** que han tenido y las **compras** que han realizado.
+
+*   **Empleados:**
+    *   Mantiene la **información de las personas que trabajan** en SteticSoft.
+    *   Sabe qué **servicios sabe hacer cada empleado** (sus especialidades).
+
+*   **Servicios y Productos:**
+    *   Tiene un catálogo de **todo lo que ofrecemos**: los diferentes tipos de cortes, tintes, masajes, y también los productos como cremas, shampoos, etc.
+    *   Organiza estos servicios y productos en **categorías** para que sea más fácil encontrarlos (ej. "Servicios Faciales", "Productos Capilares").
+
+*   **Inventario de Productos:**
+    *   Ayuda a saber **cuántos productos nos quedan** en stock.
+    *   Lleva la cuenta de cuándo hay que pedir más para no quedarnos sin nada.
+
+*   **Citas:**
+    *   Permite **agendar nuevas citas** para los clientes.
+    *   También deja **cambiar la fecha o la hora** de una cita, o **cancelarla** si es necesario.
+
+*   **Ventas y Compras:**
+    *   Registra **todo lo que se vende** en el negocio, ya sean servicios o productos.
+    *   También lleva un control de las **compras que hacemos a nuestros proveedores** (cuando compramos más shampoo para vender, por ejemplo).
+
+*   **Otros Ayudantes:**
+    *   **Proveedores:** Guarda la información de las empresas que nos venden productos.
+    *   **Estados:** Define los diferentes estados por los que puede pasar una cita o una venta (ej. "cita confirmada", "venta pagada", "cita cancelada").
+
+**4. ¿Cómo interactuamos con ella (a nivel básico)?**
+
+Directamente, la mayoría de nosotros **no "hablamos" con la API**. Lo hacemos a través de las herramientas que usamos todos los días:
+
+*   La **aplicación web** que usan los administradores y empleados.
+*   La **aplicación móvil** que podrían usar los clientes.
+
+Cuando tú haces clic en un botón en la aplicación (por ejemplo, para ver la agenda de un empleado), la aplicación está "llamando" a la API por debajo para pedirle esa información. La API se encarga del resto y le da la respuesta a la aplicación para que te la muestre.
+
+**5. Puntos Clave:**
+
+*   **Seguridad:** La API es como un guardián. Se asegura de que solo las personas autorizadas puedan ver la información que les corresponde y hacer cambios. Por ejemplo, un cliente solo puede ver sus propias citas.
+*   **Base de Datos:** Es el cerebro donde se guarda todo. Piensa en ella como un archivador gigante y súper organizado. La API es la que sabe cómo encontrar la información correcta en ese archivador o cómo guardar nuevos datos de forma ordenada.
+*   **Importancia:** Sin la API, nuestras aplicaciones de SteticSoft no podrían funcionar. No podrían mostrar información actualizada, ni guardar nuevas citas, ni registrar ventas. ¡Es una pieza fundamental!
+
+**6. Glosario Súper Básico (¡para que no te asustes si oyes estas palabras!):**
+
+*   **API:** El mesero de nuestro ejemplo. Es el intermediario oficial que conecta la aplicación que usas con los datos y las funciones de SteticSoft.
+*   **Endpoint:** Como una "dirección" o un "número de extensión" específico. Cuando la aplicación necesita algo muy concreto (como "la lista de todos los clientes"), llama a un endpoint particular de la API.
+*   **Base de Datos:** El archivador gigante o la despensa de la cocina en nuestro ejemplo. Es donde se guarda toda la información de forma segura y estructurada.
+*   **Servidor:** La computadora potente donde "vive" y funciona nuestra API y la base de datos.
+*   **Frontend:** La parte de la aplicación que ves y con la que interactúas (las pantallas, botones, formularios). Es el "salón" del restaurante.
+*   **Backend:** La "trastienda" o la "cocina". Es donde la API hace su magia, se conecta con la base de datos y se procesa toda la lógica del negocio. (La API es parte del backend).
