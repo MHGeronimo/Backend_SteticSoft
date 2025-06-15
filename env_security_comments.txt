@@ -1,0 +1,98 @@
+# src/.env (LOCAL - DO NOT UPLOAD WITH PRODUCTION CREDENTIALS)
+
+# =========================================
+# LOCAL DEVELOPMENT SETTINGS
+# =========================================
+
+# Application Environment
+NODE_ENV=development
+
+# Server Configuration
+PORT=3000
+APP_NAME="SteticSoft API (Dev)"
+FRONTEND_URL=http://localhost:5173 # URL of your development frontend
+
+# --- LOCAL DATABASE ---
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=0812480druk # For local development only. Change if this DB is exposed or use a stronger, unique password for better practice.
+DB_NAME=SteticSoft-Movil-Web # Or whatever your local DB is called
+DB_DIALECT=postgres
+DB_SSL_REQUIRED=false # Usually false for local
+
+# Application Secrets (Use the ones you generated for local development)
+# IMPORTANT: For production, use strong, unique secrets set as environment variables in your hosting platform.
+# Do NOT commit real production secrets to this file.
+JWT_SECRET=f406255d2ecd6e8fa5732ce884f3e089cdb8a0237aa004f6d8cf2e62fc752cf5 # Example for local dev
+SESSION_SECRET=83a3c4c35ad0eaf04c5ff1614d136fd5fd9ecae4c21ea36f57429e66c5738f1b # Example for local dev
+
+# Email Configuration (Nodemailer with Gmail for local/dev)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false # Typically false for local SMTP, true if your provider requires STARTTLS
+EMAIL_USER=lafuentedelpeluquero@gmail.com
+ADMIN_EMAIL=lafuentedelpeluquero@gmail.com
+EMAIL_PASS=iigutoyfzhesjjfe # Gmail application password for local dev. Consider if this should be here. For production, SET VIA ENV VARS using a strong, unique app password or token.
+EMAIL_FROM="La fuente del peluquero" <lafuentedelpeluquero@gmail.com>
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173 # For development.
+
+# Others
+LOG_LEVEL=dev
+
+# ===============================================================================
+# PRODUCTION SETTINGS (EXAMPLES - CONFIGURE THESE IN YOUR HOSTING ENVIRONMENT)
+# ===============================================================================
+# Note: The following variables are examples. You should set these with your
+# actual production values directly in your hosting provider's environment variable settings (e.g., Render).
+# Do NOT uncomment them here and commit to your repository with real production values.
+
+# # Application Environment for Production
+# NODE_ENV=production
+
+# # Application Name for Production
+# APP_NAME="SteticSoft API"
+
+# # Frontend URL for Production
+# FRONTEND_URL=https://<YOUR_FRONTEND_URL_IN_RENDER> # Replace with your actual frontend URL. SET VIA ENV VARS.
+
+# # Production Database (Example for Render)
+# # DATABASE_URL=postgresql://<your_db_user>:<YOUR_STRONG_DB_PASSWORD>@<your_db_host>/<your_db_name>?ssl=true # Replace placeholders. SET VIA ENV VARS.
+# # Or, if using individual DB components (less common if DATABASE_URL is available):
+# # DB_HOST_PROD=<your_db_host> # SET VIA ENV VARS.
+# # DB_PORT_PROD=5432 # SET VIA ENV VARS if different from default.
+# # DB_USER_PROD=<your_db_user> # SET VIA ENV VARS.
+# # DB_PASS_PROD=YOUR_STRONG_AND_UNIQUE_DATABASE_PASSWORD # SET VIA ENV VARS. DO NOT HARDCODE.
+# # DB_NAME_PROD=<your_db_name> # SET VIA ENV VARS.
+# # DB_DIALECT_PROD=postgres # Usually fixed by your DB choice.
+# # DB_SSL_REQUIRED_PROD=true # Often true for production cloud databases. SET VIA ENV VARS.
+# # DB_REJECT_UNAUTHORIZED_PROD=false # Depending on your SSL certificate setup. SET VIA ENV VARS if needed.
+
+# # Production Application Secrets (SET THESE IN YOUR HOSTING ENV VARS - DO NOT HARDCODE HERE)
+# # JWT_SECRET=YOUR_VERY_STRONG_RANDOM_JWT_SECRET_FOR_PRODUCTION # Generate a strong, unique secret. SET VIA ENV VARS.
+# # SESSION_SECRET=YOUR_DIFFERENT_VERY_STRONG_RANDOM_SESSION_SECRET_FOR_PRODUCTION # Generate a strong, unique secret. SET VIA ENV VARS.
+
+# # Production Email Configuration (Example - SET ALL SENSITIVE VALUES VIA ENV VARS)
+# # EMAIL_HOST=smtp.yourprovider.com # Your production email provider's SMTP server. SET VIA ENV VARS.
+# # EMAIL_PORT=587 # Or 465 if using SSL directly. SET VIA ENV VARS.
+# # EMAIL_SECURE=false # True if using port 465, false for STARTTLS on 587. SET VIA ENV VARS.
+# # EMAIL_USER=<your_production_email_user> # SET VIA ENV VARS.
+# # ADMIN_EMAIL=<your_production_admin_email> # SET VIA ENV VARS.
+# # EMAIL_PASS=YOUR_EMAIL_PASSWORD_OR_APP_TOKEN_FOR_PRODUCTION # SET VIA ENV VARS. DO NOT HARDCODE.
+# # EMAIL_FROM="Your App Name" <notifications@example.com> # SET VIA ENV VARS.
+
+# # Production CORS Configuration
+# # CORS_ORIGIN=https://<YOUR_FRONTEND_URL_IN_RENDER> # Replace with your actual frontend URL. SET VIA ENV VARS.
+
+# # Production Logging Level
+# # LOG_LEVEL=common # Or 'combined', 'short', etc. SET VIA ENV VARS.
+
+# # SSL specific for some DB connections if not using DATABASE_URL that includes it (less common)
+# # DB_SSL_REQUIRED=true # SET VIA ENV VARS if applicable.
+# # DB_REJECT_UNAUTHORIZED=false # SET VIA ENV VARS if applicable and understood.
+
+# Note: The section previously marked 'UPLOADED TO RENDER' has been integrated above.
+# Ensure all sensitive production values are managed via your hosting platform's environment variables.
+# NEVER COMMIT ACTUAL PRODUCTION SECRETS TO THIS FILE.

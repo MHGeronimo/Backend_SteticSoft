@@ -1,0 +1,72 @@
+# src/.env (LOCAL - DO NOT UPLOAD WITH PRODUCTION CREDENTIALS)
+
+# Application Environment
+NODE_ENV=development
+
+# Server Configuration
+PORT=3000
+APP_NAME="SteticSoft API (Dev)"
+FRONTEND_URL=http://localhost:5173 # URL of your development frontend
+
+# --- LOCAL DATABASE ---
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=0812480druk
+DB_NAME=SteticSoft-Movil-Web # Or whatever your local DB is called
+DB_DIALECT=postgres
+DB_SSL_REQUIRED=false # Usually false for local
+
+# --- PRODUCTION DATABASE (RENDER - For reference only here) ---
+# These will go in Render's environment variables
+# DATABASE_URL_PROD=postgresql://steticsoft_api_web_movil_user:r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8@dpg-d0ppdl6uk2gs739tm5d0-a/steticsoft_api_web_movil?ssl=true
+# DB_HOST_PROD=dpg-d0ppdl6uk2gs739tm5d0-a
+# DB_PORT_PROD=5432
+# DB_USER_PROD=steticsoft_api_web_movil_user
+# DB_PASS_PROD=r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8
+# DB_NAME_PROD=steticsoft_api_web_movil
+# DB_DIALECT_PROD=postgres
+# DB_SSL_REQUIRED_PROD=true
+# DB_REJECT_UNAUTHORIZED_PROD=false
+# NODE_ENV=production
+
+
+# Application Secrets (Use the ones you generated)
+JWT_SECRET=f406255d2ecd6e8fa5732ce884f3e089cdb8a0237aa004f6d8cf2e62fc752cf5
+SESSION_SECRET=83a3c4c35ad0eaf04c5ff1614d136fd5fd9ecae4c21ea36f57429e66c5738f1b
+# IN PRODUCTION (RENDER) USE DIFFERENT AND STRONGER SECRETS!
+
+# Email Configuration (Nodemailer with Gmail)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=lafuentedelpeluquero@gmail.com
+ADMIN_EMAIL=lafuentedelpeluquero@gmail.com
+EMAIL_PASS=iigutoyfzhesjjfe # Gmail application password
+EMAIL_FROM="The Barber's Source" <lafuentedelpeluquero@gmail.com>
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173 # For development. In Render, put your frontend URL.
+
+# Others
+LOG_LEVEL=dev
+
+#################################################################################3
+##############################      UPLOADED TO RENDER
+
+# NODE_ENV=production
+# DATABASE_URL=postgresql://steticsoft_api_web_movil_user:r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8@dpg-d0ppdl6uk2gs739tm5d0-a/steticsoft_api_web_movil
+# JWT_SECRET=THIS_IS_A_VERY_STRONG_AND_RANDOM_PRODUCTION_SECRET_FOR_JWT_CHANGE_ME
+# SESSION_SECRET=THIS_IS_ANOTHER_DIFFERENT_AND_STRONG_PRODUCTION_SECRET_FOR_SESSIONS_CHANGE_ME
+# FRONTEND_URL=https://<YOUR_FRONTEND_URL_IN_RENDER>
+# CORS_ORIGIN=https://<YOUR_FRONTEND_URL_IN_RENDER>
+# EMAIL_USER=lafuentedelpeluquero@gmail.com
+# EMAIL_PASS=iigutoyfzhesjjfe
+# EMAIL_FROM="The Barber's Source" <lafuentedelpeluquero@gmail.com>
+# APP_NAME="SteticSoft API"
+# LOG_LEVEL=common
+# EMAIL_HOST=smtp.gmail.com
+# EMAIL_PORT=587
+# EMAIL_SECURE=false
+# DB_SSL_REQUIRED=true
+# DB_REJECT_UNAUTHORIZED=false

@@ -1,0 +1,96 @@
+# src/.env (LOCAL - DO NOT UPLOAD WITH PRODUCTION CREDENTIALS)
+
+# =========================================
+# LOCAL DEVELOPMENT SETTINGS
+# =========================================
+
+# Application Environment
+NODE_ENV=development
+
+# Server Configuration
+PORT=3000
+APP_NAME="SteticSoft API (Dev)"
+FRONTEND_URL=http://localhost:5173 # URL of your development frontend
+
+# --- LOCAL DATABASE ---
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=0812480druk # Make sure this is a secure password if this DB is exposed
+DB_NAME=SteticSoft-Movil-Web # Or whatever your local DB is called
+DB_DIALECT=postgres
+DB_SSL_REQUIRED=false # Usually false for local
+
+# Application Secrets (Use the ones you generated for local development)
+# IMPORTANT: For production, use strong, unique secrets set as environment variables in your hosting platform.
+JWT_SECRET=f406255d2ecd6e8fa5732ce884f3e089cdb8a0237aa004f6d8cf2e62fc752cf5
+SESSION_SECRET=83a3c4c35ad0eaf04c5ff1614d136fd5fd9ecae4c21ea36f57429e66c5738f1b
+
+# Email Configuration (Nodemailer with Gmail for local/dev)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false # Typically false for local SMTP, true if your provider requires STARTTLS
+EMAIL_USER=lafuentedelpeluquero@gmail.com
+ADMIN_EMAIL=lafuentedelpeluquero@gmail.com
+EMAIL_PASS=iigutoyfzhesjjfe # Gmail application password - consider if this should be here even for local
+EMAIL_FROM="La fuente del peluquero" <lafuentedelpeluquero@gmail.com>
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173 # For development.
+
+# Others
+LOG_LEVEL=dev
+
+# ===============================================================================
+# PRODUCTION SETTINGS (EXAMPLES - CONFIGURE THESE IN YOUR HOSTING ENVIRONMENT)
+# ===============================================================================
+# Note: The following variables are examples. You should set these with your
+# actual production values directly in your hosting provider's environment variable settings (e.g., Render).
+# Do not uncomment them here and commit to your repository with real production values.
+
+# # Application Environment for Production
+# NODE_ENV=production
+
+# # Application Name for Production
+# APP_NAME="SteticSoft API"
+
+# # Frontend URL for Production
+# FRONTEND_URL=https://<YOUR_FRONTEND_URL_IN_RENDER> # Replace with your actual frontend URL
+
+# # Production Database (Example for Render)
+# # DATABASE_URL=postgresql://steticsoft_api_web_movil_user:r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8@dpg-d0ppdl6uk2gs739tm5d0-a/steticsoft_api_web_movil?ssl=true
+# # Or, if using individual DB components (less common if DATABASE_URL is available):
+# # DB_HOST_PROD=dpg-d0ppdl6uk2gs739tm5d0-a
+# # DB_PORT_PROD=5432
+# # DB_USER_PROD=steticsoft_api_web_movil_user
+# # DB_PASS_PROD=r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8 # SET IN RENDER ENV VARS
+# # DB_NAME_PROD=steticsoft_api_web_movil
+# # DB_DIALECT_PROD=postgres
+# # DB_SSL_REQUIRED_PROD=true # Often true for production cloud databases
+# # DB_REJECT_UNAUTHORIZED_PROD=false # Depending on your SSL certificate setup
+
+# # Production Application Secrets (SET THESE IN RENDER ENV VARS - DO NOT HARDCODE HERE)
+# # JWT_SECRET=ESTE_ES_UN_SECRETO_DE_PRODUCCION_MUY_FUERTE_Y_ALEATORIO_PARA_JWT_CAMBIAME # Generate a strong, unique secret
+# # SESSION_SECRET=ESTE_ES_OTRO_SECRETO_DE_PRODUCCION_DIFERENTE_Y_FUERTE_PARA_SESIONES_CAMBIAME # Generate a strong, unique secret
+
+# # Production Email Configuration (Example)
+# # EMAIL_HOST=smtp.gmail.com # Or your production email provider's SMTP server
+# # EMAIL_PORT=587 # Or 465 if using SSL directly
+# # EMAIL_SECURE=false # True if using port 465, false for STARTTLS on 587
+# # EMAIL_USER=lafuentedelpeluquero@gmail.com # Your production email user
+# # ADMIN_EMAIL=lafuentedelpeluquero@gmail.com # Your production admin email
+# # EMAIL_PASS=iigutoyfzhesjjfe # SET IN RENDER ENV VARS - Gmail app password or production email service password
+# # EMAIL_FROM="La fuente del peluquero" <lafuentedelpeluquero@gmail.com>
+
+# # Production CORS Configuration
+# # CORS_ORIGIN=https://<YOUR_FRONTEND_URL_IN_RENDER> # Replace with your actual frontend URL
+
+# # Production Logging Level
+# # LOG_LEVEL=common # Or 'combined', 'short', etc.
+
+# # SSL specific for some DB connections if not using DATABASE_URL that includes it
+# # DB_SSL_REQUIRED=true
+# # DB_REJECT_UNAUTHORIZED=false # May be needed if using self-signed certs, but Render typically handles this
+
+# Note: The section previously marked 'UPLOADED TO RENDER' has been integrated above.
+# Ensure all sensitive production values are managed via your hosting platform's environment variables.

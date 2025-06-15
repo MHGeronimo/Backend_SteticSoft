@@ -1,0 +1,91 @@
+# src/.env (LOCAL - DO NOT UPLOAD WITH PRODUCTION CREDENTIALS)
+
+# =============================================
+# LOCAL DEVELOPMENT SETTINGS
+# =============================================
+
+# Application Environment
+NODE_ENV=development
+
+# Server Configuration
+PORT=3000
+APP_NAME="SteticSoft API (Dev)"
+FRONTEND_URL=http://localhost:5173 # URL of your development frontend
+CORS_ORIGIN=http://localhost:5173 # For development.
+
+# Local Database Configuration
+# --- LOCAL DATABASE ---
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=0812480druk # Replace with your local DB password
+DB_NAME=SteticSoft-Movil-Web # Or whatever your local DB is called
+DB_DIALECT=postgres
+DB_SSL_REQUIRED=false # Usually false for local
+
+# Application Secrets (Use the ones you generated for local development)
+# These are for local development. For production, use strong, unique secrets set in the environment.
+JWT_SECRET=f406255d2ecd6e8fa5732ce884f3e089cdb8a0237aa004f6d8cf2e62fc752cf5
+SESSION_SECRET=83a3c4c35ad0eaf04c5ff1614d136fd5fd9ecae4c21ea36f57429e66c5738f1b
+
+# Email Configuration (Nodemailer with Gmail - Example for Local)
+# For production, consider a dedicated email service and secure credential management.
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false # true for port 465, false for 587 (STARTTLS)
+EMAIL_USER=lafuentedelpeluquero@gmail.com # Your Gmail address
+ADMIN_EMAIL=lafuentedelpeluquero@gmail.com # Admin email for notifications
+EMAIL_PASS=iigutoyfzhesjjfe # Gmail application password or OAuth token
+EMAIL_FROM="La fuente del peluquero" <lafuentedelpeluquero@gmail.com> # Sender name and email
+
+# Other Local Settings
+LOG_LEVEL=dev
+
+
+# ================================================================================
+# PRODUCTION SETTINGS (EXAMPLES - CONFIGURE THESE IN YOUR HOSTING ENVIRONMENT)
+# ================================================================================
+# These variables should be set in your production environment (e.g., Render dashboard),
+# NOT hardcoded in this file when deploying to production.
+
+# # Application Environment for Production
+# NODE_ENV=production
+# APP_NAME="SteticSoft API" # Production App Name
+# FRONTEND_URL=https://<YOUR_FRONTEND_URL_IN_RENDER> # URL of your production frontend
+# CORS_ORIGIN=https://<YOUR_FRONTEND_URL_IN_RENDER> # Production CORS origin
+
+# # Production Database (Example for Render - use DATABASE_URL)
+# # --- PRODUCTION DATABASE (RENDER - For reference here only) ---
+# # These will go into Render's environment variables
+# DATABASE_URL=postgresql://steticsoft_api_web_movil_user:r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8@dpg-d0ppdl6uk2gs739tm5d0-a/steticsoft_api_web_movil?ssl=true
+# # Individual DB parts if not using DATABASE_URL (less common for Render with managed DBs)
+# # DB_HOST_PROD=dpg-d0ppdl6uk2gs739tm5d0-a
+# # DB_PORT_PROD=5432
+# # DB_USER_PROD=steticsoft_api_web_movil_user
+# # DB_PASS_PROD=r9CzWKdRoaOrufEcnSc0k3CJtRmS60z8 # Set in environment
+# # DB_NAME_PROD=steticsoft_api_web_movil
+# # DB_DIALECT_PROD=postgres
+# DB_SSL_REQUIRED=true # Usually true for production databases
+# DB_REJECT_UNAUTHORIZED=false # May be needed depending on SSL certs, Render often handles this via DATABASE_URL
+
+# # Production Application Secrets (SET THESE IN YOUR RENDER ENVIRONMENT VARIABLES)
+# # ¡IN PRODUCTION (RENDER) USE DIFFERENT AND STRONGER SECRETS!
+# # JWT_SECRET=THIS_IS_A_VERY_STRONG_AND_RANDOM_PRODUCTION_SECRET_FOR_JWT_CHANGE_ME
+# # SESSION_SECRET=THIS_IS_ANOTHER_DIFFERENT_AND_STRONG_PRODUCTION_SECRET_FOR_SESSIONS_CHANGE_ME
+
+# # Production Email Configuration (SET THESE IN YOUR RENDER ENVIRONMENT VARIABLES)
+# # EMAIL_HOST=smtp.gmail.com # Or your production email provider
+# # EMAIL_PORT=587
+# # EMAIL_SECURE=false
+# # EMAIL_USER=your_production_email@example.com
+# # EMAIL_PASS=your_production_email_password_or_token # SET IN ENVIRONMENT
+# # ADMIN_EMAIL=your_admin_email@example.com
+# # EMAIL_FROM="Your App Name" <your_production_email@example.com>
+
+# # Production Logging Level
+# # LOG_LEVEL=common # Or 'tiny', 'short', etc.
+
+# # Note on "UPLOADED TO RENDER" section:
+# # The variables previously under "UPLOADED TO RENDER" are examples of what should be
+# # configured in the Render environment. They have been integrated or are covered by
+# # the production examples above and are commented out as they should not be active in this file.
