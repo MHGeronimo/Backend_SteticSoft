@@ -1,0 +1,81 @@
+Servicio: abastecimiento.service.js
+  - Modelo: db.Producto, Alias: producto
+  - Modelo: db.Empleado, Alias: empleado
+
+Servicio: auth.service.js
+  - Modelo: db.Rol, Alias: rol
+    - (Incluye anidado: db.Permisos, Alias: permisos)
+
+Servicio: categoriaProducto.service.js
+  (No se encontraron alias explícitos en cláusulas 'include')
+
+Servicio: categoriaServicio.service.js
+  (No se encontraron alias explícitos en cláusulas 'include')
+
+Servicio: cita.service.js
+  - Modelo: db.Cliente, Alias: cliente
+  - Modelo: db.Empleado, Alias: empleado
+  - Modelo: db.Estado, Alias: estadoDetalle
+  - Modelo: db.Servicio, Alias: serviciosProgramados
+
+Servicio: cliente.service.js
+  - Modelo: db.Usuario, Alias: usuarioCuenta
+    - (Incluye anidado: db.Rol, Alias: rol)
+
+Servicio: compra.service.js
+  - Modelo: db.Proveedor, Alias: proveedor
+  - Modelo: db.Dashboard, Alias: dashboard
+  - Modelo: db.Producto, Alias: productos (Alias para tabla intermedia 'detalleCompra' también visto)
+
+Servicio: dashboard.service.js
+  (No se encontraron alias explícitos en cláusulas 'include' - archivo vacío)
+
+Servicio: empleado.service.js
+  - Modelo: db.Usuario, Alias: cuentaUsuario
+    - (Incluye anidado: db.Rol, Alias: rol)
+
+Servicio: empleadoEspecialidad.service.js
+  (No se encontraron alias explícitos en cláusulas 'include' para asociaciones directas)
+
+Servicio: especialidad.service.js
+  (No se encontraron alias explícitos en cláusulas 'include')
+
+Servicio: estado.service.js
+  (No se encontraron alias explícitos en cláusulas 'include')
+
+Servicio: mailer.service.js
+  (No aplica - sin interacciones con base de datos Sequelize)
+
+Servicio: novedades.service.js
+  - Modelo: db.Empleado, Alias: empleado
+
+Servicio: permiso.service.js
+  (No se encontraron alias explícitos en cláusulas 'include')
+
+Servicio: permisosXRol.service.js
+  - Modelo: db.Permisos, Alias: permisos
+
+Servicio: producto.service.js
+  - Modelo: db.CategoriaProducto, Alias: categoria
+
+Servicio: proveedor.service.js
+  (No se encontraron alias explícitos en cláusulas 'include')
+
+Servicio: rol.service.js
+  - Modelo: db.Permisos, Alias: permisos
+
+Servicio: servicio.service.js
+  - Modelo: db.CategoriaServicio, Alias: categoria
+  - Modelo: db.Especialidad, Alias: especialidad
+
+Servicio: usuario.service.js
+  - Modelo: db.Rol, Alias: rol
+  - Modelo: db.Cliente, Alias: clienteInfo
+  - Modelo: db.Empleado, Alias: empleadoInfo
+
+Servicio: venta.service.js
+  - Modelo: db.Cliente, Alias: cliente
+  - Modelo: db.Dashboard, Alias: dashboard
+  - Modelo: db.Estado, Alias: estadoDetalle
+  - Modelo: db.Producto, Alias: productos (Alias para tabla intermedia 'detalleProductoVenta' también visto)
+  - Modelo: db.Servicio, Alias: servicios (Alias para tabla intermedia 'detalleServicioVenta' también visto)

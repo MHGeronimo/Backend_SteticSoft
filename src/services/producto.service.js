@@ -122,7 +122,7 @@ const obtenerTodosLosProductos = async (filtros) => {
   // 2. Construimos la condición para la tabla asociada 'CategoriaProducto'
   let includeCondition = [
     {
-      model: CategoriaProducto,
+      model: db.CategoriaProducto,
       as: "categoria",
       attributes: ["idCategoria", "nombre", "vidaUtilDias", "tipoUso"],
       // --- CORRECCIÓN CLAVE ---
@@ -130,15 +130,10 @@ const obtenerTodosLosProductos = async (filtros) => {
       // Si 'tipoUso' no viene, la condición 'where' no se añade.
       ...(tipoUso && { where: { tipoUso: tipoUso } }),
     },
-    {
-      model: Proveedor,
-      as: "proveedor",
-      attributes: ["idProveedor", "nombre"],
-    },
   ];
 
   try {
-    const { count, rows } = await Producto.findAndCountAll({
+    const { count, rows } = await db.Producto.findAndCountAll({
       where: whereCondition,
       include: includeCondition,
       limit: parseInt(limit),

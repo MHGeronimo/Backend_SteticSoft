@@ -39,7 +39,7 @@ const obtenerVentaCompletaPorIdInterno = async (
       },
       {
         model: db.Producto,
-        as: "productosVendidos",
+        as: "productos",
         attributes: ["idProducto", "nombre", "descripcion", "precio", "stockMinimo", "existencia"],
         through: {
           model: db.ProductoXVenta,
@@ -49,7 +49,7 @@ const obtenerVentaCompletaPorIdInterno = async (
       },
       {
         model: db.Servicio,
-        as: "serviciosVendidos",
+        as: "servicios",
         attributes: ["idServicio", "nombre", "descripcion", "precio", "duracionEstimadaMin"], // Corregido: duracionEstimadaMin
         through: {
           model: db.VentaXServicio,
@@ -258,13 +258,13 @@ const crearVenta = async (datosVenta) => {
             estado: ventaCreadaConDetalles.estadoDetalle
               ? ventaCreadaConDetalles.estadoDetalle.nombreEstado
               : "Desconocido",
-            productos: ventaCreadaConDetalles.productosVendidos.map((p) => ({
+            productos: ventaCreadaConDetalles.productos.map((p) => ({
               nombre: p.nombre,
               cantidad: p.detalleProductoVenta.cantidad,
               valorUnitario: p.detalleProductoVenta.valorUnitario,
               descripcion: p.descripcion,
             })),
-            servicios: ventaCreadaConDetalles.serviciosVendidos.map((s) => ({
+            servicios: ventaCreadaConDetalles.servicios.map((s) => ({
               nombre: s.nombre,
               valorServicio: s.detalleServicioVenta.valorServicio,
               descripcion: s.descripcion,
@@ -332,7 +332,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
         },
         {
           model: db.Producto,
-          as: "productosVendidos",
+          as: "productos",
           attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
           through: {
             model: db.ProductoXVenta,
@@ -342,7 +342,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
         },
         {
           model: db.Servicio,
-          as: "serviciosVendidos",
+          as: "servicios",
           attributes: ["idServicio", "nombre", "duracionEstimadaMin"], // Corregido: duracionEstimadaMin
           through: {
             model: db.VentaXServicio,
@@ -388,7 +388,7 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
       include: [
         {
           model: db.Producto,
-          as: "productosVendidos",
+          as: "productos",
           through: {
             model: db.ProductoXVenta,
             as: "detalleProductoVenta",
@@ -437,8 +437,8 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
 
     if (estadoOriginalBooleano !== nuevoEstadoBooleanoVenta && 
         (estadoProcesoActualNombre === "Completado" || estadoProcesoActualNombre === "En proceso")) {
-      if (venta.productosVendidos && venta.productosVendidos.length > 0) {
-        for (const pV of venta.productosVendidos) {
+      if (venta.productos && venta.productos.length > 0) {
+        for (const pV of venta.productos) {
           const pDB = await db.Producto.findByPk(pV.idProducto, { transaction });
           const cantVendida = pV.detalleProductoVenta.cantidad;
           if (pDB && cantVendida > 0) {
@@ -484,13 +484,13 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
 
       try {
         let subtotalProductosCorreo = 0;
-        venta.productosVendidos.forEach((p) => {
+        venta.productos.forEach((p) => {
           subtotalProductosCorreo +=
             p.detalleProductoVenta.cantidad *
             p.detalleProductoVenta.valorUnitario;
         });
         let subtotalServiciosCorreo = 0;
-        venta.serviciosVendidos.forEach((s) => {
+        venta.servicios.forEach((s) => {
           subtotalServiciosCorreo += Number(
             s.detalleServicioVenta.valorServicio
           );
@@ -511,13 +511,13 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
             estado: venta.estadoDetalle
               ? venta.estadoDetalle.nombreEstado
               : "Desconocido",
-            productos: venta.productosVendidos.map((p) => ({
+            productos: venta.productos.map((p) => ({
               nombre: p.nombre,
               cantidad: p.detalleProductoVenta.cantidad,
               valorUnitario: p.detalleProductoVenta.valorUnitario,
               descripcion: p.descripcion,
             })),
-            servicios: venta.serviciosVendidos.map((s) => ({
+            servicios: venta.servicios.map((s) => ({
               nombre: s.nombre,
               valorServicio: s.detalleServicioVenta.valorServicio,
               descripcion: s.descripcion,
@@ -574,7 +574,7 @@ const eliminarVentaFisica = async (idVenta) => {
         { model: db.Estado, as: "estadoDetalle" },
         {
           model: db.Producto,
-          as: "productosVendidos",
+          as: "productos",
           through: {
             model: db.ProductoXVenta,
             as: "detalleProductoVenta",
@@ -593,8 +593,8 @@ const eliminarVentaFisica = async (idVenta) => {
         (venta.estadoDetalle.nombreEstado === "Completado" || venta.estadoDetalle.nombreEstado === "En proceso");
 
     if (ventaOriginalEstabaActivaYProcesable) {
-      if (venta.productosVendidos && venta.productosVendidos.length > 0) {
-        for (const pV of venta.productosVendidos) {
+      if (venta.productos && venta.productos.length > 0) {
+        for (const pV of venta.productos) {
           const pDB = await db.Producto.findByPk(pV.idProducto, { transaction });
           const cantVendida = pV.detalleProductoVenta.cantidad;
           if (pDB && cantVendida > 0) {

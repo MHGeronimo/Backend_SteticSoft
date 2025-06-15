@@ -83,7 +83,7 @@ module.exports = (sequelize, DataTypes) => {
       through: 'servicio_x_cita', 
       foreignKey: 'id_cita',      
       otherKey: 'id_servicio',    
-      as: 'servicios'
+      as: 'serviciosProgramados'
     });
     
     // La Cita puede tener detalles de Venta asociados.
