@@ -21,9 +21,9 @@ const startServer = async () => {
       // await db.sequelize.sync(); // Crea tablas si no existen, no altera si ya coinciden.
       // await db.sequelize.sync({ alter: true }); // Intenta alterar tablas. ¡Precaución!
       // await db.sequelize.sync({ force: true }); // ¡PELIGRO! Borra y recrea tablas.
-      console.log(
-        "🔄 Sincronización de modelos Sequelize verificada/ejecutada (modo desarrollo)."
-      );
+      // console.log(
+      //   "🔄 Sincronización de modelos Sequelize verificada/ejecutada (modo desarrollo)."
+      // );
     }
 
     server.listen(PORT, () => {

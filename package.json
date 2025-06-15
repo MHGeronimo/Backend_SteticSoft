@@ -9,7 +9,14 @@
     "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo",
+    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
+    "db:seed:all": "sequelize-cli db:seed:all",
+    "db:seed:undo:all": "sequelize-cli db:seed:undo:all",
+    "db:migration:create": "sequelize-cli migration:generate",
+    "db:seed:create": "sequelize-cli seed:generate"
   },
   "author": "SteticSoft Dev Team",
   "license": "ISC",
@@ -50,6 +57,7 @@
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-prettier": "^5.4.1",
     "nodemon": "^3.1.10",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "sequelize-cli": "^6.6.3"
   }
 }

@@ -1,0 +1,35 @@
+{
+  "development": {
+    "username": "",
+    "password": "",
+    "database": "",
+    "host": "",
+    "port": "",
+    "dialect": "",
+    "dialectOptions": {
+      "bigNumberStrings": true
+    }
+  },
+  "test": {
+    "username": "",
+    "password": "",
+    "database": "_test",
+    "host": "",
+    "port": "",
+    "dialect": "",
+    "dialectOptions": {
+      "bigNumberStrings": true
+    }
+  },
+  "production": {
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "",
+    "dialectOptions": {
+      "bigNumberStrings": true,
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
+  }
+}
