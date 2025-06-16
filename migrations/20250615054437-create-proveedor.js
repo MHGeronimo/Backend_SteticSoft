@@ -8,44 +8,70 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      nombre_empresa: {
-        type: Sequelize.STRING(255),
+      nombre: { // Renamed from nombre_empresa
+        type: Sequelize.STRING(100),
         allowNull: false
       },
-      nombre_contacto: {
-        type: Sequelize.STRING(255),
+      tipo: { // Added
+        type: Sequelize.STRING(50),
+        allowNull: false
+      },
+      tipo_documento: { // Added
+        type: Sequelize.STRING(50),
+        allowNull: true
+      },
+      numero_documento: { // Added
+        type: Sequelize.STRING(45),
+        allowNull: true // SQL script does not specify UNIQUE for this directly
+      },
+      nit_empresa: { // Renamed from nit_o_rut
+        type: Sequelize.STRING(45),
+        unique: true,
         allowNull: true
       },
       telefono: {
         type: Sequelize.STRING(20),
-        allowNull: true,
-        unique: true
+        allowNull: false // unique:true removed
       },
-      email: {
+      correo: { // Renamed from email
         type: Sequelize.STRING(100),
-        allowNull: true,
-        unique: true,
-        validate: {
-          isEmail: true
-        }
+        allowNull: false,
+        unique: true
+        // validate: { isEmail: true } removed
       },
       direccion: {
         type: Sequelize.TEXT,
+        allowNull: false // Was allowNull: true
+      },
+      nombre_persona_encargada: { // Renamed from nombre_contacto
+        type: Sequelize.STRING(100),
         allowNull: true
       },
-      nit_o_rut: { // Assuming NIT for Colombia or RUT for Chile, etc.
-        type: Sequelize.STRING(50),
-        allowNull: true,
-        unique: true
+      telefono_persona_encargada: { // Added
+        type: Sequelize.STRING(20),
+        allowNull: true
       },
-      estado: {
+      email_persona_encargada: { // Added
+        type: Sequelize.STRING(100),
+        allowNull: true
+      },
+      estado: { // This field was in the original migration but not in the new requirements.
+                // However, the SQL script for 'proveedor' DOES have an 'estado' field.
+                // Keeping it as per the original script for 'proveedor' seems appropriate.
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false
       }
     });
+
+    await queryInterface.addConstraint('proveedor', {
+      fields: ['nombre', 'tipo'],
+      type: 'unique',
+      name: 'proveedor_nombre_tipo_unique_constraint'
+    });
   },
   async down(queryInterface, Sequelize) {
+    await queryInterface.removeConstraint('proveedor', 'proveedor_nombre_tipo_unique_constraint');
     await queryInterface.dropTable('proveedor');
   }
 };

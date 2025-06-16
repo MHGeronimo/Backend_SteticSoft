@@ -9,52 +9,51 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       nombre: {
-        type: Sequelize.STRING(255),
+        type: Sequelize.STRING(100), // Adjusted from STRING(255)
         allowNull: false
       },
-      descripcion: {
+      descripcion: { // This field is kept as it's common for products, though not explicitly in the adjustment list.
         type: Sequelize.TEXT,
         allowNull: true
       },
-      precio_venta: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
+      precio: { // Renamed from precio_venta and adjusted
+        type: Sequelize.DECIMAL(12, 2),
+        allowNull: false,
+        defaultValue: 0.00
       },
-      precio_compra: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: true // Purchase price might not always be available or relevant
-      },
-      stock: {
+      // precio_compra field removed
+      existencia: { // Renamed from stock and adjusted
         type: Sequelize.INTEGER,
         allowNull: false,
         defaultValue: 0
       },
       id_categoria_producto: {
         type: Sequelize.INTEGER,
-        allowNull: false, // Assuming a product must belong to a category
+        allowNull: false,
         references: {
           model: 'categoria_producto',
           key: 'id_categoria_producto',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Don't delete category if products are using it
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
-      id_proveedor: {
+      // id_proveedor field removed
+      // codigo_barras field removed
+      stock_minimo: { // Added
         type: Sequelize.INTEGER,
-        allowNull: true, // Product might not have a supplier or it's sourced from multiple
-        references: {
-          model: 'proveedor',
-          key: 'id_proveedor',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL', // If supplier is deleted, set FK to null
+        allowNull: false,
+        defaultValue: 0
       },
-      codigo_barras: {
-        type: Sequelize.STRING(100),
-        allowNull: true,
-        unique: true
+      stock_maximo: { // Added
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0 // Script had DEFAULT 0, allowNull: false is a reasonable assumption
       },
-      estado: {
+      imagen: { // Added
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      estado: { // This field is kept as it's common and often expected.
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false

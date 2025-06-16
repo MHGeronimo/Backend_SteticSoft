@@ -15,8 +15,8 @@ module.exports = {
           model: 'producto',
           key: 'id_producto',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Prevent deleting product if it's in sales history
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
       id_venta: {
         type: Sequelize.INTEGER,
@@ -25,43 +25,38 @@ module.exports = {
           model: 'venta',
           key: 'id_venta',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE', // If sale is deleted, its line items are also deleted
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'CASCADE',
       },
-      cantidad_vendida: {
+      cantidad: { // Renamed from cantidad_vendida
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: false,
+        defaultValue: 1 // Added default
       },
-      precio_unitario_venta: { // Price of product at the time of this sale
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
+      valor_unitario: { // Renamed from precio_unitario_venta
+        type: Sequelize.DECIMAL(12, 2), // Adjusted precision
+        allowNull: false,
+        defaultValue: 0.00 // Added default
       },
-      subtotal_linea: { // cantidad_vendida * precio_unitario_venta (before line item taxes)
-        type: Sequelize.DECIMAL(12, 2),
-        allowNull: false
-      },
-      iva_linea: { // Tax specifically for this line item, if applicable
-        type: Sequelize.DECIMAL(12, 2),
+      // subtotal_linea field removed
+      // iva_linea field removed
+      id_dashboard: { // Added
+        type: Sequelize.INTEGER,
         allowNull: true,
-        defaultValue: 0.00
+        references: {
+          model: 'dashboard',
+          key: 'id_dashboard',
+        },
+        onDelete: 'SET NULL' // onUpdate defaults to RESTRICT/NO ACTION
       }
-      // Timestamps
-      // createdAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW },
-      // updatedAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW }
     });
 
-    // Unique constraint to ensure a product is not added twice to the same sale
-    // (updates should modify quantity of existing line item)
-    await queryInterface.addConstraint('producto_x_venta', {
-      fields: ['id_producto', 'id_venta'],
-      type: 'unique',
-      name: 'unique_producto_venta'
-    });
-
-    await queryInterface.addIndex('producto_x_venta', ['id_venta']);
-    await queryInterface.addIndex('producto_x_venta', ['id_producto']);
+    // Unique constraint 'unique_producto_venta' removed as per instructions
+    // addIndex calls removed
   },
   async down(queryInterface, Sequelize) {
+    // If 'unique_producto_venta' constraint were to be kept, it should be removed here first.
+    // await queryInterface.removeConstraint('producto_x_venta', 'unique_producto_venta');
     await queryInterface.dropTable('producto_x_venta');
   }
 };

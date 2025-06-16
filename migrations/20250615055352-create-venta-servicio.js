@@ -15,8 +15,8 @@ module.exports = {
           model: 'venta',
           key: 'id_venta',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE', // If sale is deleted, its service line items are also deleted
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'CASCADE',
       },
       id_servicio: {
         type: Sequelize.INTEGER,
@@ -25,54 +25,35 @@ module.exports = {
           model: 'servicio',
           key: 'id_servicio',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Prevent deleting service if it's in sales history
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
-      id_empleado_presto_servicio: { // Employee who performed the service for this sale
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'empleado',
-          key: 'id_empleado',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-      },
-      cantidad: { // Usually 1 for a service, but structure allows for more
-        type: Sequelize.INTEGER,
+      valor_servicio: { // Renamed from precio_unitario_servicio_venta
+        type: Sequelize.DECIMAL(12, 2), // Adjusted precision
         allowNull: false,
-        defaultValue: 1
+        defaultValue: 0.00 // Added default
       },
-      precio_unitario_servicio_venta: { // Price of service at the time of this sale
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
-      },
-      subtotal_linea: { // cantidad * precio_unitario_servicio_venta
-        type: Sequelize.DECIMAL(12, 2),
-        allowNull: false
-      },
-      iva_linea: { // Tax for this service line item, if applicable
-        type: Sequelize.DECIMAL(12, 2),
-        allowNull: true,
-        defaultValue: 0.00
+      // id_empleado_presto_servicio field removed
+      // cantidad field removed
+      // subtotal_linea field removed
+      // iva_linea field removed
+      id_cita: { // Added
+        type: Sequelize.INTEGER,
+        allowNull: true, // A service sale might not always originate from a Cita
+        references: {
+          model: 'cita',
+          key: 'id_cita',
+        },
+        onDelete: 'SET NULL' // onUpdate defaults to RESTRICT/NO ACTION
       }
-      // Timestamps
-      // createdAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW },
-      // updatedAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW }
     });
 
-    // Unique constraint to ensure a service is not added twice to the same sale
-    await queryInterface.addConstraint('venta_x_servicio', {
-      fields: ['id_venta', 'id_servicio'],
-      type: 'unique',
-      name: 'unique_venta_servicio'
-    });
-
-    await queryInterface.addIndex('venta_x_servicio', ['id_venta']);
-    await queryInterface.addIndex('venta_x_servicio', ['id_servicio']);
-    await queryInterface.addIndex('venta_x_servicio', ['id_empleado_presto_servicio']);
+    // Unique constraint 'unique_venta_servicio' removed as per instructions
+    // addIndex calls removed
   },
   async down(queryInterface, Sequelize) {
+    // If 'unique_venta_servicio' constraint were to be kept, it should be removed here first.
+    // await queryInterface.removeConstraint('venta_x_servicio', 'unique_venta_servicio');
     await queryInterface.dropTable('venta_x_servicio');
   }
 };

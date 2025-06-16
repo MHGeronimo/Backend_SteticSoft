@@ -9,32 +9,43 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       nombre: {
-        type: Sequelize.STRING(255),
-        allowNull: false
+        type: Sequelize.STRING(100), // Adjusted from STRING(255)
+        allowNull: false,
+        unique: true // Added unique constraint
       },
-      descripcion: {
+      descripcion: { // This field is kept as it's common for services.
         type: Sequelize.TEXT,
         allowNull: true
       },
       precio: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
+        type: Sequelize.DECIMAL(12, 2), // Adjusted precision
+        allowNull: false,
+        defaultValue: 0.00 // Added default value
       },
-      duracion_estimada: { // Duration in minutes, for example
+      duracion_estimada_min: { // Renamed from duracion_estimada
         type: Sequelize.INTEGER,
         allowNull: true
       },
       id_categoria_servicio: {
         type: Sequelize.INTEGER,
-        allowNull: false, // Assuming a service must belong to a category
+        allowNull: false,
         references: {
           model: 'categoria_servicio',
           key: 'id_categoria_servicio',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Don't delete category if services are using it
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
-      estado: {
+      id_especialidad: { // Added
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'especialidad', // Name of the target table
+          key: 'id_especialidad',   // Name of the target column
+        },
+        onDelete: 'RESTRICT' // onUpdate defaults to RESTRICT or NO ACTION
+      },
+      estado: { // This field is kept as it's common for services.
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false

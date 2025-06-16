@@ -9,18 +9,12 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       nombre_estado: {
-        type: Sequelize.STRING(50),
+        type: Sequelize.STRING(45), // Adjusted length
         allowNull: false,
-        unique: true
-      },
-      descripcion: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },
-      ambito: { // To categorize states, e.g., 'USER_STATUS', 'ORDER_STATUS'
-        type: Sequelize.STRING(50),
-        allowNull: true
+        unique: true // Assuming this should be kept as per general good practice for names, though SQL script does not explicitly state unique for `nombre_estado`
       }
+      // descripcion field removed
+      // ambito field removed
       // No 'estado' column for the 'estado' table itself usually.
       // Timestamps false assumed based on other tables.
     });

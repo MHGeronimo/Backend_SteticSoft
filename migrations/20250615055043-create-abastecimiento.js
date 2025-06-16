@@ -15,61 +15,58 @@ module.exports = {
           model: 'producto',
           key: 'id_producto',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Don't delete product if stock entries exist
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
-      id_compra: { // Optional: link to a specific purchase order
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'compra',
-          key: 'id_compra',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-      },
-      id_empleado_registra: { // Employee who registered this stock entry
+      // id_compra field removed
+      id_empleado_asignado: { // Renamed from id_empleado_registra
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'empleado',
           key: 'id_empleado',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'SET NULL', // Adjusted
       },
-      cantidad_ingresada: {
+      cantidad: { // Renamed from cantidad_ingresada
         type: Sequelize.INTEGER,
         allowNull: false
       },
-      fecha_ingreso: {
+      fecha_ingreso: { // Kept as it is common for this table
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.NOW
       },
-      precio_compra_unitario: { // Cost of product for this specific batch
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: true
+      // precio_compra_unitario field removed
+      // lote field removed
+      // fecha_vencimiento_lote field removed
+      // notas field removed
+      esta_agotado: { // Added
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+        allowNull: false
       },
-      lote: { // Batch number, if applicable
-        type: Sequelize.STRING(100),
-        allowNull: true
-      },
-      fecha_vencimiento_lote: { // Expiry date for this batch, if applicable
-        type: Sequelize.DATEONLY,
-        allowNull: true
-      },
-      notas: {
+      razon_agotamiento: { // Added
         type: Sequelize.TEXT,
         allowNull: true
+      },
+      fecha_agotamiento: { // Added
+        type: Sequelize.DATEONLY, // Script said DATE, using DATEONLY
+        allowNull: true
+      },
+      estado: { // Added (for the record itself)
+        type: Sequelize.BOOLEAN,
+        defaultValue: true,
+        allowNull: false
       }
-      // No general 'estado' column, as this is a transactional record.
-      // Timestamps (createdAt, updatedAt) could be added for auditing.
     });
+    // addIndex for id_producto can be kept if high query volume on it
     await queryInterface.addIndex('abastecimiento', ['id_producto']);
-    await queryInterface.addIndex('abastecimiento', ['id_compra']);
+    // id_compra index removed as field is removed
   },
   async down(queryInterface, Sequelize) {
+    // await queryInterface.removeIndex('abastecimiento', ['id_producto']); // if you added it
     await queryInterface.dropTable('abastecimiento');
   }
 };

@@ -8,20 +8,18 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      nombre: {
+      nombre_dashboard: { // Renamed from nombre
         type: Sequelize.STRING(100),
-        allowNull: false,
-        unique: true
-      },
-      configuracion: {
-        type: Sequelize.TEXT, // Could be Sequelize.JSON if dialect supports it well
-        allowNull: true
-      },
-      estado: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: true,
         allowNull: false
+        // unique: true // Removed
+      },
+      fecha_creacion: { // Added
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW
       }
+      // configuracion field removed
+      // estado field removed
     });
   },
   async down(queryInterface, Sequelize) {

@@ -15,8 +15,8 @@ module.exports = {
           model: 'compra',
           key: 'id_compra',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE', // If the purchase is deleted, its line items are also deleted
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'CASCADE',
       },
       id_producto: {
         type: Sequelize.INTEGER,
@@ -25,36 +25,23 @@ module.exports = {
           model: 'producto',
           key: 'id_producto',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Prevent deleting a product if it's part of a purchase history
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
       cantidad: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: false,
+        defaultValue: 1 // Added default value
       },
-      precio_unitario_compra: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
-      },
-      subtotal_linea: { // cantidad * precio_unitario_compra
-        type: Sequelize.DECIMAL(12, 2),
-        allowNull: false
+      valor_unitario: { // Renamed from precio_unitario_compra
+        type: Sequelize.DECIMAL(12, 2), // Adjusted precision
+        allowNull: false,
+        defaultValue: 0.00 // Added default value
       }
-      // Timestamps (createdAt, updatedAt) can be useful for auditing line item changes
-      // createdAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW },
-      // updatedAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW }
+      // subtotal_linea field removed
     });
-    // Index for faster lookup of products per purchase
-    await queryInterface.addIndex('compra_x_producto', ['id_compra']);
-    // Index for faster lookup of purchases for a product
-    await queryInterface.addIndex('compra_x_producto', ['id_producto']);
-    // Optional: Unique constraint on (id_compra, id_producto) if a product
-    // should only appear once per purchase (updates modify quantity).
-    // await queryInterface.addConstraint('compra_x_producto', {
-    //   fields: ['id_compra', 'id_producto'],
-    //   type: 'unique',
-    //   name: 'unique_compra_producto'
-    // });
+    // addIndex calls removed
+    // Unique constraint 'unique_compra_producto' also removed as per instruction to remove if not in SQL script
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('compra_x_producto');

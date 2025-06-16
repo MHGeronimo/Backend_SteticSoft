@@ -2,7 +2,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('servicio_x_cita', {
-      id_servicio_x_cita: {
+      id_servicio_x_cita: { // This surrogate PK is kept as per current structure
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
@@ -15,8 +15,8 @@ module.exports = {
           model: 'servicio',
           key: 'id_servicio',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Prevent deleting a service if it's part of appointment history
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'CASCADE', // Changed from RESTRICT
       },
       id_cita: {
         type: Sequelize.INTEGER,
@@ -25,47 +25,26 @@ module.exports = {
           model: 'cita',
           key: 'id_cita',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE', // If appointment is deleted, these service links are also deleted
-      },
-      id_empleado_realiza: { // Employee who performed this specific service in the appointment
-        type: Sequelize.INTEGER,
-        allowNull: true, // May not be known or applicable
-        references: {
-          model: 'empleado',
-          key: 'id_empleado',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-      },
-      precio_servicio_en_cita: { // Price of service at the time of this appointment
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
-      },
-      duracion_servicio_real: { // Actual duration in minutes for this service in this appointment
-        type: Sequelize.INTEGER,
-        allowNull: true
-      },
-      // estado_servicio_cita: { // e.g., "Programado", "Completado", "Cancelado" - could be FK to estado table
-      //   type: Sequelize.STRING(50),
-      //   allowNull: true
-      // }
-      // Timestamps
-      // createdAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW },
-      // updatedAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW }
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'CASCADE',
+      }
+      // id_empleado_realiza field removed
+      // precio_servicio_en_cita field removed
+      // duracion_servicio_real field removed
     });
 
     // Unique constraint to ensure a service is not added twice to the same appointment
     await queryInterface.addConstraint('servicio_x_cita', {
       fields: ['id_servicio', 'id_cita'],
       type: 'unique',
-      name: 'unique_servicio_cita'
+      name: 'unique_servicio_cita' // This name must be used in down method if removing
     });
 
-    await queryInterface.addIndex('servicio_x_cita', ['id_cita']);
-    await queryInterface.addIndex('servicio_x_cita', ['id_empleado_realiza']);
+    // addIndex calls for id_cita and id_empleado_realiza removed
   },
   async down(queryInterface, Sequelize) {
+    // It's good practice to remove constraints before dropping the table in 'down'
+    await queryInterface.removeConstraint('servicio_x_cita', 'unique_servicio_cita');
     await queryInterface.dropTable('servicio_x_cita');
   }
 };

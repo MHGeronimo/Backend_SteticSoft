@@ -17,6 +17,15 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
+      vida_util_dias: { // Added
+        type: Sequelize.INTEGER,
+        allowNull: true
+      },
+      tipo_uso: { // Added
+        type: Sequelize.STRING(10),
+        allowNull: false
+        // CHECK constraint for tipo_uso IN ('Interno', 'Externo') is omitted as per instructions
+      },
       estado: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,

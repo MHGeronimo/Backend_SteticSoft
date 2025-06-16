@@ -23,11 +23,11 @@ module.exports = {
     const adminPasswordHash = '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO';
 
     await queryInterface.bulkInsert('usuario', [{
-      nombre_usuario: 'admin', // Added as 'nombre_usuario' is a required field in the migration
-      email: 'mrgerito@gmail.com', // 'correo' in prompt, using 'email' as per migration
+      // nombre_usuario: 'admin', // ELIMINADO
+      correo: 'mrgerito@gmail.com', // Renamed from email
       contrasena: adminPasswordHash,
       id_rol: adminRolId,
-      ultimo_login: null, // Or Sequelize.NOW if an immediate login is implied
+      // ultimo_login: null, // ELIMINADO
       estado: true,
       // createdAt and updatedAt will be handled by Sequelize if timestamps are enabled in model
       // If not, and you need them:
@@ -38,6 +38,7 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     // Delete the specific admin user
-    await queryInterface.bulkDelete('usuario', { email: 'mrgerito@gmail.com' }, {});
+    // Ensure this matches the new field name 'correo' if it's used as the condition
+    await queryInterface.bulkDelete('usuario', { correo: 'mrgerito@gmail.com' }, {});
   }
 };
