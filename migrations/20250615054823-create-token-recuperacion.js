@@ -2,14 +2,14 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('token_recuperacion', {
-      id_token: {
+      id_token_recuperacion: { // Renamed from id_token
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
       token: {
-        type: Sequelize.STRING(255),
+        type: Sequelize.TEXT, // Changed from STRING(255)
         allowNull: false,
         unique: true
       },
@@ -20,29 +20,18 @@ module.exports = {
           model: 'usuario',
           key: 'id_usuario',
         },
-        onUpdate: 'CASCADE',
+        // onUpdate: 'CASCADE' removed
         onDelete: 'CASCADE',
       },
       fecha_expiracion: {
-        type: Sequelize.DATE,
+        type: Sequelize.DATE, // Kept as DATE as per instruction, SQL script might say TIMESTAMP
         allowNull: false
-      },
-      utilizado: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false,
-        allowNull: false
-      },
-      createdAt: { // Added for tracking when the token was created
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
       }
+      // utilizado field removed
+      // createdAt field removed
       // updatedAt is generally not needed for tokens as they are typically not updated
     });
-    // Adding index on id_usuario for faster lookups of tokens per user
-    await queryInterface.addIndex('token_recuperacion', ['id_usuario']);
-    // Adding index on the token itself for faster lookups
-    await queryInterface.addIndex('token_recuperacion', ['token']);
+    // addIndex calls removed
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('token_recuperacion');

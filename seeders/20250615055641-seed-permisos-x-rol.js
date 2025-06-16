@@ -52,8 +52,8 @@ module.exports = {
     // Assign all permissions to Administrador
     const permisosParaAdmin = todosLosPermisos.map(permiso => ({
       id_rol: adminRolId,
-      id_permiso: permiso.id_permiso,
-      estado: true
+      id_permiso: permiso.id_permiso
+      // estado: true // ELIMINADO
     }));
 
     // Define permissions for Empleado role
@@ -74,8 +74,8 @@ module.exports = {
         const permisoId = await getPermisoId(nombrePermiso);
         permisosParaEmpleado.push({
           id_rol: empleadoRolId,
-          id_permiso: permisoId,
-          estado: true
+          id_permiso: permisoId
+          // estado: true // ELIMINADO
         });
       } catch (error) {
         console.warn(`Advertencia: No se pudo encontrar el permiso '${nombrePermiso}' para el rol Empleado. ${error.message}`);

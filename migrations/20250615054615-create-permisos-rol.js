@@ -23,11 +23,6 @@ module.exports = {
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE', // If a role is deleted, remove the link
-      },
-      estado: { // Optional: to enable/disable a specific permission for a role
-        type: Sequelize.BOOLEAN,
-        defaultValue: true,
-        allowNull: false
       }
       // No separate ID for the join table itself is strictly needed if using composite PK.
       // Timestamps are generally not used for join tables.

@@ -10,7 +10,7 @@ module.exports = {
           model: 'empleado',
           key: 'id_empleado',
         },
-        onUpdate: 'CASCADE',
+        // onUpdate: 'CASCADE' removed
         onDelete: 'CASCADE', // If employee is deleted, this link is removed
       },
       id_especialidad: {
@@ -21,19 +21,11 @@ module.exports = {
           model: 'especialidad',
           key: 'id_especialidad',
         },
-        onUpdate: 'CASCADE',
+        // onUpdate: 'CASCADE' removed
         onDelete: 'CASCADE', // If especialidad is deleted, this link is removed
-      },
-      fecha_asignacion: { // Optional: when this specialty was assigned to the employee
-        type: Sequelize.DATE,
-        allowNull: true,
-        defaultValue: Sequelize.NOW
-      },
-      estado: { // To enable/disable this specific employee-specialty link
-        type: Sequelize.BOOLEAN,
-        defaultValue: true,
-        allowNull: false
       }
+      // fecha_asignacion field removed
+      // estado field removed
       // Timestamps (createdAt, updatedAt) are generally not needed for join tables unless auditing changes to the link itself.
     });
   },

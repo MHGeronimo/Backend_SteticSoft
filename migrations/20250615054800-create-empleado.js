@@ -18,40 +18,42 @@ module.exports = {
       },
       telefono: {
         type: Sequelize.STRING(20),
-        allowNull: true
+        allowNull: false // Was true
       },
-      email: { // Professional email, could be different from user account email
+      correo: { // Renamed from email
         type: Sequelize.STRING(100),
-        allowNull: true,
-        unique: true,
-        validate: {
-          isEmail: true
-        }
+        allowNull: false, // Was true
+        unique: true
+        // validate: { isEmail: true } removed
       },
-      direccion: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },
-      id_usuario: { // Link to a user account, assuming an employee MUST be a user
+      // direccion field removed
+      id_usuario: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        unique: true, // Each user can only be one employee
+        unique: true,
         references: {
           model: 'usuario',
           key: 'id_usuario',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE', // If user is deleted, employee record is also deleted
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT', // Changed from CASCADE
       },
-      cargo: {
-        type: Sequelize.STRING(100),
-        allowNull: true
+      // cargo field removed
+      // fecha_contratacion field removed
+      tipo_documento: { // Added
+        type: Sequelize.STRING(50),
+        allowNull: false
       },
-      fecha_contratacion: {
-        type: Sequelize.DATEONLY, // Just the date, not time
-        allowNull: true
+      numero_documento: { // Added
+        type: Sequelize.STRING(45),
+        allowNull: false,
+        unique: true
       },
-      estado: {
+      fecha_nacimiento: { // Added
+        type: Sequelize.DATEONLY,
+        allowNull: false
+      },
+      estado: { // This field is kept as it's common.
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false

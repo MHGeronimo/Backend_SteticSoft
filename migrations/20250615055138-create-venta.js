@@ -10,89 +10,60 @@ module.exports = {
       },
       id_cliente: {
         type: Sequelize.INTEGER,
-        allowNull: true, // Sale could be to an anonymous customer
+        allowNull: true,
         references: {
           model: 'cliente',
           key: 'id_cliente',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT', // Changed from SET NULL
       },
-      id_empleado_atendio: { // Employee who processed the sale
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'empleado',
-          key: 'id_empleado',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-      },
-      id_cita: { // If the sale originated from an appointment
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'cita',
-          key: 'id_cita',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL', // Sale record persists even if original cita is deleted
-      },
-      fecha_hora_venta: {
+      // id_empleado_atendio field removed
+      // id_cita field removed
+      fecha: { // Renamed from fecha_hora_venta
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.NOW
       },
-      subtotal: {
+      // subtotal field removed
+      iva: {
         type: Sequelize.DECIMAL(12,2),
-        allowNull: true // Or calculate on the fly, but good to store
-      },
-      iva: { // Or other taxes
-        type: Sequelize.DECIMAL(12,2),
-        allowNull: true,
+        allowNull: false, // Was true
         defaultValue: 0.00
       },
-      total_venta: {
+      total: { // Renamed from total_venta
         type: Sequelize.DECIMAL(12, 2),
-        allowNull: false
+        allowNull: false,
+        defaultValue: 0.00 // Added default value
       },
-      metodo_pago: { // E.g., "Efectivo", "Tarjeta Credito", "Transferencia"
-        type: Sequelize.STRING(50),
-        allowNull: true
-      },
-      id_estado_venta: { // FK to 'estado' table for sale status (e.g. "Pagada", "Anulada")
+      // metodo_pago field removed
+      id_estado: { // Renamed from id_estado_venta
         type: Sequelize.INTEGER,
-        allowNull: false, // This matches the model change: allowNull: false for idEstado
+        allowNull: false,
         references: {
           model: 'estado',
           key: 'id_estado',
         },
-        onUpdate: 'CASCADE',
+        // onUpdate: 'CASCADE' removed
         onDelete: 'RESTRICT',
       },
-      id_dashboard: { // Optional link to a daily dashboard summary
+      id_dashboard: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'dashboard',
           key: 'id_dashboard',
         },
-        onUpdate: 'CASCADE',
+        // onUpdate: 'CASCADE' removed
         onDelete: 'SET NULL',
       },
-      estado: { // General status of the sale record (e.g. for soft delete)
+      estado: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false
       }
-      // createdAt, updatedAt for auditing
-      // createdAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW },
-      // updatedAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.NOW }
     });
-    await queryInterface.addIndex('venta', ['id_cliente']);
-    await queryInterface.addIndex('venta', ['id_empleado_atendio']);
-    await queryInterface.addIndex('venta', ['id_cita']);
-    await queryInterface.addIndex('venta', ['fecha_hora_venta']);
+    // addIndex calls removed
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('venta');

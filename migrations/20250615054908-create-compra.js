@@ -15,59 +15,42 @@ module.exports = {
           model: 'proveedor',
           key: 'id_proveedor',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Don't delete proveedor if compras are linked
+        // onUpdate: 'CASCADE' removed
+        onDelete: 'RESTRICT',
       },
-      id_empleado: { // Employee who registered or managed the purchase
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'empleado',
-          key: 'id_empleado',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL', // If employee is deleted, keep purchase record
-      },
-      fecha_compra: {
+      // id_empleado field removed
+      fecha: { // Renamed from fecha_compra
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.NOW
       },
-      total_compra: {
+      total: { // Renamed from total_compra
         type: Sequelize.DECIMAL(12, 2),
-        allowNull: false
+        allowNull: false,
+        defaultValue: 0.00 // Added default value
       },
-      descripcion_compra: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      // descripcion_compra field removed
+      // numero_factura_proveedor field removed
+      // estado_compra_info field removed
+      iva: { // Added
+        type: Sequelize.DECIMAL(12, 2),
+        allowNull: false,
+        defaultValue: 0.00
       },
-      numero_factura_proveedor: {
-        type: Sequelize.STRING(100),
-        allowNull: true
+      id_dashboard: { // Added
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'dashboard', // Name of the target table
+          key: 'id_dashboard',   // Name of the target column
+        },
+        onDelete: 'SET NULL' // onUpdate defaults to RESTRICT or NO ACTION
       },
-      // Instead of a string, it would be better to use an FK to 'estado' table
-      // For now, let's use a string as per initial thought, can be refactored.
-      estado_compra_info: { // e.g., "Pedido", "Recibido", "Pagado"
-        type: Sequelize.STRING(50),
-        allowNull: true
-      },
-      // General status of the record itself (active/inactive)
-      estado: {
+      estado: { // This field is kept.
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false
       }
-      // Timestamps (createdAt, updatedAt) can be added if needed for auditing
-      // createdAt: {
-      //   allowNull: false,
-      //   type: Sequelize.DATE,
-      //   defaultValue: Sequelize.NOW
-      // },
-      // updatedAt: {
-      //   allowNull: false,
-      //   type: Sequelize.DATE,
-      //   defaultValue: Sequelize.NOW
-      // }
     });
   },
   async down(queryInterface, Sequelize) {

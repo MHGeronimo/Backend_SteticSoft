@@ -8,55 +8,44 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      titulo: {
-        type: Sequelize.STRING(255),
-        allowNull: false
-      },
-      descripcion: {
-        type: Sequelize.TEXT,
-        allowNull: false
-      },
-      tipo_novedad: { // E.g., "Alerta Stock", "Mantenimiento", "Promocion"
-        type: Sequelize.STRING(50),
-        allowNull: true
-      },
-      id_usuario_creador: { // User who created this novedad (optional)
+      dia_semana: { // 0=Domingo, 6=Sábado
         type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'usuario',
-          key: 'id_usuario',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        allowNull: false
+        // CHECK constraint (dia_semana BETWEEN 0 AND 6) se omite aquí, añadir manualmente si es crítico.
       },
-      fecha_publicacion: {
-        type: Sequelize.DATE,
-        allowNull: false,
-        defaultValue: Sequelize.NOW
+      hora_inicio: {
+        type: Sequelize.TIME,
+        allowNull: false
       },
-      fecha_expiracion: {
-        type: Sequelize.DATE,
-        allowNull: true
+      hora_fin: {
+        type: Sequelize.TIME,
+        allowNull: false
       },
-      estado: { // General status of the novedad (active/archived)
+      estado: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,
         allowNull: false
       },
-      // Specific to certain types of 'novedades' like alerts
-      leido_por_admin: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false,
-        allowNull: true // May not apply to all novedad types
+      id_empleado: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'empleado',
+          key: 'id_empleado',
+        },
+        onDelete: 'CASCADE' // onUpdate se omite para default
       }
-      // Timestamps (createdAt, updatedAt) are implicitly handled by Sequelize
-      // if not specified in model with timestamps: false.
-      // For migrations, it's good to be explicit if needed, or rely on model defaults.
-      // Since other tables omit them, I'll omit for consistency here.
+    });
+    // Añadir restricción UNIQUE para (id_empleado, dia_semana)
+    await queryInterface.addConstraint('novedades', {
+      fields: ['id_empleado', 'dia_semana'],
+      type: 'unique',
+      name: 'novedades_id_empleado_dia_semana_unique'
     });
   },
   async down(queryInterface, Sequelize) {
+    // Need to remove constraint before dropping table
+    await queryInterface.removeConstraint('novedades', 'novedades_id_empleado_dia_semana_unique');
     await queryInterface.dropTable('novedades');
   }
 };

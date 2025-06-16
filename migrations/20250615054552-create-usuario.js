@@ -8,22 +8,16 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      nombre_usuario: {
-        type: Sequelize.STRING(50),
-        allowNull: false,
-        unique: true
-      },
+      // nombre_usuario field removed
       contrasena: { // Storing hashed password
-        type: Sequelize.STRING(255),
+        type: Sequelize.TEXT, // Changed from STRING(255)
         allowNull: false
       },
-      email: {
+      correo: { // Renamed from email
         type: Sequelize.STRING(100),
         allowNull: false,
-        unique: true,
-        validate: {
-          isEmail: true
-        }
+        unique: true
+        // validate: { isEmail: true } removed
       },
       id_rol: {
         type: Sequelize.INTEGER,
@@ -32,13 +26,10 @@ module.exports = {
           model: 'rol', // Name of the target table
           key: 'id_rol',  // Name of the target column
         },
-        onUpdate: 'CASCADE',
+        // onUpdate: 'CASCADE' removed to use DB default
         onDelete: 'RESTRICT',
       },
-      ultimo_login: {
-        type: Sequelize.DATE,
-        allowNull: true
-      },
+      // ultimo_login field removed
       estado: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,
