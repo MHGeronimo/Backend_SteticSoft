@@ -1,4 +1,4 @@
-// src/services/producto.service.js
+// src/shared/src_api/services/producto.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -7,13 +7,9 @@ const {
   CustomError,
   BadRequestError,
 } = require("../errors");
-// No se necesita stockAlertHelper aquí, ya que el estado del producto no afecta directamente el stock. 
 
 /**
  * Helper interno para cambiar el estado de un producto.
- * @param {number} idProducto - ID del producto.
- * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
- * @returns {Promise<object>} El producto con el estado cambiado.
  */
 const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
   const producto = await db.Producto.findByPk(idProducto);
@@ -54,9 +50,11 @@ const crearProducto = async (datosProducto) => {
   }
 
   if (categoriaProductoId) {
+    // ==================== CORRECCIÓN 1 ====================
     const categoria = await db.CategoriaProducto.findOne({
-      where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Corregido: idCategoria a idCategoriaProducto
+      where: { idCategoriaProducto: categoriaProductoId, estado: true },
     });
+    // ======================================================
     if (!categoria) {
       throw new BadRequestError(
         `La categoría de producto con ID ${categoriaProductoId} no existe o no está activa.`
@@ -96,18 +94,12 @@ const obtenerTodosLosProductos = async (filtros) => {
     limit = 10,
     nombre,
     estado,
-    idCategoria,
-    tipoUso, // El filtro que nos interesa
+    idCategoria, // Este filtro viene de la URL
+    tipoUso,
   } = filtros;
-
-  // --- PASO DE DEPURACIÓN ---
-  // Este log se mostrará en la consola de tu *backend* (la terminal donde corres la API)
-  // Nos dirá si el filtro está llegando correctamente desde el frontend.
-  console.log("[Service:Producto] Filtros recibidos:", filtros);
 
   const offset = (page - 1) * limit;
 
-  // 1. Construimos la condición principal para la tabla 'Producto'
   let whereCondition = {};
   if (nombre) {
     whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
@@ -115,19 +107,21 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (estado !== undefined) {
     whereCondition.estado = estado === "true";
   }
+  // ==================== CORRECCIÓN 2 ====================
+  // Si se filtra por categoría, usamos el nombre correcto del campo.
   if (idCategoria) {
-    whereCondition.idCategoria = idCategoria;
+    whereCondition.categoriaProductoId = idCategoria;
   }
+  // ======================================================
 
-  // 2. Construimos la condición para la tabla asociada 'CategoriaProducto'
   let includeCondition = [
     {
       model: db.CategoriaProducto,
       as: "categoria",
-      attributes: ["idCategoria", "nombre", "vidaUtilDias", "tipoUso"],
-      // --- CORRECCIÓN CLAVE ---
-      // Aplicamos el filtro 'tipoUso' directamente aquí.
-      // Si 'tipoUso' no viene, la condición 'where' no se añade.
+      // ==================== CORRECCIÓN 3 ====================
+      // Se corrige el nombre de la columna en los atributos a incluir.
+      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
+      // ======================================================
       ...(tipoUso && { where: { tipoUso: tipoUso } }),
     },
   ];
@@ -163,8 +157,10 @@ const obtenerProductoPorId = async (idProducto) => {
       include: [
         {
           model: db.CategoriaProducto,
-          as: "categoria", // Corregido: 'categoria' es el alias en Producto.model.js
-          attributes: ["idCategoriaProducto", "nombre"], // Corregido: idCategoria a idCategoriaProducto
+          as: "categoria",
+          // ==================== CORRECCIÓN 4 ====================
+          attributes: ["idCategoriaProducto", "nombre"],
+          // ======================================================
         },
       ],
     });
@@ -215,9 +211,11 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
       if (categoriaProductoId === null) {
         datosActualizar.categoriaProductoId = null;
       } else {
+        // ==================== CORRECCIÓN 5 ====================
         const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Corregido: idCategoria a idCategoriaProducto
+          where: { idCategoriaProducto: categoriaProductoId, estado: true },
         });
+        // ======================================================
         if (!categoria) {
           throw new BadRequestError(
             `La categoría de producto con ID ${categoriaProductoId} no existe o no está activa.`
@@ -324,5 +322,5 @@ module.exports = {
   anularProducto,
   habilitarProducto,
   eliminarProductoFisico,
-  cambiarEstadoProducto, // Exportar la nueva función
+  cambiarEstadoProducto,
 };
