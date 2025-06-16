@@ -6,7 +6,15 @@ const servicioService = require("../services/servicio.service.js");
  */
 const crearServicio = async (req, res, next) => {
   try {
-    const nuevoServicio = await servicioService.crearServicio(req.body);
+    const servicioData = { ...req.body };
+    if (req.file) {
+      // Normalize path to be platform-independent and web-accessible
+      const imagePath = req.file.path.replace(/\\/g, "/");
+      // Construct a web-accessible URL if 'uploads' is served statically
+      // Assuming 'uploads' is at the root of the served static files
+      servicioData.imagen = imagePath.substring(imagePath.indexOf("uploads"));
+    }
+    const nuevoServicio = await servicioService.crearServicio(servicioData);
     res.status(201).json({
       success: true,
       message: "Servicio creado exitosamente.",
@@ -76,9 +84,17 @@ const obtenerServicioPorId = async (req, res, next) => {
 const actualizarServicio = async (req, res, next) => {
   try {
     const { idServicio } = req.params;
+    const datosActualizar = { ...req.body };
+    if (req.file) {
+      // Normalize path to be platform-independent and web-accessible
+      const imagePath = req.file.path.replace(/\\/g, "/");
+      // Construct a web-accessible URL if 'uploads' is served statically
+      // Assuming 'uploads' is at the root of the served static files
+      datosActualizar.imagen = imagePath.substring(imagePath.indexOf("uploads"));
+    }
     const servicioActualizado = await servicioService.actualizarServicio(
       Number(idServicio),
-      req.body
+      datosActualizar
     );
     res.status(200).json({
       success: true,

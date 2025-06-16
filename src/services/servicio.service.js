@@ -66,16 +66,49 @@ const crearServicio = async (datosServicio) => {
   }
 
   try {
-    const nuevoServicio = await db.Servicio.create({
+    const servicioParaCrear = {
       nombre,
       descripcion: descripcion || null,
       precio: parseFloat(precio).toFixed(2),
       duracionEstimadaMin: // Corregido: Mapeo a duracionEstimadaMin del modelo
-        duracionEstimada !== undefined ? Number(duracionEstimada) : null,
-      estado: typeof estado === "boolean" ? estado : true,
-      categoriaServicioId,
-      especialidadId: especialidadId || null,
-    });
+        datosServicio.duracionEstimada !== undefined ? Number(datosServicio.duracionEstimada) : null,
+      estado: typeof datosServicio.estado === "boolean" ? datosServicio.estado : true,
+      idCategoriaServicio: datosServicio.idCategoriaServicio, // Aseguramos que usamos el nombre correcto del campo FK
+      idEspecialidad: datosServicio.idEspecialidad || null, // Aseguramos que usamos el nombre correcto del campo FK
+    };
+
+    if (datosServicio.imagen) {
+      servicioParaCrear.imagen = datosServicio.imagen;
+    }
+
+    // Corrección de nombres de campos FK que se usan en el modelo y BD.
+    // El modelo Servicio usa 'idCategoriaServicio' y 'idEspecialidad'
+    // pero datosServicio podría venir con 'categoriaServicioId' y 'especialidadId'
+    // Esto ya se maneja arriba al asignar a servicioParaCrear.idCategoriaServicio y servicioParaCrear.idEspecialidad
+
+    // Aseguramos que categoriaServicioId y especialidadId se mapean correctamente a los campos del modelo
+    // que son idCategoriaServicio y idEspecialidad respectivamente.
+    // La validación de existencia de CategoriaServicio y Especialidad ya usa
+    // datosServicio.categoriaServicioId y datosServicio.especialidadId.
+    // Lo importante es que el objeto final para .create() use los nombres de campo del modelo.
+
+    // El objeto servicioParaCrear ahora usa idCategoriaServicio y idEspecialidad.
+    // Las validaciones previas usan categoriaServicioId y especialidadId.
+    // Vamos a unificar esto para claridad, usando los nombres de campo del modelo en el objeto final.
+    // La validación de categoriaServicioId se hizo con datosServicio.categoriaServicioId
+    // La validación de especialidadId se hizo con datosServicio.especialidadId
+
+    // Re-asignación para asegurar que los campos correctos del modelo son usados
+    // y que los valores vienen de los datos de entrada correctos.
+    servicioParaCrear.idCategoriaServicio = datosServicio.categoriaServicioId;
+    if (datosServicio.especialidadId) {
+      servicioParaCrear.idEspecialidad = datosServicio.especialidadId;
+    } else {
+      delete servicioParaCrear.idEspecialidad; // Si no hay especialidadId, no lo incluimos o lo ponemos null
+    }
+
+
+    const nuevoServicio = await db.Servicio.create(servicioParaCrear);
     return nuevoServicio;
   } catch (error) {
     if (error.name === "SequelizeUniqueConstraintError") {

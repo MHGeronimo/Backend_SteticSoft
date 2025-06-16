@@ -2,10 +2,11 @@
   "development": {
     "username": "",
     "password": "",
-    "database": "",
-    "host": "",
+    "database": "database_dev",
+    "host": "127.0.0.1",
     "port": "",
-    "dialect": "",
+    "dialect": "sqlite",
+    "storage": "development.sqlite",
     "dialectOptions": {
       "bigNumberStrings": true
     }
@@ -13,17 +14,18 @@
   "test": {
     "username": "",
     "password": "",
-    "database": "_test",
-    "host": "",
+    "database": "database_test",
+    "host": "127.0.0.1",
     "port": "",
-    "dialect": "",
+    "dialect": "sqlite",
+    "storage": "test.sqlite",
     "dialectOptions": {
       "bigNumberStrings": true
     }
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
-    "dialect": "",
+    "dialect": "mysql",
     "dialectOptions": {
       "bigNumberStrings": true,
       "ssl": {
