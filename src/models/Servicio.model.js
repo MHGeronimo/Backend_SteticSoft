@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         field: 'descripcion'
       },
+      imagen: {
+        type: DataTypes.TEXT,
+        field: 'imagen'
+      },
       precio: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
