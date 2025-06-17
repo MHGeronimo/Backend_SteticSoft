@@ -164,6 +164,7 @@ const obtenerTodasLasCompras = async (opcionesDeFiltro = {}) => {
             // El alias de la tabla de unión se define en el modelo de la tabla de unión,
             // por lo que no es necesario aquí si no se necesita un alias específico en la consulta.
             model: db.CompraXProducto,
+            as: "detalleCompra",
             attributes: ["cantidad", "valorUnitario"],
           },
         },
