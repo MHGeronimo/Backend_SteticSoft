@@ -1,4 +1,3 @@
-// src/controllers/producto.controller.js 
 const productoService = require("../services/producto.service.js");
 
 /**
@@ -6,7 +5,19 @@ const productoService = require("../services/producto.service.js");
  */
 const crearProducto = async (req, res, next) => {
   try {
-    const nuevoProducto = await productoService.crearProducto(req.body);
+    // Se extraen los datos del cuerpo de la solicitud.
+    const datosProducto = { ...req.body };
+
+    // Si se subió un archivo, 'req.file' existirá gracias a multer.
+    if (req.file) {
+      // Se construye la URL completa y accesible para la imagen.
+      // Esto asume que la carpeta 'public' se sirve estáticamente.
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      // La ruta de la imagen será, por ejemplo: http://localhost:3000/uploads/productos/producto-1678886400000.jpg
+      datosProducto.imagen = `${baseUrl}/uploads/productos/${req.file.filename}`;
+    }
+
+    const nuevoProducto = await productoService.crearProducto(datosProducto);
     res.status(201).json({
       success: true,
       message: "Producto creado exitosamente.",
@@ -22,34 +33,8 @@ const crearProducto = async (req, res, next) => {
  */
 const listarProductos = async (req, res, next) => {
   try {
-    const opcionesDeFiltro = {};
-    if (req.query.estado === "true") {
-      opcionesDeFiltro.estado = true;
-    } else if (req.query.estado === "false") {
-      opcionesDeFiltro.estado = false;
-    } else if (req.query.estado === undefined) {
-      // Si no se especifica estado, por defecto mostrar activos
-      opcionesDeFiltro.estado = true; 
-    }
-    
-    if (req.query.categoriaProductoId) {
-      const idCategoria = Number(req.query.categoriaProductoId);
-      if (!isNaN(idCategoria) && idCategoria > 0) {
-        opcionesDeFiltro.categoriaId = idCategoria; // Cambiado a categoriaId para coincidir con el servicio
-      }
-    }
-
-    if (req.query.tipoUso) { // Nuevo filtro añadido
-      opcionesDeFiltro.tipoUso = req.query.tipoUso;
-    }
-
-    if (req.query.busqueda) {
-      opcionesDeFiltro.busqueda = req.query.busqueda;
-    }
-
-    const productos = await productoService.obtenerTodosLosProductos(
-      opcionesDeFiltro
-    );
+    // Se pasan directamente los filtros de la query al servicio.
+    const productos = await productoService.obtenerTodosLosProductos(req.query);
     res.status(200).json({
       success: true,
       data: productos,
@@ -83,9 +68,17 @@ const obtenerProductoPorId = async (req, res, next) => {
 const actualizarProducto = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
+    const datosActualizar = { ...req.body };
+
+    // Lógica similar para la actualización de la imagen.
+    if (req.file) {
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        datosActualizar.imagen = `${baseUrl}/uploads/productos/${req.file.filename}`;
+    }
+
     const productoActualizado = await productoService.actualizarProducto(
       Number(idProducto),
-      req.body
+      datosActualizar
     );
     res.status(200).json({
       success: true,
@@ -103,7 +96,7 @@ const actualizarProducto = async (req, res, next) => {
 const cambiarEstadoProducto = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
-    const { estado } = req.body; // Se espera un booleano
+    const { estado } = req.body;
 
     const productoActualizado = await productoService.cambiarEstadoProducto(
       Number(idProducto),
@@ -178,5 +171,5 @@ module.exports = {
   anularProducto,
   habilitarProducto,
   eliminarProductoFisico,
-  cambiarEstadoProducto, // <-- Nueva función exportada
+  cambiarEstadoProducto,
 };
