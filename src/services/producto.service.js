@@ -7,13 +7,9 @@ const {
   CustomError,
   BadRequestError,
 } = require("../errors");
-// No se necesita stockAlertHelper aquí, ya que el estado del producto no afecta directamente el stock. 
 
 /**
  * Helper interno para cambiar el estado de un producto.
- * @param {number} idProducto - ID del producto.
- * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
- * @returns {Promise<object>} El producto con el estado cambiado.
  */
 const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
   const producto = await db.Producto.findByPk(idProducto);
@@ -54,11 +50,9 @@ const crearProducto = async (datosProducto) => {
   }
 
   if (categoriaProductoId) {
-    // ==================== CORRECCIÓN ====================
     const categoria = await db.CategoriaProducto.findOne({
-      where: { idCategoriaProducto: categoriaProductoId, estado: true }, 
+      where: { idCategoriaProducto: categoriaProductoId, estado: true },
     });
-    // ======================================================
     if (!categoria) {
       throw new BadRequestError(
         `La categoría de producto con ID ${categoriaProductoId} no existe o no está activa.`
@@ -111,21 +105,15 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (estado !== undefined) {
     whereCondition.estado = estado === "true";
   }
-  // ==================== CORRECCIÓN ====================
-  // Si se filtra por categoría, el campo en el modelo Producto es 'categoriaProductoId'.
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  // ======================================================
 
   let includeCondition = [
     {
       model: db.CategoriaProducto,
       as: "categoria",
-      // ==================== CORRECCIÓN ====================
-      // El nombre correcto de la columna es 'idCategoriaProducto'.
       attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
-      // ======================================================
       ...(tipoUso && { where: { tipoUso: tipoUso } }),
     },
   ];
@@ -162,9 +150,7 @@ const obtenerProductoPorId = async (idProducto) => {
         {
           model: db.CategoriaProducto,
           as: "categoria",
-          // ==================== CORRECCIÓN ====================
           attributes: ["idCategoriaProducto", "nombre"],
-          // ======================================================
         },
       ],
     });
@@ -215,11 +201,9 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
       if (categoriaProductoId === null) {
         datosActualizar.categoriaProductoId = null;
       } else {
-        // ==================== CORRECCIÓN ====================
         const categoria = await db.CategoriaProducto.findOne({
           where: { idCategoriaProducto: categoriaProductoId, estado: true },
         });
-        // ======================================================
         if (!categoria) {
           throw new BadRequestError(
             `La categoría de producto con ID ${categoriaProductoId} no existe o no está activa.`

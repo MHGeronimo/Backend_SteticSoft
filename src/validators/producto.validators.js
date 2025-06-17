@@ -1,4 +1,3 @@
-// src/validators/producto.validators.js 
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
@@ -68,8 +67,6 @@ const crearProductoValidators = [
     )
     .custom(async (value) => {
       if (value) {
-        // src/validators/producto.validators.js
-        // CORRECCIÓN APLICADA AQUÍ
         const categoria = await db.CategoriaProducto.findByPk(value);
         if (!categoria) {
           throw new Error("La categoría de producto especificada no existe.");
@@ -155,7 +152,6 @@ const actualizarProductoValidators = [
             "El ID de la categoría de producto debe ser un entero positivo o null."
           );
         }
-        // CORRECCIÓN APLICADA AQUÍ
         const categoria = await db.CategoriaProducto.findByPk(value);
         if (!categoria) {
           throw new Error(
@@ -180,13 +176,12 @@ const idProductoValidator = [
   handleValidationErrors,
 ];
 
-// Nuevo validador para cambiar el estado
 const cambiarEstadoProductoValidators = [
   param("idProducto")
     .isInt({ gt: 0 })
     .withMessage("El ID del producto debe ser un entero positivo."),
   body("estado")
-    .exists({ checkFalsy: false }) // 'checkFalsy: false' permite que el valor 'false' sea válido.
+    .exists({ checkFalsy: false })
     .withMessage(
       "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
     )
@@ -199,5 +194,5 @@ module.exports = {
   crearProductoValidators,
   actualizarProductoValidators,
   idProductoValidator,
-  cambiarEstadoProductoValidators, // <-- Exportar nuevo validador
+  cambiarEstadoProductoValidators,
 };
