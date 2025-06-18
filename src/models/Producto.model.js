@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "nombre",
       },
-      descripcion: { 
+      descripcion: {
         type: DataTypes.TEXT,
         field: "descripcion",
       },
@@ -51,7 +51,18 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "estado",
       },
-      // ASEGÚRATE DE QUE SOLO EXISTA ESTA VERSIÓN
+      tipo_uso: {
+        type: DataTypes.ENUM("Interno", "Venta Directa", "Otro"),
+        allowNull: false,
+        defaultValue: "Venta Directa",
+        field: "tipo_uso",
+      },
+      vida_util_dias: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        validate: { min: 0 },
+        field: "vida_util_dias",
+      },
       categoriaProductoId: {
         type: DataTypes.INTEGER,
         allowNull: true,
