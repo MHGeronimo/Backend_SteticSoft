@@ -31,6 +31,11 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   const producto = await db.Producto.findByPk(productoId);
   if (!producto) throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
   if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
+
+  if (producto.tipo_uso !== 'Interno') {
+    throw new BadRequestError(`El producto '${producto.nombre}' (ID: ${productoId}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`);
+  }
+
   if (producto.existencia < cantidad) {
     throw new ConflictError(`No hay suficiente stock para '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`);
   }
