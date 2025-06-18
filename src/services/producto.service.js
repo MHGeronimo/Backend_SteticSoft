@@ -93,7 +93,7 @@ const obtenerTodosLosProductos = async (filtros) => {
     nombre,
     estado,
     idCategoria,
-    tipoUso,
+    tipo_uso, 
   } = filtros;
 
   const offset = (page - 1) * limit;
@@ -108,13 +108,15 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
+  if (tipo_uso) {
+    whereCondition.tipo_uso = tipo_uso;
+  }
 
   let includeCondition = [
     {
       model: db.CategoriaProducto,
       as: "categoria",
       attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
-      ...(tipoUso && { where: { tipoUso: tipoUso } }),
     },
   ];
 
