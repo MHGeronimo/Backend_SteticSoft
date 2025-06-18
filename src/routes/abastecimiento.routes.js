@@ -5,11 +5,6 @@ const router = express.Router();
 // Importar el controlador de abastecimiento
 const AbastecimientoController = require("../controllers/abastecimiento.controller");
 
-// --- PASO DE DEPURACIÓN ---
-// Vamos a imprimir el contenido del controlador para ver qué se está importando realmente.
-console.log("Contenido de AbastecimientoController:", AbastecimientoController);
-// --- FIN DEL PASO DE DEPURACIÓN ---
-
 // Importar los middlewares
 const authMiddleware = require("../middlewares/auth.middleware");
 const { checkPermission } = require("../middlewares/authorization.middleware");
@@ -23,6 +18,7 @@ const {
   updateAbastecimientoValidator,
   idValidator,
   toggleEstadoValidator,
+  agotarAbastecimientoValidators, // Importar el nuevo validador
 } = require("../validators/abastecimiento.validators");
 
 const PERMISO_GESTION = "MODULO_ABASTECIMIENTOS_GESTIONAR";
@@ -79,6 +75,16 @@ router.delete(
   idValidator,
   handleValidationErrors,
   AbastecimientoController.eliminarAbastecimientoFisico
+);
+
+// Ruta para marcar un abastecimiento como agotado
+router.patch(
+  "/:id/agotar",
+  authMiddleware,
+  checkPermission(PERMISO_GESTION), // Usando PERMISO_GESTION según lo decidido
+  agotarAbastecimientoValidators, // Referencia directa al validador importado
+  handleValidationErrors,
+  AbastecimientoController.agotarAbastecimiento
 );
 
 module.exports = router;

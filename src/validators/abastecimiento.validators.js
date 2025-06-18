@@ -44,11 +44,21 @@ const updateAbastecimientoValidator = [
     .withMessage("El estado debe ser un valor booleano."),
 ];
 
-// --- CORRECCIÓN CLAVE ---
-// Exportamos cada validador como una propiedad de module.exports
+
+const agotarAbastecimientoValidators = [
+  param('id')
+    .isInt({ gt: 0 }).withMessage('El ID del abastecimiento debe ser un entero positivo.'),
+  body('razon_agotamiento')
+    .optional({ nullable: true, checkFalsy: true })
+    .isString().withMessage('La razón de agotamiento debe ser una cadena de texto.')
+    .trim()
+    .isLength({ max: 500 }).withMessage('La razón de agotamiento no debe exceder los 500 caracteres.'),
+ ];
+
 module.exports = {
   idValidator,
   toggleEstadoValidator,
   createAbastecimientoValidator,
   updateAbastecimientoValidator,
+  agotarAbastecimientoValidators,
 };

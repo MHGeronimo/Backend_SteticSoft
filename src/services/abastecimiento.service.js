@@ -32,9 +32,11 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   if (!producto) throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
   if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
 
+  // --- INICIO DE NUEVA VALIDACIÓN ---
   if (producto.tipo_uso !== 'Interno') {
     throw new BadRequestError(`El producto '${producto.nombre}' (ID: ${productoId}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`);
   }
+  // --- FIN DE NUEVA VALIDACIÓN ---
 
   if (producto.existencia < cantidad) {
     throw new ConflictError(`No hay suficiente stock para '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`);
@@ -302,10 +304,29 @@ const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
   }
 };
 
+// Nueva función para marcar un abastecimiento como agotado
+const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
+  const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento);
+  if (!abastecimiento) {
+    throw new NotFoundError(`Abastecimiento con ID ${idAbastecimiento} no encontrado.`);
+  }
+  if (abastecimiento.estaAgotado) { // Corresponde a esta_agotado en BD
+    throw new ConflictError(`El abastecimiento con ID ${idAbastecimiento} ya está marcado como agotado.`);
+  }
+
+  abastecimiento.estaAgotado = true;
+  abastecimiento.razonAgotamiento = razonAgotamiento || null; // Corresponde a razon_agotamiento
+  abastecimiento.fechaAgotamiento = new Date(); // Corresponde a fecha_agotamiento
+
+  await abastecimiento.save();
+  return abastecimiento;
+};
+
 module.exports = {
   crearAbastecimiento,
   obtenerTodosLosAbastecimientos,
   obtenerAbastecimientoPorId,
-  actualizarAbastecimiento, 
+  actualizarAbastecimiento,
   eliminarAbastecimientoFisico,
+  agotarAbastecimiento,
 };

@@ -89,11 +89,27 @@ const eliminarAbastecimientoFisico = async (req, res, next) => {
   }
 };
 
+const agotarAbastecimiento = async (req, res, next) => {
+  try {
+    const { id } = req.params; 
+    const { razon_agotamiento } = req.body;
+    const abastecimientoAgotado = await abastecimientoService.agotarAbastecimiento(Number(id), razon_agotamiento);
+    res.status(200).json({
+      success: true,
+      message: `Abastecimiento ID ${id} marcado como agotado.`,
+      data: abastecimientoAgotado
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearAbastecimiento,
   listarAbastecimientos,
   obtenerAbastecimientoPorId,
   actualizarAbastecimiento,
   cambiarEstadoAbastecimiento,
-  eliminarAbastecimientoFisico
+  eliminarAbastecimientoFisico,
+  agotarAbastecimiento,
 };
