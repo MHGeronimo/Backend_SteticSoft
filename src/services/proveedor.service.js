@@ -109,10 +109,33 @@ const crearProveedor = async (datosProveedor) => {
 /**
  * Obtener todos los proveedores.
  */
-const obtenerTodosLosProveedores = async (opcionesDeFiltro = {}) => {
+const obtenerTodosLosProveedores = async (opciones = {}) => {
   try {
+    const { estado, tipo, busqueda } = opciones;
+    const whereClause = {};
+
+    if (estado !== undefined) {
+      whereClause.estado = estado;
+    }
+    if (tipo) {
+      whereClause.tipo = tipo;
+    }
+    
+    // --- LÓGICA DE BÚSQUEDA NUEVA ---
+    if (busqueda) {
+      whereClause[Op.or] = [
+        { nombre: { [Op.iLike]: `%${busqueda}%` } },
+        { correo: { [Op.iLike]: `%${busqueda}%` } },
+        { nitEmpresa: { [Op.iLike]: `%${busqueda}%` } },
+        { numeroDocumento: { [Op.iLike]: `%${busqueda}%` } },
+        { telefono: { [Op.iLike]: `%${busqueda}%` } },
+        { direccion: { [Op.iLike]: `%${busqueda}%` } },
+      ];
+    }
+    // --- FIN DE LÓGICA DE BÚSQUEDA ---
+
     return await db.Proveedor.findAll({
-      where: opcionesDeFiltro,
+      where: whereClause,
       order: [["nombre", "ASC"]],
     });
   } catch (error) {

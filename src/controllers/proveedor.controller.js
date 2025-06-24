@@ -22,18 +22,20 @@ const crearProveedor = async (req, res, next) => {
  */
 const listarProveedores = async (req, res, next) => {
   try {
-    const opcionesDeFiltro = {};
-    if (req.query.estado === "true") {
-      opcionesDeFiltro.estado = true;
-    } else if (req.query.estado === "false") {
-      opcionesDeFiltro.estado = false;
+    // --- LÓGICA DE FILTROS Y BÚSQUEDA ---
+    const opciones = {};
+    if (req.query.estado) {
+      opciones.estado = req.query.estado === 'true';
     }
     if (req.query.tipo) {
-      opcionesDeFiltro.tipo = req.query.tipo;
+      opciones.tipo = req.query.tipo;
     }
-    const proveedores = await proveedorService.obtenerTodosLosProveedores(
-      opcionesDeFiltro
-    );
+    if (req.query.busqueda) { // Nuevo parámetro de búsqueda
+      opciones.busqueda = req.query.busqueda;
+    }
+    // --- FIN DE LÓGICA ---
+
+    const proveedores = await proveedorService.obtenerTodosLosProveedores(opciones);
     res.status(200).json({
       success: true,
       data: proveedores,
