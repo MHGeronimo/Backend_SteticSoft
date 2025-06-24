@@ -19,6 +19,15 @@ router.post(
   proveedorController.crearProveedor
 );
 
+// --- AÑADE ESTA NUEVA RUTA AQUÍ ---
+router.post(
+  "/verificar-unicidad",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_PROVEEDORES),
+  proveedorController.verificarUnicidad
+);
+// --- FIN DE LA NUEVA RUTA ---
+
 router.get(
   "/",
   authMiddleware,

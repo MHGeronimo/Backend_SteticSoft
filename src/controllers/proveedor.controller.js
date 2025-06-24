@@ -154,13 +154,40 @@ const eliminarProveedorFisico = async (req, res, next) => {
   }
 };
 
+/**
+ * Verifica si uno o más campos únicos ya existen en la base de datos.
+ * Diseñado para validación asíncrona desde el frontend.
+ */
+const verificarUnicidad = async (req, res, next) => {
+  try {
+    // El frontend enviará un cuerpo como { correo: '...', numeroDocumento: '...' }
+    // El servicio se encargará de la lógica de búsqueda.
+    const errors = await proveedorService.verificarDatosUnicos(req.body, req.params.idProveedor || null);
+    if (Object.keys(errors).length > 0) {
+      // Si hay errores (datos ya existen), devolvemos un 409 Conflict.
+      return res.status(409).json({
+        success: false,
+        message: "Uno o más campos ya están registrados.",
+        errors: errors,
+      });
+    }
+    // Si no hay errores, devolvemos un 200 OK.
+    res.status(200).json({ success: true, message: "Los datos están disponibles." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- CORRECCIÓN AQUÍ ---
+// Aseguramos que la nueva función `verificarUnicidad` esté incluida en las exportaciones.
 module.exports = {
   crearProveedor,
-  listarProveedores,
+  listarProveedores: listarProveedores, // Nombre corregido para consistencia
   obtenerProveedorPorId,
   actualizarProveedor,
   anularProveedor,
   habilitarProveedor,
   eliminarProveedorFisico,
-  cambiarEstadoProveedor, // <-- Nueva función exportada
+  cambiarEstadoProveedor,
+  verificarUnicidad, // <-- AÑADIDO A LA EXPORTACIÓN
 };

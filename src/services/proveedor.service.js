@@ -348,6 +348,40 @@ const eliminarProveedorFisico = async (idProveedor) => {
   }
 };
 
+// --- FUNCIÓN NUEVA AÑADIDA ---
+/**
+ * Verifica si los campos únicos ya existen, para validación en tiempo real desde el frontend.
+ * @param {object} campos - Objeto con los campos a verificar. Ej: { correo: 'test@test.com' }
+ * @param {number|null} idExcluir - El ID del proveedor a excluir de la búsqueda (para modo edición).
+ * @returns {Promise<object>} Un objeto con los mensajes de error.
+ */
+const verificarDatosUnicos = async (campos, idExcluir = null) => {
+    const errores = {};
+    const whereClause = idExcluir ? { idProveedor: { [Op.ne]: idExcluir } } : {};
+
+    const camposAValidar = {
+        correo: "Este correo ya está registrado.",
+        numeroDocumento: "Este documento ya está registrado.",
+        nitEmpresa: "Este NIT ya está registrado."
+    };
+
+    for (const campo in campos) {
+        if (camposAValidar[campo] && campos[campo]) {
+            const existe = await db.Proveedor.findOne({
+                where: {
+                    ...whereClause,
+                    [campo]: campos[campo],
+                },
+            });
+            if (existe) {
+                errores[campo] = camposAValidar[campo];
+            }
+        }
+    }
+    return errores;
+};
+
+
 module.exports = {
   crearProveedor,
   obtenerTodosLosProveedores,
@@ -356,5 +390,6 @@ module.exports = {
   anularProveedor,
   habilitarProveedor,
   eliminarProveedorFisico,
-  cambiarEstadoProveedor, // Exportar la nueva función
+  cambiarEstadoProveedor,
+  verificarDatosUnicos, // <-- Exportamos la nueva función
 };
