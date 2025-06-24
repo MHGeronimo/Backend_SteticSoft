@@ -1,4 +1,5 @@
-// src/models/CategoriaProducto.model.js 
+// RUTA: src/shared/src_api/models/CategoriaProducto.model.js
+
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -46,13 +47,16 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
+  // ==================== INICIO DE LA CORRECCIÓN ====================
   CategoriaProducto.associate = (models) => {
     // Una CategoriaProducto puede tener muchos Productos.
     CategoriaProducto.hasMany(models.Producto, {
-      foreignKey: "categoriaProductoId", 
+      // Se especifica explícitamente la clave foránea que está en el modelo Producto.
+      foreignKey: "categoriaProductoId",
       as: "productos",
     });
   };
+  // ===================== FIN DE LA CORRECCIÓN ======================
 
   return CategoriaProducto;
 };
