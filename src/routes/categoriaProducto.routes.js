@@ -1,4 +1,4 @@
-// RUTA: src/shared/src_api/routes/categoriaProducto.routes.js
+// src/routes/categoriaProducto.routes.js 
 const express = require("express");
 const router = express.Router();
 const categoriaProductoController = require("../controllers/categoriaProducto.controller.js");
@@ -27,54 +27,49 @@ router.get(
   categoriaProductoController.listarCategoriasProducto
 );
 
-// ✅ CORRECCIÓN: Usar :idCategoriaProducto para coincidir con el modelo
 router.get(
-  "/:idCategoriaProducto",
+  "/:idCategoria",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CATEGORIAS_PRODUCTOS),
   categoriaProductoValidators.idCategoriaProductoValidator,
   categoriaProductoController.obtenerCategoriaProductoPorId
 );
 
-// ✅ CORRECCIÓN: Usar :idCategoriaProducto
 router.put(
-  "/:idCategoriaProducto",
+  "/:idCategoria",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CATEGORIAS_PRODUCTOS),
   categoriaProductoValidators.actualizarCategoriaProductoValidators,
   categoriaProductoController.actualizarCategoriaProducto
 );
 
-// ✅ CORRECCIÓN: Usar :idCategoriaProducto
+// NUEVA RUTA: Cambiar el estado de una categoría de producto
 router.patch(
-  "/:idCategoriaProducto/estado",
+  "/:idCategoria/estado",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CATEGORIAS_PRODUCTOS),
   categoriaProductoValidators.cambiarEstadoCategoriaProductoValidators,
   categoriaProductoController.cambiarEstadoCategoriaProducto
 );
 
-// ✅ CORRECCIÓN: Usar :idCategoriaProducto
 router.patch(
-  "/:idCategoriaProducto/anular",
+  "/:idCategoria/anular",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CATEGORIAS_PRODUCTOS),
   categoriaProductoValidators.idCategoriaProductoValidator,
   categoriaProductoController.anularCategoriaProducto
 );
 
-// ✅ CORRECCIÓN: Usar :idCategoriaProducto
 router.patch(
-  "/:idCategoriaProducto/habilitar",
+  "/:idCategoria/habilitar",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CATEGORIAS_PRODUCTOS),
   categoriaProductoValidators.idCategoriaProductoValidator,
   categoriaProductoController.habilitarCategoriaProducto
 );
 
-// ✅ CORRECCIÓN: Usar :idCategoriaProducto
 router.delete(
-  "/:idCategoriaProducto",
+  "/:idCategoria",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CATEGORIAS_PRODUCTOS),
   categoriaProductoValidators.idCategoriaProductoValidator,

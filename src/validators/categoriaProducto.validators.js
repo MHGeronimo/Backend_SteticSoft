@@ -1,9 +1,9 @@
-// RUTA: src/shared/src_api/validators/categoriaProducto.validators.js
+// src/validators/categoriaProducto.validators.js
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
-const db = require("../models"); 
+const db = require("../models"); // Asegúrate de que esto esté bien importado
 
 const tiposDeUsoPermitidos = ["Interno", "Externo"];
 
@@ -58,8 +58,7 @@ const crearCategoriaProductoValidators = [
 ];
 
 const actualizarCategoriaProductoValidators = [
-  // ✅ CORRECCIÓN: Validar el parámetro con el nombre correcto.
-  param("idCategoriaProducto")
+  param("idCategoria")
     .isInt({ gt: 0 })
     .withMessage(
       "El ID de la categoría de producto debe ser un entero positivo."
@@ -79,12 +78,12 @@ const actualizarCategoriaProductoValidators = [
     )
     .custom(async (value, { req }) => {
       if (value) {
-        // ✅ CORRECCIÓN: Extraer y usar el parámetro con el nombre correcto.
-        const idCategoriaProducto = Number(req.params.idCategoriaProducto);
+        const idCategoria = Number(req.params.idCategoria);
         const categoriaExistente = await db.CategoriaProducto.findOne({
           where: {
             nombre: value,
-            idCategoriaProducto: { [db.Sequelize.Op.ne]: idCategoriaProducto },
+            // CAMBIO CLAVE: Se usaba 'idCategoria' aquí, ahora es 'idCategoriaProducto'
+            idCategoriaProducto: { [db.Sequelize.Op.ne]: idCategoria },
           },
         });
         if (categoriaExistente) {
@@ -125,8 +124,7 @@ const actualizarCategoriaProductoValidators = [
 ];
 
 const idCategoriaProductoValidator = [
-  // ✅ CORRECCIÓN: Validar el parámetro con el nombre correcto.
-  param("idCategoriaProducto")
+  param("idCategoria")
     .isInt({ gt: 0 })
     .withMessage(
       "El ID de la categoría de producto debe ser un entero positivo."
@@ -135,8 +133,7 @@ const idCategoriaProductoValidator = [
 ];
 
 const cambiarEstadoCategoriaProductoValidators = [
-  // ✅ CORRECCIÓN: Validar el parámetro con el nombre correcto.
-  param("idCategoriaProducto")
+  param("idCategoria")
     .isInt({ gt: 0 })
     .withMessage(
       "El ID de la categoría de producto debe ser un entero positivo."

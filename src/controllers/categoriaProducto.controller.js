@@ -1,4 +1,4 @@
-// RUTA: src/shared/src_api/controllers/categoriaProducto.controller.js
+// src/controllers/categoriaProducto.controller.js 
 const categoriaProductoService = require("../services/categoriaProducto.service.js");
 
 /**
@@ -50,11 +50,10 @@ const listarCategoriasProducto = async (req, res, next) => {
  */
 const obtenerCategoriaProductoPorId = async (req, res, next) => {
   try {
-    // ✅ CORRECCIÓN: Extraer el parámetro con el nombre correcto.
-    const { idCategoriaProducto } = req.params;
+    const { idCategoria } = req.params;
     const categoria =
       await categoriaProductoService.obtenerCategoriaProductoPorId(
-        Number(idCategoriaProducto)
+        Number(idCategoria)
       );
     res.status(200).json({
       success: true,
@@ -70,11 +69,10 @@ const obtenerCategoriaProductoPorId = async (req, res, next) => {
  */
 const actualizarCategoriaProducto = async (req, res, next) => {
   try {
-    // ✅ CORRECCIÓN: Extraer el parámetro con el nombre correcto.
-    const { idCategoriaProducto } = req.params;
+    const { idCategoria } = req.params;
     const categoriaActualizada =
       await categoriaProductoService.actualizarCategoriaProducto(
-        Number(idCategoriaProducto),
+        Number(idCategoria),
         req.body
       );
     res.status(200).json({
@@ -92,18 +90,17 @@ const actualizarCategoriaProducto = async (req, res, next) => {
  */
 const cambiarEstadoCategoriaProducto = async (req, res, next) => {
   try {
-    // ✅ CORRECCIÓN: Extraer el parámetro con el nombre correcto.
-    const { idCategoriaProducto } = req.params;
+    const { idCategoria } = req.params;
     const { estado } = req.body; // Se espera un booleano
 
     const categoriaActualizada =
       await categoriaProductoService.cambiarEstadoCategoriaProducto(
-        Number(idCategoriaProducto),
+        Number(idCategoria),
         estado
       );
     res.status(200).json({
       success: true,
-      message: `Estado de la categoría de producto ID ${idCategoriaProducto} cambiado a ${estado} exitosamente.`,
+      message: `Estado de la categoría de producto ID ${idCategoria} cambiado a ${estado} exitosamente.`,
       data: categoriaActualizada,
     });
   } catch (error) {
@@ -116,11 +113,10 @@ const cambiarEstadoCategoriaProducto = async (req, res, next) => {
  */
 const anularCategoriaProducto = async (req, res, next) => {
   try {
-    // ✅ CORRECCIÓN: Extraer el parámetro con el nombre correcto.
-    const { idCategoriaProducto } = req.params;
+    const { idCategoria } = req.params;
     const categoriaAnulada =
       await categoriaProductoService.anularCategoriaProducto(
-        Number(idCategoriaProducto)
+        Number(idCategoria)
       );
     res.status(200).json({
       success: true,
@@ -137,11 +133,10 @@ const anularCategoriaProducto = async (req, res, next) => {
  */
 const habilitarCategoriaProducto = async (req, res, next) => {
   try {
-    // ✅ CORRECCIÓN: Extraer el parámetro con el nombre correcto.
-    const { idCategoriaProducto } = req.params;
+    const { idCategoria } = req.params;
     const categoriaHabilitada =
       await categoriaProductoService.habilitarCategoriaProducto(
-        Number(idCategoriaProducto)
+        Number(idCategoria)
       );
     res.status(200).json({
       success: true,
@@ -158,10 +153,9 @@ const habilitarCategoriaProducto = async (req, res, next) => {
  */
 const eliminarCategoriaProductoFisica = async (req, res, next) => {
   try {
-    // ✅ CORRECCIÓN: Extraer el parámetro con el nombre correcto.
-    const { idCategoriaProducto } = req.params;
+    const { idCategoria } = req.params;
     await categoriaProductoService.eliminarCategoriaProductoFisica(
-      Number(idCategoriaProducto)
+      Number(idCategoria)
     );
     res.status(204).send();
   } catch (error) {
@@ -177,5 +171,5 @@ module.exports = {
   anularCategoriaProducto,
   habilitarCategoriaProducto,
   eliminarCategoriaProductoFisica,
-  cambiarEstadoCategoriaProducto,
+  cambiarEstadoCategoriaProducto, // <-- Nueva función exportada
 };
