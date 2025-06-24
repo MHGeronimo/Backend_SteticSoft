@@ -1,5 +1,4 @@
 // RUTA: src/shared/src_api/models/CategoriaProducto.model.js
-
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -51,8 +50,8 @@ module.exports = (sequelize, DataTypes) => {
   CategoriaProducto.associate = (models) => {
     // Una CategoriaProducto puede tener muchos Productos.
     CategoriaProducto.hasMany(models.Producto, {
-      // Se especifica explícitamente la clave foránea que está en el modelo Producto.
-      foreignKey: "categoriaProductoId",
+      foreignKey: "categoriaProductoId", 
+      // ✅ CORRECCIÓN: Se añade el alias 'productos' que faltaba.
       as: "productos",
     });
   };
