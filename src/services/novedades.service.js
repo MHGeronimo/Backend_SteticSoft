@@ -99,6 +99,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
         {
           model: db.Empleado,
           as: "empleado", // Corregido: 'empleado' es el alias en Novedades.model.js
+          required: true,
           attributes: ["idEmpleado", "nombre"],
         },
       ],
@@ -110,7 +111,8 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   } catch (error) {
     console.error(
       "Error al obtener todas las novedades en el servicio:",
-      error.message
+      error.message,
+      error.stack
     );
     throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
