@@ -340,9 +340,8 @@ const habilitarProveedor = async (idProveedor) => {
 
 // src/shared/src_api/services/proveedor.service.js
 
-/**
- * Eliminar un proveedor físicamente.
- */
+// src/shared/src_api/services/proveedor.service.js
+
 const eliminarProveedorFisico = async (idProveedor) => {
   try {
     const proveedor = await db.Proveedor.findByPk(idProveedor);
@@ -352,33 +351,31 @@ const eliminarProveedorFisico = async (idProveedor) => {
       );
     }
 
-    // --- INICIO DE LA VALIDACIÓN AÑADIDA ---
-    // Se utiliza el modelo Compra para contar las entradas asociadas al proveedor.
     const comprasAsociadas = await db.Compra.count({
       where: { idProveedor: idProveedor },
     });
 
-    // Si el conteo es mayor a 0, se lanza un error de conflicto.
     if (comprasAsociadas > 0) {
+      // --- LÍNEA MODIFICADA ---
+      // Cambiamos el mensaje para que sea más específico según tu solicitud.
       throw new ConflictError(
-        `No se puede eliminar el proveedor '${proveedor.nombre}' porque tiene ${comprasAsociadas} compra(s) asociada(s). Considere anularlo en su lugar.`
+        `El proveedor '${proveedor.nombre}' está asociado con compras y por ello no puede ser eliminado.`
       );
+      // --- FIN DE LA MODIFICACIÓN ---
     }
-    // --- FIN DE LA VALIDACIÓN AÑADIDA ---
 
     const filasEliminadas = await db.Proveedor.destroy({
       where: { idProveedor },
     });
     return filasEliminadas;
   } catch (error) {
-    // Se añade ConflictError al manejo de errores conocidos para que sea gestionado correctamente.
     if (error instanceof NotFoundError || error instanceof ConflictError) {
       throw error;
     }
-    // El error de FK se mantiene como un respaldo, aunque nuestra lógica ahora es más específica.
     if (error.name === "SequelizeForeignKeyConstraintError") {
+      // Este error de respaldo también se puede ajustar si lo deseas.
       throw new ConflictError(
-        "No se puede eliminar el proveedor porque está siendo referenciado en Compras."
+        "No se puede eliminar el proveedor porque está asociado con compras."
       );
     }
     console.error(
