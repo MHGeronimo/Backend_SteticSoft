@@ -61,11 +61,25 @@ const crearProveedorValidators = [
     .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isString(),
+  
+  // --- INICIO DE CORRECCIÓN ---
   body("numeroDocumento")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isString()
-    .isLength({ max: 45 }),
+    .isLength({ max: 45 })
+    .custom(async (value) => {
+      if (value) {
+        const proveedorExistente = await db.Proveedor.findOne({
+          where: { numeroDocumento: value },
+        });
+        if (proveedorExistente) {
+          return Promise.reject("El número de documento ya está registrado.");
+        }
+      }
+    }),
+  // --- FIN DE CORRECCIÓN ---
+
   body("nitEmpresa")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -170,11 +184,31 @@ const actualizarProveedorValidators = [
     .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isString(),
+
+  // --- INICIO DE CORRECCIÓN ---
   body("numeroDocumento")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isString()
-    .isLength({ max: 45 }),
+    .isLength({ max: 45 })
+    .custom(async (value, { req }) => {
+        if (value) {
+          const idProveedor = Number(req.params.idProveedor);
+          const proveedorExistente = await db.Proveedor.findOne({
+            where: {
+              numeroDocumento: value,
+              idProveedor: { [db.Sequelize.Op.ne]: idProveedor },
+            },
+          });
+          if (proveedorExistente) {
+            return Promise.reject(
+              "El número de documento ya está registrado para otro proveedor."
+            );
+          }
+        }
+      }),
+  // --- FIN DE CORRECCIÓN ---
+
   body("nitEmpresa")
     .optional({ nullable: true, checkFalsy: true })
     .trim()

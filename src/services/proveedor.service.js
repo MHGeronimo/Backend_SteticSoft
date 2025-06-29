@@ -40,6 +40,20 @@ const crearProveedor = async (datosProveedor) => {
     estado,
   } = datosProveedor;
 
+  // --- INICIO DE CORRECCIÓN ---
+  // Se añade la validación para el número de documento único.
+  if (numeroDocumento) {
+    const proveedorConDocumento = await db.Proveedor.findOne({
+      where: { numeroDocumento },
+    });
+    if (proveedorConDocumento) {
+      throw new ConflictError(
+        `El número de documento '${numeroDocumento}' ya está registrado.`
+      );
+    }
+  }
+  // --- FIN DE CORRECCIÓN ---
+
   if (nitEmpresa) {
     const proveedorConNit = await db.Proveedor.findOne({
       where: { nitEmpresa },
@@ -86,6 +100,11 @@ const crearProveedor = async (datosProveedor) => {
       let campoConflictivo = "un campo único";
       if (error.fields) {
         if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
+        // --- INICIO DE CORRECCIÓN ---
+        // Se añade el caso para el error de restricción de la base de datos.
+        else if (error.fields.numero_documento)
+          campoConflictivo = "Número de Documento";
+        // --- FIN DE CORRECCIÓN ---
         else if (
           error.fields.proveedor_nombre_tipo_key ||
           (error.fields.nombre && error.fields.tipo)
@@ -183,7 +202,25 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
       throw new NotFoundError("Proveedor no encontrado para actualizar.");
     }
 
-    const { nombre, tipo, nitEmpresa, correo } = datosActualizar;
+    // --- INICIO DE CORRECCIÓN ---
+    // Se extrae 'numeroDocumento' de los datos a actualizar.
+    const { nombre, tipo, nitEmpresa, correo, numeroDocumento } = datosActualizar;
+
+    // Se añade la validación para número de documento único al actualizar.
+    if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
+      const otroProveedorConDocumento = await db.Proveedor.findOne({
+        where: {
+          numeroDocumento: numeroDocumento,
+          idProveedor: { [Op.ne]: idProveedor },
+        },
+      });
+      if (otroProveedorConDocumento) {
+        throw new ConflictError(
+          `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor.`
+        );
+      }
+    }
+    // --- FIN DE CORRECCIÓN ---
 
     if (nitEmpresa && nitEmpresa !== proveedor.nitEmpresa) {
       const otroProveedorConNit = await db.Proveedor.findOne({
@@ -277,6 +314,10 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
       let campoConflictivo = "un campo único";
       if (error.fields) {
         if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
+        // --- INICIO DE CORRECCIÓN ---
+        else if (error.fields.numero_documento)
+          campoConflictivo = "Número de Documento";
+        // --- FIN DE CORRECCIÓN ---
         else if (
           error.fields.proveedor_nombre_tipo_key ||
           (error.fields.nombre && error.fields.tipo)
