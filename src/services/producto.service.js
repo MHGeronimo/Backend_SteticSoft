@@ -87,14 +87,16 @@ const crearProducto = async (datosProducto) => {
  * Obtener todos los productos.
  */
 const obtenerTodosLosProductos = async (filtros) => {
+  // --- INICIO DE MODIFICACIÓN ---
   const {
     page = 1,
     limit = 10,
     nombre,
     estado,
     idCategoria,
-    tipo_uso, 
+    tipoUso, // CORREGIDO: Se cambia de 'tipo_uso' a 'tipoUso' para que coincida con el query param de la URL.
   } = filtros;
+  // --- FIN DE MODIFICACIÓN ---
 
   const offset = (page - 1) * limit;
 
@@ -108,9 +110,12 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  if (tipo_uso) {
-    whereCondition.tipo_uso = tipo_uso;
+  // --- INICIO DE MODIFICACIÓN ---
+  if (tipoUso) {
+    // CORREGIDO: Se usa la variable correcta 'tipoUso'.
+    whereCondition.tipo_uso = tipoUso; // Se mantiene 'tipo_uso' para la consulta a la BD.
   }
+  // --- FIN DE MODIFICACIÓN ---
 
   let includeCondition = [
     {
@@ -133,6 +138,7 @@ const obtenerTodosLosProductos = async (filtros) => {
       totalItems: count,
       totalPages: Math.ceil(count / limit),
       currentPage: parseInt(page),
+      // CORREGIDO: El nombre del array es 'productos' y no 'data'.
       productos: rows,
     };
   } catch (error) {
@@ -140,6 +146,7 @@ const obtenerTodosLosProductos = async (filtros) => {
     throw new Error("No se pudieron obtener los productos.");
   }
 };
+
 
 
 /**
