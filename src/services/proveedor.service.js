@@ -196,20 +196,20 @@ const obtenerProveedorPorId = async (idProveedor) => {
  */
 const actualizarProveedor = async (idProveedor, datosActualizar) => {
   try {
+    // 1. Buscamos el proveedor que vamos a actualizar
     const proveedor = await db.Proveedor.findByPk(idProveedor);
     if (!proveedor) {
       throw new NotFoundError("Proveedor no encontrado para actualizar.");
     }
 
-    // --- INICIO DE CORRECCIÓN ---
-    // Se extrae 'numeroDocumento' de los datos a actualizar.
     const { nombre, tipo, nitEmpresa, correo, numeroDocumento } = datosActualizar;
+
     if (nitEmpresa && nitEmpresa !== proveedor.nitEmpresa) {
       const otroProveedorConNit = await db.Proveedor.findOne({
         where: {
           nitEmpresa: nitEmpresa,
-          idProveedor: { [Op.ne]: idProveedor },
-          estado: true,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
         },
       });
       if (otroProveedorConNit) {
@@ -219,12 +219,14 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
       }
     }
 
+    // VALIDACIÓN 2: Correo electrónico
+    // Solo validamos si se envió un correo y si es DIFERENTE al que ya tenía.
     if (correo && correo !== proveedor.correo) {
       const otroProveedorConCorreo = await db.Proveedor.findOne({
-        where: { 
-          correo: correo, 
-          idProveedor: { [Op.ne]: idProveedor },
-          estado: true, // <-- CORRECCIÓN
+        where: {
+          correo: correo,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
         },
       });
       if (otroProveedorConCorreo) {
@@ -233,90 +235,66 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
         );
       }
     }
+    
+    // VALIDACIÓN 3: Número de Documento
+    // Solo validamos si se envió un documento y si es DIFERENTE al que ya tenía.
+    if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
+      const otroProveedorConDocumento = await db.Proveedor.findOne({
+        where: {
+          numeroDocumento: numeroDocumento,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
+        },
+      });
+      if (otroProveedorConDocumento) {
+        throw new ConflictError(
+          `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor activo.`
+        );
+      }
+    }
 
-    //...
+    // VALIDACIÓN 4: Combinación de Nombre y Tipo
+    // Esta es la validación más compleja y la que probablemente fallaba.
+    const nombreCambiado = nombre !== undefined && nombre !== proveedor.nombre;
+    const tipoCambiado = tipo !== undefined && tipo !== proveedor.tipo;
+
+    // Solo validamos si el nombre o el tipo han cambiado.
+    if (nombreCambiado || tipoCambiado) {
+      const nombreFinal = nombre !== undefined ? nombre : proveedor.nombre;
+      const tipoFinal = tipo !== undefined ? tipo : proveedor.tipo;
 
       const otroProveedorConNombreTipo = await db.Proveedor.findOne({
         where: {
-          nombre: nombre,
-          tipo: tipo,
-          idProveedor: { [Op.ne]: idProveedor },
-          estado: true,
-      },
-    });
+          nombre: nombreFinal,
+          tipo: tipoFinal,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
+        },
+      });
+      if (otroProveedorConNombreTipo) {
+        throw new ConflictError(
+          `Ya existe un proveedor activo con el nombre '${nombreFinal}' y tipo '${tipoFinal}'.`
+        );
+      }
+    }
 
-        if (otroProveedorConNombreTipo) {
-          throw new ConflictError(
-  `Ya existe un proveedor activo con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
-);
-}
+    // --- FIN DE LA LÓGICA DE VALIDACIÓN ---
 
-      //aqui
-      if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
-  const otroProveedorConDocumento = await db.Proveedor.findOne({
-    where: {
-      numeroDocumento: numeroDocumento,
-      idProveedor: { [Op.ne]: idProveedor },
-      estado: true,
-    },
-  });
-
-  if (otroProveedorConDocumento) {
-    throw new ConflictError(
-      `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor activo.`
-    );
-  }
-}
-
-    const camposAActualizar = { ...datosActualizar };
-    if (
-      datosActualizar.hasOwnProperty("tipoDocumento") &&
-      datosActualizar.tipoDocumento === null
-    )
-      camposAActualizar.tipoDocumento = null;
-    if (
-      datosActualizar.hasOwnProperty("numeroDocumento") &&
-      datosActualizar.numeroDocumento === null
-    )
-      camposAActualizar.numeroDocumento = null;
-    if (
-      datosActualizar.hasOwnProperty("nitEmpresa") &&
-      datosActualizar.nitEmpresa === null
-    )
-      camposAActualizar.nitEmpresa = null;
-    if (
-      datosActualizar.hasOwnProperty("telefonoPersonaEncargada") &&
-      datosActualizar.telefonoPersonaEncargada === null
-    )
-      camposAActualizar.telefonoPersonaEncargada = null;
-    if (
-      datosActualizar.hasOwnProperty("emailPersonaEncargada") &&
-      datosActualizar.emailPersonaEncargada === null
-    )
-      camposAActualizar.emailPersonaEncargada = null;
-    if (
-      datosActualizar.hasOwnProperty("nombrePersonaEncargada") &&
-      datosActualizar.nombrePersonaEncargada === null
-    )
-      camposAActualizar.nombrePersonaEncargada = null;
-
-    await proveedor.update(camposAActualizar);
+    // 2. Si todas las validaciones pasan, actualizamos el proveedor.
+    await proveedor.update(datosActualizar);
     return proveedor;
+
   } catch (error) {
-    if (error instanceof NotFoundError || error instanceof ConflictError)
+    if (error instanceof NotFoundError || error instanceof ConflictError) {
       throw error;
+    }
+    // Manejo de errores de restricción única a nivel de base de datos (como respaldo)
     if (error.name === "SequelizeUniqueConstraintError") {
       let campoConflictivo = "un campo único";
       if (error.fields) {
         if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
-        // --- INICIO DE CORRECCIÓN ---
-        else if (error.fields.numero_documento)
-          campoConflictivo = "Número de Documento";
-        // --- FIN DE CORRECCIÓN ---
-        else if (
-          error.fields.proveedor_nombre_tipo_key ||
-          (error.fields.nombre && error.fields.tipo)
-        )
+        else if (error.fields.numero_documento) campoConflictivo = "Número de Documento";
+        else if (error.fields.proveedor_nombre_tipo_key || (error.fields.nombre && error.fields.tipo))
           campoConflictivo = `la combinación de nombre y tipo`;
         else if (error.fields.correo) campoConflictivo = "correo electrónico";
       }
@@ -335,6 +313,7 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
     );
   }
 };
+
 
 /**
  * Anular un proveedor.
