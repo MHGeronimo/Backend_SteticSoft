@@ -238,12 +238,13 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
 
       const otroProveedorConNombreTipo = await db.Proveedor.findOne({
         where: {
-          nombre: nombreActualizado,
-          tipo: tipoActualizado,
+          nombre: nombre,
+          tipo: tipo,
           idProveedor: { [Op.ne]: idProveedor },
-          estado: true, // <-- CORRECCIÓN
-          },
-        });
+          estado: true,
+      },
+    });
+
         if (otroProveedorConNombreTipo) {
           throw new ConflictError(
   `Ya existe un proveedor activo con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
@@ -252,19 +253,21 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
 
       //aqui
       if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
-        const otroProveedorConDocumento = await db.Proveedor.findOne({
-          where: {
-            numeroDocumento: numeroDocumento,
-            idProveedor: { [Op.ne]: idProveedor },
-          estado: true, // <-- CORRECCIÓN
-          },
-        });
-      if (otroProveedorConNombreTipo) {
-        throw new ConflictError(
-          `Ya existe un proveedor con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
-        );
-      }
-    }
+  const otroProveedorConDocumento = await db.Proveedor.findOne({
+    where: {
+      numeroDocumento: numeroDocumento,
+      idProveedor: { [Op.ne]: idProveedor },
+      estado: true,
+    },
+  });
+
+  if (otroProveedorConDocumento) {
+    throw new ConflictError(
+      `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor activo.`
+    );
+  }
+}
+
     const camposAActualizar = { ...datosActualizar };
     if (
       datosActualizar.hasOwnProperty("tipoDocumento") &&
