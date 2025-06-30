@@ -40,44 +40,43 @@ const crearProveedor = async (datosProveedor) => {
     estado,
   } = datosProveedor;
 
-  // --- INICIO DE CORRECCIÓN ---
-  // Se añade la validación para el número de documento único.
   if (numeroDocumento) {
     const proveedorConDocumento = await db.Proveedor.findOne({
-      where: { numeroDocumento },
-    });
-    if (proveedorConDocumento) {
-      throw new ConflictError(
-        `El número de documento '${numeroDocumento}' ya está registrado.`
-      );
-    }
-  }
-  // --- FIN DE CORRECCIÓN ---
+      where: { numeroDocumento, estado: true }, // <-- CORRECCIÓN
+      });
+    if (proveedorConDocumento) {
+      throw new ConflictError(
+        `El número de documento '${numeroDocumento}' ya está registrado en un proveedor activo.`
+      );
+    }
+  }
 
-  if (nitEmpresa) {
-    const proveedorConNit = await db.Proveedor.findOne({
-      where: { nitEmpresa },
-    });
-    if (proveedorConNit) {
-      throw new ConflictError(
-        `El NIT de empresa '${nitEmpresa}' ya está registrado.`
-      );
-    }
-  }
-  const proveedorConNombreTipo = await db.Proveedor.findOne({
-    where: { nombre, tipo },
+  if (nitEmpresa) {
+    const proveedorConNit = await db.Proveedor.findOne({
+      where: { nitEmpresa, estado: true }, // <-- CORRECCIÓN
+    });
+    if (proveedorConNit) {
+      throw new ConflictError(
+        `El NIT de empresa '${nitEmpresa}' ya está registrado en un proveedor activo.`
+      );
+    }
+  }
+  const proveedorConNombreTipo = await db.Proveedor.findOne({
+    where: { nombre, tipo, estado: true }, // <-- CORRECCIÓN
+  });
+  if (proveedorConNombreTipo) {
+    throw new ConflictError(
+      `Ya existe un proveedor activo con el nombre '${nombre}' y tipo '${tipo}'.`
+    );
+  }
+  const proveedorConCorreo = await db.Proveedor.findOne({ 
+    where: { correo, estado: true } // <-- CORRECCIÓN
   });
-  if (proveedorConNombreTipo) {
-    throw new ConflictError(
-      `Ya existe un proveedor con el nombre '${nombre}' y tipo '${tipo}'.`
-    );
-  }
-  const proveedorConCorreo = await db.Proveedor.findOne({ where: { correo } });
-  if (proveedorConCorreo) {
-    throw new ConflictError(
-      `El correo electrónico '${correo}' ya está registrado para otro proveedor.`
-    );
-  }
+  if (proveedorConCorreo) {
+    throw new ConflictError(
+      `El correo electrónico '${correo}' ya está registrado para otro proveedor activo.`
+    );
+  }
 
   try {
     const nuevoProveedor = await db.Proveedor.create({
@@ -205,68 +204,61 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
     // --- INICIO DE CORRECCIÓN ---
     // Se extrae 'numeroDocumento' de los datos a actualizar.
     const { nombre, tipo, nitEmpresa, correo, numeroDocumento } = datosActualizar;
-
-    // Se añade la validación para número de documento único al actualizar.
-    if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
-      const otroProveedorConDocumento = await db.Proveedor.findOne({
-        where: {
-          numeroDocumento: numeroDocumento,
-          idProveedor: { [Op.ne]: idProveedor },
-        },
-      });
-      if (otroProveedorConDocumento) {
-        throw new ConflictError(
-          `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor.`
-        );
-      }
-    }
-    // --- FIN DE CORRECCIÓN ---
-
     if (nitEmpresa && nitEmpresa !== proveedor.nitEmpresa) {
       const otroProveedorConNit = await db.Proveedor.findOne({
         where: {
           nitEmpresa: nitEmpresa,
           idProveedor: { [Op.ne]: idProveedor },
+          estado: true,
         },
       });
       if (otroProveedorConNit) {
         throw new ConflictError(
-          `El NIT de empresa '${nitEmpresa}' ya está registrado para otro proveedor.`
+          `El NIT de empresa '${nitEmpresa}' ya está registrado para otro proveedor activo.`
         );
       }
     }
 
     if (correo && correo !== proveedor.correo) {
       const otroProveedorConCorreo = await db.Proveedor.findOne({
-        where: { correo: correo, idProveedor: { [Op.ne]: idProveedor } },
+        where: { 
+          correo: correo, 
+          idProveedor: { [Op.ne]: idProveedor },
+          estado: true, // <-- CORRECCIÓN
+        },
       });
       if (otroProveedorConCorreo) {
         throw new ConflictError(
-          `El correo electrónico '${correo}' ya está registrado para otro proveedor.`
+          `El correo electrónico '${correo}' ya está registrado para otro proveedor activo.`
         );
       }
     }
 
-    const nombreActualizado = datosActualizar.hasOwnProperty("nombre")
-      ? nombre
-      : proveedor.nombre;
-    const tipoActualizado = datosActualizar.hasOwnProperty("tipo")
-      ? tipo
-      : proveedor.tipo;
+    //...
 
-    if (
-      (datosActualizar.hasOwnProperty("nombre") ||
-        datosActualizar.hasOwnProperty("tipo")) &&
-      (nombreActualizado !== proveedor.nombre ||
-        tipoActualizado !== proveedor.tipo)
-    ) {
       const otroProveedorConNombreTipo = await db.Proveedor.findOne({
         where: {
           nombre: nombreActualizado,
           tipo: tipoActualizado,
           idProveedor: { [Op.ne]: idProveedor },
-        },
-      });
+          estado: true, // <-- CORRECCIÓN
+          },
+        });
+        if (otroProveedorConNombreTipo) {
+          throw new ConflictError(
+  `Ya existe un proveedor activo con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
+);
+}
+
+      //aqui
+      if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
+        const otroProveedorConDocumento = await db.Proveedor.findOne({
+          where: {
+            numeroDocumento: numeroDocumento,
+            idProveedor: { [Op.ne]: idProveedor },
+          estado: true, // <-- CORRECCIÓN
+          },
+        });
       if (otroProveedorConNombreTipo) {
         throw new ConflictError(
           `Ya existe un proveedor con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
@@ -439,7 +431,10 @@ const eliminarProveedorFisico = async (idProveedor) => {
  */
 const verificarDatosUnicos = async (campos, idExcluir = null) => {
     const errores = {};
-    const whereClause = idExcluir ? { idProveedor: { [Op.ne]: idExcluir } } : {};
+    const whereClause = { estado: true }; // <-- CORRECCIÓN
+    if (idExcluir) {
+        whereClause.idProveedor = { [Op.ne]: idExcluir };
+    }
 
     const camposAValidar = {
         correo: "Este correo ya está registrado.",

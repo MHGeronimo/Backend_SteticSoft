@@ -41,14 +41,14 @@ const crearProveedorValidators = [
     .normalizeEmail()
     .custom(async (value) => {
       const proveedorExistente = await db.Proveedor.findOne({
-        where: { correo: value },
-      });
-      if (proveedorExistente) {
-        return Promise.reject(
-          "El correo electrónico principal ya está registrado."
-        );
-      }
-    }),
+        where: { correo: value, estado: true }, // <-- AÑADIR ESTO
+        });
+        if (proveedorExistente) {
+          return Promise.reject(
+            "El correo electrónico ya está registrado en un proveedor activo."
+          );
+        }
+      }),
   body("direccion")
     .trim()
     .notEmpty()
@@ -71,13 +71,13 @@ const crearProveedorValidators = [
     .custom(async (value) => {
       if (value) {
         const proveedorExistente = await db.Proveedor.findOne({
-          where: { numeroDocumento: value },
-        });
-        if (proveedorExistente) {
-          return Promise.reject("El número de documento ya está registrado.");
+          where: { numeroDocumento: value, estado: true }, // <-- AÑADIR ESTO
+          });
+          if (proveedorExistente) {
+            return Promise.reject("El número de documento ya está registrado en un proveedor activo.");
+          }
         }
-      }
-    }),
+      }),
   // --- FIN DE CORRECCIÓN ---
 
   body("nitEmpresa")
@@ -90,13 +90,13 @@ const crearProveedorValidators = [
     .custom(async (value) => {
       if (value) {
         const proveedorExistente = await db.Proveedor.findOne({
-          where: { nitEmpresa: value },
-        });
-        if (proveedorExistente) {
-          return Promise.reject("El NIT de empresa ya está registrado.");
+          where: { nitEmpresa: value, estado: true }, // <-- AÑADIR ESTO
+          });
+          if (proveedorExistente) {
+            return Promise.reject("El NIT de empresa ya está registrado en un proveedor activo.");
+          }
         }
-      }
-    }),
+      }),
   body("nombrePersonaEncargada")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -165,6 +165,7 @@ const actualizarProveedorValidators = [
           where: {
             correo: value,
             idProveedor: { [db.Sequelize.Op.ne]: idProveedor },
+            estado: true,
           },
         });
         if (proveedorExistente) {
@@ -198,6 +199,7 @@ const actualizarProveedorValidators = [
             where: {
               numeroDocumento: value,
               idProveedor: { [db.Sequelize.Op.ne]: idProveedor },
+              estado: true,
             },
           });
           if (proveedorExistente) {
@@ -222,6 +224,7 @@ const actualizarProveedorValidators = [
           where: {
             nitEmpresa: value,
             idProveedor: { [db.Sequelize.Op.ne]: idProveedor },
+            estado: true,
           },
         });
         if (proveedorExistente) {
