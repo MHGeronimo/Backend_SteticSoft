@@ -117,18 +117,18 @@ const obtenerTodosLosProductos = async (filtros) => {
   }
   // --- FIN DE CORRECCIÓN ---
 
-  let includeCondition = [
-    {
-      model: db.CategoriaProducto,
-      as: "categoria",
-      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
-    },
-  ];
+  // let includeCondition = [
+  //   {
+  //     model: db.CategoriaProducto,
+  //     as: "categoria",
+  //     attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
+  //   },
+  // ];
 
   try {
     const { count, rows } = await db.Producto.findAndCountAll({
       where: whereCondition,
-      include: includeCondition,
+      // include: includeCondition,
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["nombre", "ASC"]],
