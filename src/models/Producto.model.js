@@ -1,5 +1,4 @@
-// RUTA: src/shared/src_api/models/Producto.model.js
-"use strict";
+'use strict';
 
 module.exports = (sequelize, DataTypes) => {
   const Producto = sequelize.define(
@@ -23,7 +22,6 @@ module.exports = (sequelize, DataTypes) => {
       existencia: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        validate: { min: 0 },
         field: "existencia",
       },
       precio: {
@@ -31,13 +29,13 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0.0,
         field: "precio",
       },
-      // CORREGIDO: Estandarizado a camelCase
+      // ✅ CORREGIDO: Estandarizado a camelCase
       stockMinimo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         field: "stock_minimo",
       },
-      // CORREGIDO: Estandarizado a camelCase
+      // ✅ CORREGIDO: Estandarizado a camelCase
       stockMaximo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
@@ -53,43 +51,38 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "estado",
       },
-      // CORREGIDO: Estandarizado a camelCase
+      // ✅ CORREGIDO: Estandarizado a camelCase
       tipoUso: {
         type: DataTypes.ENUM("Interno", "Venta Directa", "Otro"),
         allowNull: false,
         defaultValue: "Venta Directa",
         field: "tipo_uso",
       },
-      // CORREGIDO: Estandarizado a camelCase
+      // ✅ CORREGIDO: Estandarizado a camelCase
       vidaUtilDias: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        validate: { min: 0 },
         field: "vida_util_dias",
       },
-      // CORREGIDO: Estandarizado a camelCase
+      // ✅ CORREGIDO: Estandarizado a camelCase
       categoriaProductoId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: "id_categoria_producto",
-        references: {
-          model: "categoria_producto",
-          key: "id_categoria_producto",
-        },
-        onDelete: "RESTRICT",
       },
     },
     {
-      tableName: "product",
+      tableName: "producto",
       timestamps: false,
     }
   );
 
   Producto.associate = (models) => {
     Producto.belongsTo(models.CategoriaProducto, {
-      foreignKey: "categoriaProductoId",
+      foreignKey: "categoriaProductoId", // Clave foránea estandarizada
       as: "categoria",
     });
+    // Tus otras asociaciones se mantienen igual...
     Producto.belongsToMany(models.Compra, {
       through: "compra_x_producto",
       foreignKey: "id_producto",
