@@ -554,7 +554,7 @@ module.exports = {
       });
       return !!usuario; // Convierte el resultado (objeto o null) a booleano.
     } catch (error) {
-      // console.error("Error en el servicio al verificar el correo:", error.message);
+      // console.error("Error en el servicio al verificar el correo:", error.message); 
       throw new CustomError(`Error al verificar el correo en el servicio: ${error.message}`, 500);
     }
   },

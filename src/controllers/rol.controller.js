@@ -18,10 +18,12 @@ const crearRol = async (req, res, next) => {
       message = "Rol y permisos asignados creados exitosamente.";
     } else if (req.body.idPermisos && req.body.idPermisos.length === 0) {
       // Si se envió un array vacío de permisos, se puede reflejar en el mensaje.
-      message = "Rol creado exitosamente sin permisos asignados (se recibió un array de permisos vacío).";
+      message =
+        "Rol creado exitosamente sin permisos asignados (se recibió un array de permisos vacío).";
     } else if (!req.body.idPermisos) {
       // Si no se enviaron permisos en absoluto.
-      message = "Rol creado exitosamente sin permisos asignados (no se proporcionaron permisos).";
+      message =
+        "Rol creado exitosamente sin permisos asignados (no se proporcionaron permisos).";
     }
 
     res.status(201).json({
@@ -240,5 +242,5 @@ module.exports = {
   asignarPermisosARol,
   quitarPermisosDeRol,
   listarPermisosDeRol,
-  cambiarEstadoRol, 
+  cambiarEstadoRol,
 };
