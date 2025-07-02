@@ -26,6 +26,15 @@ router.get(
   usuarioController.listarUsuarios
 );
 
+// Ruta para verificar correo
+router.get(
+  "/verificar-correo",
+  authMiddleware,
+  // Considerar si se necesita un checkPermission específico o si es público
+  usuarioValidators.verificarCorreoValidators,
+  usuarioController.verificarCorreo // Esta función deberá ser creada en usuario.controller.js
+);
+
 router.get(
   "/:idUsuario",
   authMiddleware,
