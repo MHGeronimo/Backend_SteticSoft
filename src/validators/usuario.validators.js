@@ -1,5 +1,5 @@
 // src/shared/src_api/validators/usuario.validators.js
-const { body, param } = require("express-validator");
+const { body, param, query } = require("express-validator"); // Import query
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
@@ -205,4 +205,13 @@ module.exports = {
   actualizarUsuarioValidators,
   idUsuarioValidator,
   cambiarEstadoUsuarioValidators,
+  // NUEVO VALIDADOR:
+  verificarCorreoValidators: [
+    query("correo")
+      .trim()
+      .notEmpty().withMessage("El correo es requerido.")
+      .isEmail().withMessage("Debe proporcionar un correo electrónico válido.")
+      .normalizeEmail(),
+    handleValidationErrors,
+  ],
 };
