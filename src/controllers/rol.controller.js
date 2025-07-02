@@ -7,11 +7,13 @@ const permisosXRolService = require("../services/permisosXRol.service.js");
  */
 const crearRol = async (req, res, next) => {
   try {
-    const nuevoRol = await rolService.crearRol(req.body);
+    // El servicio rolService.crearRol ahora maneja la creación del rol y la asignación de permisos
+    // y devuelve el rol con sus permisos.
+    const rolConPermisos = await rolService.crearRol(req.body);
     res.status(201).json({
       success: true,
-      message: "Rol creado exitosamente.",
-      data: nuevoRol,
+      message: "Rol y permisos asignados creados exitosamente.",
+      data: rolConPermisos,
     });
   } catch (error) {
     next(error);
@@ -224,5 +226,5 @@ module.exports = {
   asignarPermisosARol,
   quitarPermisosDeRol,
   listarPermisosDeRol,
-  cambiarEstadoRol, // <-- Nueva función exportada
+  cambiarEstadoRol, 
 };
