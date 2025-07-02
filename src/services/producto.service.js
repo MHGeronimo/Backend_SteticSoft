@@ -84,19 +84,19 @@ const crearProducto = async (datosProducto) => {
 };
 
 /**
- * Obtener todos los productos.
+ * Obtener todos los productos con paginación y filtros.
  */
 const obtenerTodosLosProductos = async (filtros) => {
-  // --- INICIO DE MODIFICACIÓN ---
+  // --- INICIO DE CORRECCIÓN ---
   const {
     page = 1,
     limit = 10,
     nombre,
     estado,
     idCategoria,
-    tipoUso, // CORREGIDO: Se cambia de 'tipo_uso' a 'tipoUso' para que coincida con el query param de la URL.
+    tipoUso, // Se mantiene 'tipoUso' para que coincida con el query param de la URL.
   } = filtros;
-  // --- FIN DE MODIFICACIÓN ---
+  // --- FIN DE CORRECCIÓN ---
 
   const offset = (page - 1) * limit;
 
@@ -110,12 +110,12 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  // --- INICIO DE MODIFICACIÓN ---
+  // --- INICIO DE CORRECCIÓN ---
   if (tipoUso) {
-    // CORREGIDO: Se usa la variable correcta 'tipoUso'.
-    whereCondition.tipo_uso = tipoUso; // Se mantiene 'tipo_uso' para la consulta a la BD.
+    // Se usa la variable correcta 'tipoUso' para la condición.
+    whereCondition.tipo_uso = tipoUso; // Se mantiene 'tipo_uso' para el campo de la BD.
   }
-  // --- FIN DE MODIFICACIÓN ---
+  // --- FIN DE CORRECCIÓN ---
 
   let includeCondition = [
     {
@@ -133,21 +133,22 @@ const obtenerTodosLosProductos = async (filtros) => {
       offset: parseInt(offset),
       order: [["nombre", "ASC"]],
     });
-
+    
+    // --- INICIO DE CORRECCIÓN ---
     return {
       totalItems: count,
       totalPages: Math.ceil(count / limit),
       currentPage: parseInt(page),
-      // CORREGIDO: El nombre del array es 'productos' y no 'data'.
+      // Se corrige el nombre del array a 'productos' para que coincida con lo que espera el frontend.
       productos: rows,
     };
+    // --- FIN DE CORRECCIÓN ---
   } catch (error) {
     console.error("Error al obtener productos con paginación:", error);
+    // Lanzamos el error para que el controlador lo capture y envíe la respuesta 500.
     throw new Error("No se pudieron obtener los productos.");
   }
 };
-
-
 
 /**
  * Obtener un producto por su ID.
