@@ -540,4 +540,22 @@ module.exports = {
   habilitarUsuario,
   eliminarUsuarioFisico,
   cambiarEstadoUsuario,
+
+  /**
+   * Verifica si un correo electrónico ya existe en la tabla de Usuarios.
+   * @param {string} correo - El correo electrónico a verificar.
+   * @returns {Promise<boolean>} - True si el correo existe, false en caso contrario.
+   */
+  verificarCorreoExistente: async (correo) => {
+    try {
+      const usuario = await db.Usuario.findOne({
+        where: { correo },
+        attributes: ['idUsuario'] // Solo necesitamos saber si existe, no traer todos los datos.
+      });
+      return !!usuario; // Convierte el resultado (objeto o null) a booleano.
+    } catch (error) {
+      // console.error("Error en el servicio al verificar el correo:", error.message);
+      throw new CustomError(`Error al verificar el correo en el servicio: ${error.message}`, 500);
+    }
+  },
 };
