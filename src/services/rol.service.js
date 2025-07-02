@@ -64,19 +64,48 @@ const crearRol = async (datosRol) => {
 };
 
 /**
- * Obtener todos los roles.
+ * Obtener todos los roles, con opción de búsqueda y filtrado por estado.
  */
-const obtenerTodosLosRoles = async (opcionesDeFiltro = {}) => {
+const obtenerTodosLosRoles = async (opciones = {}) => {
   try {
-    // CORRECCIÓN: Se añade 'include' para traer los permisos de cada rol.
+    const { terminoBusqueda, estado } = opciones; // Extraemos terminoBusqueda y estado de las opciones
+
+    let whereClause = {}; // Cláusula where principal para Roles
+
+    // Filtro por estado (si se proporciona)
+    if (estado === 'activos') {
+      whereClause.estado = true;
+    } else if (estado === 'inactivos') {
+      whereClause.estado = false;
+    }
+    // Si estado es 'todos' o no se define, no se filtra por estado.
+
+    let includePermisos = {
+      model: db.Permisos,
+      as: 'permisos',
+      attributes: ['idPermiso', 'nombre'], // Traer id y nombre para la búsqueda y para mostrar
+      through: { attributes: [] },
+      required: false, // Hacemos el include opcional por defecto
+    };
+
+    if (terminoBusqueda) {
+      const busquedaLike = { [Op.like]: `%${terminoBusqueda}%` };
+      
+      whereClause = {
+        ...whereClause, // Mantenemos el filtro de estado si existe
+        [Op.or]: [
+          { nombre: busquedaLike },
+          { descripcion: busquedaLike },
+          { '$permisos.nombre$': busquedaLike } // Búsqueda en el nombre del permiso asociado
+        ]
+      };
+    }
+
     return await db.Rol.findAll({
-      where: opcionesDeFiltro,
-      include: [{
-        model: db.Permisos,
-        as: 'permisos',
-        attributes: ['nombre'], // Solo traemos el nombre para la tabla
-        through: { attributes: [] }
-      }]
+      where: whereClause,
+      include: [includePermisos],
+      distinct: true, // Necesario cuando se filtra por atributos de modelos incluidos
+      subQuery: false // Generalmente recomendado con includes y where en el top level
     });
   } catch (error) {
     console.error(
