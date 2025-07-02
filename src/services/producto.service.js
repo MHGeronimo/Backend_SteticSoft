@@ -105,20 +105,16 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (estado !== undefined) {
     whereCondition.estado = estado === "true";
   }
-  
-  // --- INICIO DE CORRECCIÓN ---
+
+  // ✅ CORREGIDO: Usar los nombres de propiedad del modelo (camelCase)
   if (idCategoria) {
-    // CORREGIDO: Usar el nombre de la propiedad del modelo (camelCase)
     whereCondition.categoriaProductoId = idCategoria;
   }
   if (tipoUso) {
-    // CORREGIDO: Usar el nombre de la propiedad del modelo (camelCase)
     whereCondition.tipoUso = tipoUso;
   }
-  // --- FIN DE CORRECCIÓN ---
-
-  // --- INICIO DE CORRECCIÓN ---
-  // CORREGIDO: Se reactiva el include para que la consulta traiga la categoría.
+  
+  // ✅ CORREGIDO: Se reactiva el include para que la consulta traiga la categoría.
   let includeCondition = [
     {
       model: db.CategoriaProducto,
@@ -126,12 +122,11 @@ const obtenerTodosLosProductos = async (filtros) => {
       attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
     },
   ];
-  // --- FIN DE CORRECCIÓN ---
 
   try {
     const { count, rows } = await db.Producto.findAndCountAll({
       where: whereCondition,
-      include: includeCondition, // Se vuelve a incluir la condición
+      include: includeCondition, // Asegurándose de que se use el include
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["nombre", "ASC"]],
@@ -144,7 +139,7 @@ const obtenerTodosLosProductos = async (filtros) => {
       productos: rows,
     };
   } catch (error) {
-    console.error("Error al obtener productos con paginación:", error);
+    console.error("Error en Sequelize al obtener productos:", error);
     throw new Error("No se pudieron obtener los productos.");
   }
 };
