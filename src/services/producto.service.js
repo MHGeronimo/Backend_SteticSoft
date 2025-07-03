@@ -87,61 +87,60 @@ const crearProducto = async (datosProducto) => {
  * Obtener todos los productos con paginación y filtros.
  */
 const obtenerTodosLosProductos = async (filtros) => {
-  const {
-    page = 1,
-    limit = 10,
-    nombre,
-    estado,
-    idCategoria,
-    tipoUso,
-  } = filtros;
+  const {
+    page = 1,
+    limit = 10,
+    nombre,
+    estado,
+    idCategoria,
+    tipoUso,
+  } = filtros;
 
-  const offset = (page - 1) * limit;
+  const offset = (page - 1) * limit;
 
-  let whereCondition = {};
-  if (nombre) {
-    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
-  }
-  if (estado !== undefined) {
-    whereCondition.estado = estado === "true";
-  }
+  let whereCondition = {};
+  if (nombre) {
+    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
+  }
+  if (estado !== undefined) {
+    whereCondition.estado = estado === "true";
+  }
+  if (idCategoria) {
+    whereCondition.categoriaProductoId = idCategoria;
+  }
+  if (tipoUso) {
+    whereCondition.tipoUso = tipoUso;
+  }
+  
+  // ✅ --- CORRECCIÓN --- ✅
+  // Se cambia el alias 'as' para que coincida con la definición del modelo.
+  let includeCondition = [
+    {
+      model: db.CategoriaProducto,
+      as: "categoriaProducto", // <-- Este era el error, lo cambiamos de "categoria"
+      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
+    },
+  ];
 
-  // ✅ CORREGIDO: Usar los nombres de propiedad del modelo (camelCase)
-  if (idCategoria) {
-    whereCondition.categoriaProductoId = idCategoria;
-  }
-  if (tipoUso) {
-    whereCondition.tipoUso = tipoUso;
-  }
-  
-  // ✅ CORREGIDO: Se reactiva el include para que la consulta traiga la categoría.
-  let includeCondition = [
-    {
-      model: db.CategoriaProducto,
-      as: "categoria",
-      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
-    },
-  ];
-
-  try {
-    const { count, rows } = await db.Producto.findAndCountAll({
-      where: whereCondition,
-      include: includeCondition, // Asegurándose de que se use el include
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [["nombre", "ASC"]],
-    });
-    
-    return {
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: parseInt(page),
-      productos: rows,
-    };
-  } catch (error) {
-    console.error("Error en Sequelize al obtener productos:", error);
-    throw new Error("No se pudieron obtener los productos.");
-  }
+  try {
+    const { count, rows } = await db.Producto.findAndCountAll({
+      where: whereCondition,
+      include: includeCondition,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["nombre", "ASC"]],
+    });
+    
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      productos: rows,
+    };
+  } catch (error) {
+    console.error("Error en Sequelize al obtener productos:", error);
+    throw new Error("No se pudieron obtener los productos.");
+  }
 };
 
 /**
