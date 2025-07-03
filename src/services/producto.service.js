@@ -1,4 +1,4 @@
-// src/shared/src_api/services/producto.service.js
+// src/shared/src_api/services/producto.service.js 
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -36,7 +36,7 @@ const crearProducto = async (datosProducto) => {
     stockMaximo,
     imagen,
     estado,
-    categoriaProductoId,
+    categoriaProductoId, // Asegúrate de que este campo llegue aquí
   } = datosProducto;
 
   if (
@@ -49,9 +49,10 @@ const crearProducto = async (datosProducto) => {
     );
   }
 
-  if (categoriaProductoId) {
+  // --- VALIDACIÓN CLAVE: No permitir asignar a categoría inactiva al CREAR ---
+  if (categoriaProductoId) { // Solo si se proporciona una categoría
     const categoria = await db.CategoriaProducto.findOne({
-      where: { idCategoriaProducto: categoriaProductoId, estado: true },
+      where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Busca la categoría Y que esté activa
     });
     if (!categoria) {
       throw new BadRequestError(
@@ -59,6 +60,7 @@ const crearProducto = async (datosProducto) => {
       );
     }
   }
+  // --- FIN VALIDACIÓN CLAVE ---
 
   try {
     const nuevoProducto = await db.Producto.create({
@@ -87,16 +89,14 @@ const crearProducto = async (datosProducto) => {
  * Obtener todos los productos.
  */
 const obtenerTodosLosProductos = async (filtros) => {
-  // --- INICIO DE MODIFICACIÓN ---
   const {
     page = 1,
     limit = 10,
     nombre,
     estado,
     idCategoria,
-    tipoUso, // CORREGIDO: Se cambia de 'tipo_uso' a 'tipoUso' para que coincida con el query param de la URL.
+    tipoUso,
   } = filtros;
-  // --- FIN DE MODIFICACIÓN ---
 
   const offset = (page - 1) * limit;
 
@@ -110,12 +110,9 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  // --- INICIO DE MODIFICACIÓN ---
   if (tipoUso) {
-    // CORREGIDO: Se usa la variable correcta 'tipoUso'.
-    whereCondition.tipo_uso = tipoUso; // Se mantiene 'tipo_uso' para la consulta a la BD.
+    whereCondition.tipo_uso = tipoUso;
   }
-  // --- FIN DE MODIFICACIÓN ---
 
   let includeCondition = [
     {
@@ -138,7 +135,6 @@ const obtenerTodosLosProductos = async (filtros) => {
       totalItems: count,
       totalPages: Math.ceil(count / limit),
       currentPage: parseInt(page),
-      // CORREGIDO: El nombre del array es 'productos' y no 'data'.
       productos: rows,
     };
   } catch (error) {
@@ -146,7 +142,6 @@ const obtenerTodosLosProductos = async (filtros) => {
     throw new Error("No se pudieron obtener los productos.");
   }
 };
-
 
 
 /**
@@ -203,15 +198,17 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
       );
     }
 
+    // --- VALIDACIÓN CLAVE: No permitir asignar a categoría inactiva al ACTUALIZAR ---
+    // Si la categoría se está actualizando y no se está poniendo a null
     if (
-      categoriaProductoId !== undefined &&
-      categoriaProductoId !== producto.categoriaProductoId
+      categoriaProductoId !== undefined && // Si el campo categoriaProductoId está en los datos de actualización
+      categoriaProductoId !== producto.categoriaProductoId // Y es diferente de la categoría actual del producto
     ) {
       if (categoriaProductoId === null) {
-        datosActualizar.categoriaProductoId = null;
+        datosActualizar.categoriaProductoId = null; // Permite desvincular la categoría
       } else {
         const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoriaProducto: categoriaProductoId, estado: true },
+          where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Busca la nueva categoría Y que esté activa
         });
         if (!categoria) {
           throw new BadRequestError(
@@ -220,6 +217,7 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
         }
       }
     }
+    // --- FIN VALIDACIÓN CLAVE ---
 
     await producto.update(datosActualizar);
     return obtenerProductoPorId(producto.idProducto);

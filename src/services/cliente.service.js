@@ -36,8 +36,8 @@ const cambiarEstadoCliente = async (idCliente, nuevoEstado) => {
 const crearCliente = async (datosCompletos) => {
   const {
     // Datos para Usuario
-    correo,             // Correo para la cuenta de Usuario y perfil Cliente
-    contrasena,         // Contraseña para la nueva cuenta de Usuario
+    correo, // Correo para la cuenta de Usuario y perfil Cliente
+    contrasena, // Contraseña para la nueva cuenta de Usuario
     // idRol ya no se pasaría, se asume Rol "Cliente"
     // estadoUsuario (opcional, por defecto true para Usuario)
 
@@ -66,7 +66,7 @@ const crearCliente = async (datosCompletos) => {
   if (clienteExistenteNumeroDoc) {
     throw new ConflictError(`El número de documento '${numeroDocumento}' ya está registrado para otro cliente.`);
   }
-  
+
   let clienteExistenteCorreo = await db.Cliente.findOne({ where: { correo } });
   if (clienteExistenteCorreo) {
     throw new ConflictError(`El correo electrónico '${correo}' ya está registrado para otro perfil de cliente.`);
@@ -103,10 +103,10 @@ const crearCliente = async (datosCompletos) => {
     }, { transaction });
 
     await transaction.commit();
-    
+
     // Devolver el cliente con su cuenta de usuario asociada
     return db.Cliente.findByPk(nuevoCliente.idCliente, {
-        include: [{ model: db.Usuario, as: "usuarioCuenta", attributes: ["idUsuario", "correo", "estado", "idRol"] }]
+      include: [{ model: db.Usuario, as: "usuarioCuenta", attributes: ["idUsuario", "correo", "estado", "idRol"] }]
     });
 
   } catch (error) {
@@ -129,7 +129,7 @@ const crearCliente = async (datosCompletos) => {
 const obtenerTodosLosClientes = async (opcionesDeFiltro = {}) => {
   try {
     const clientes = await db.Cliente.findAll({
-      where: opcionesDeFiltro,
+      where: opcionesDeFiltro.where || {}, // Asegúrate de que `where` sea un objeto si no se provee
       include: [
         {
           model: db.Usuario,
@@ -162,7 +162,7 @@ const obtenerClientePorId = async (idCliente) => {
           model: db.Usuario,
           as: "usuarioCuenta",
           attributes: ["idUsuario", "correo", "estado", "idRol"],
-           include: [{
+          include: [{
             model: db.Rol,
             as: "rol",
             attributes: ["nombre"]
@@ -209,8 +209,8 @@ const actualizarCliente = async (idCliente, datosActualizar) => {
 
     // Campos que podrían afectar a la tabla Usuario
     if (datosActualizar.hasOwnProperty('correo')) {
-        datosParaCliente.correo = datosActualizar.correo; // Actualizar correo en perfil Cliente
-        datosParaUsuario.correo = datosActualizar.correo; // Marcar para actualizar correo en Usuario
+      datosParaCliente.correo = datosActualizar.correo; // Actualizar correo en perfil Cliente
+      datosParaUsuario.correo = datosActualizar.correo; // Marcar para actualizar correo en Usuario
     }
     if (datosActualizar.hasOwnProperty('estadoUsuario')) datosParaUsuario.estado = datosActualizar.estadoUsuario; // Estado de la cuenta Usuario
 
@@ -317,15 +317,30 @@ const eliminarClienteFisico = async (idCliente) => {
     if (!cliente) {
       throw new NotFoundError("Cliente no encontrado para eliminar físicamente.");
     }
-    // Opcional: Si al eliminar un cliente también quieres eliminar su cuenta de usuario (si no se usa en otro lado)
-    // if (cliente.idUsuario) {
-    //   await db.Usuario.destroy({ where: { idUsuario: cliente.idUsuario }});
-    // }
+
+    // --- VALIDACIÓN DE ACCIONES ASOCIADAS (VENTAS Y CITAS) ---
+    // Verifica si existen ventas asociadas al cliente
+    const ventasCount = await db.Venta.count({ where: { idCliente: idCliente } });
+    if (ventasCount > 0) {
+      throw new ConflictError(`No se puede eliminar el cliente porque tiene ${ventasCount} venta(s) asociada(s).`);
+    }
+
+    // Verifica si existen citas asociadas al cliente
+    const citasCount = await db.Cita.count({ where: { idCliente: idCliente } });
+    if (citasCount > 0) {
+      throw new ConflictError(`No se puede eliminar el cliente porque tiene ${citasCount} cita(s) asociada(s).`);
+    }
+    // --- FIN VALIDACIÓN DE ACCIONES ASOCIADAS ---
+
+    // Si no hay ventas ni citas asociadas, procede con la eliminación física
     const filasEliminadas = await db.Cliente.destroy({ where: { idCliente } });
     return filasEliminadas > 0; // Devuelve true si se eliminó algo
   } catch (error) {
-    // ... (manejo de error existente) ...
-    if (error instanceof NotFoundError) throw error;
+    // Manejo de errores específicos y genéricos
+    if (error instanceof NotFoundError || error instanceof ConflictError) { // Incluye ConflictError aquí
+      throw error;
+    }
+    // Si hay un error de restricción de clave foránea de Sequelize, lo manejamos con un mensaje más amigable
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new ConflictError("No se puede eliminar el cliente porque está siendo referenciado de una manera que impide su borrado. Verifique las dependencias (ej. Ventas, Citas).");
     }
