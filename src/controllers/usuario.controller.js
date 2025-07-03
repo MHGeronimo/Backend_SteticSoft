@@ -34,9 +34,8 @@ const listarUsuarios = async (req, res, next) => {
         opcionesDeFiltro.idRol = idRol;
       }
     }
-    const usuarios = await usuarioService.obtenerTodosLosUsuarios(
-      opcionesDeFiltro
-    );
+    const usuarios =
+      await usuarioService.obtenerTodosLosUsuarios(opcionesDeFiltro);
     res.status(200).json({
       success: true,
       data: usuarios,
@@ -158,6 +157,30 @@ const eliminarUsuarioFisico = async (req, res, next) => {
   }
 };
 
+// NUEVA FUNCIÓN para verificar correo
+const verificarCorreo = async (req, res, next) => {
+  try {
+    const { correo } = req.query;
+    const estaEnUso = await usuarioService.verificarCorreoExistente(correo);
+
+    if (estaEnUso) {
+      return res.status(200).json({
+        success: true,
+        estaEnUso: true,
+        message: "El correo electrónico ya está registrado.",
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        estaEnUso: false,
+        message: "El correo electrónico está disponible.",
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearUsuario,
   listarUsuarios,
@@ -166,5 +189,6 @@ module.exports = {
   anularUsuario,
   habilitarUsuario,
   eliminarUsuarioFisico,
-  cambiarEstadoUsuario, // <-- Nueva función exportada
+  cambiarEstadoUsuario,
+  verificarCorreo, // <-- EXPORTACIÓN AÑADIDA
 };

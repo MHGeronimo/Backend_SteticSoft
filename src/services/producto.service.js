@@ -1,4 +1,4 @@
-// src/shared/src_api/services/producto.service.js 
+// RUTA: src/shared/src_api/services/producto.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -86,7 +86,7 @@ const crearProducto = async (datosProducto) => {
 };
 
 /**
- * Obtener todos los productos.
+ * Obtener todos los productos con paginación y filtros.
  */
 const obtenerTodosLosProductos = async (filtros) => {
   const {
@@ -111,13 +111,16 @@ const obtenerTodosLosProductos = async (filtros) => {
     whereCondition.categoriaProductoId = idCategoria;
   }
   if (tipoUso) {
-    whereCondition.tipo_uso = tipoUso;
+    whereCondition.tipoUso = tipoUso; // Corregido: tipoUso en lugar de tipo_uso si el campo en el modelo es tipoUso
   }
 
+  // ✅ --- CORRECCIÓN --- ✅
+  // Se asegura que el alias 'as' coincida con la definición de la relación en el modelo Producto.
+  // Asumo que la relación en el modelo Producto se define con 'as: "categoriaProducto"'.
   let includeCondition = [
     {
       model: db.CategoriaProducto,
-      as: "categoria",
+      as: "categoriaProducto", // <-- Este alias debe coincidir con la definición de la asociación en el modelo Producto
       attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
     },
   ];
@@ -138,11 +141,10 @@ const obtenerTodosLosProductos = async (filtros) => {
       productos: rows,
     };
   } catch (error) {
-    console.error("Error al obtener productos con paginación:", error);
+    console.error("Error en Sequelize al obtener productos:", error);
     throw new Error("No se pudieron obtener los productos.");
   }
 };
-
 
 /**
  * Obtener un producto por su ID.
@@ -153,7 +155,7 @@ const obtenerProductoPorId = async (idProducto) => {
       include: [
         {
           model: db.CategoriaProducto,
-          as: "categoria",
+          as: "categoriaProducto", // Asegúrate de que este alias sea consistente con el modelo
           attributes: ["idCategoriaProducto", "nombre"],
         },
       ],
