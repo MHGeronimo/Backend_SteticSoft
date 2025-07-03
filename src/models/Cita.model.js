@@ -1,4 +1,4 @@
-// src/models/Cita.model.js
+// src/models/Cita.model.js 
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {

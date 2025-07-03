@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         field: 'id_venta' 
       },
-      estado: {
+      estado: { 
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,

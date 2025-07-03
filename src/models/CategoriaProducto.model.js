@@ -1,4 +1,4 @@
-// RUTA: src/shared/src_api/models/CategoriaProducto.model.js
+// RUTA: src/shared/src_api/models/CategoriaProducto.model.js 
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {

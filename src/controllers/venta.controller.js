@@ -1,4 +1,4 @@
-// src/controllers/venta.controller.js
+// src/controllers/venta.controller.js 
 const ventaService = require("../services/venta.service.js");
 
 /**

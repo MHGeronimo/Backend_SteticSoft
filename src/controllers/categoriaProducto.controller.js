@@ -1,4 +1,4 @@
-// src/controllers/categoriaProducto.controller.js 
+// src/controllers/categoriaProducto.controller.js  
 const categoriaProductoService = require("../services/categoriaProducto.service.js");
 
 /**
@@ -24,6 +24,8 @@ const crearCategoriaProducto = async (req, res, next) => {
 const listarCategoriasProducto = async (req, res, next) => {
   try {
     const opcionesDeFiltro = {};
+    
+    // Filtros existentes
     if (req.query.estado === "true") {
       opcionesDeFiltro.estado = true;
     } else if (req.query.estado === "false") {
@@ -32,6 +34,12 @@ const listarCategoriasProducto = async (req, res, next) => {
     if (req.query.tipoUso) {
       opcionesDeFiltro.tipoUso = req.query.tipoUso;
     }
+
+    // AÑADIDO: Si hay un término de búsqueda, agregarlo a las opcionesDeFiltro
+    if (req.query.search) {
+      opcionesDeFiltro.search = req.query.search;
+    }
+
     const categorias =
       await categoriaProductoService.obtenerTodasLasCategoriasProducto(
         opcionesDeFiltro
@@ -171,5 +179,5 @@ module.exports = {
   anularCategoriaProducto,
   habilitarCategoriaProducto,
   eliminarCategoriaProductoFisica,
-  cambiarEstadoCategoriaProducto, // <-- Nueva función exportada
+  cambiarEstadoCategoriaProducto,
 };

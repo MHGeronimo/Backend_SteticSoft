@@ -36,7 +36,7 @@ const crearProducto = async (datosProducto) => {
     stockMaximo,
     imagen,
     estado,
-    categoriaProductoId,
+    categoriaProductoId, // Asegúrate de que este campo llegue aquí
   } = datosProducto;
 
   if (
@@ -49,9 +49,10 @@ const crearProducto = async (datosProducto) => {
     );
   }
 
-  if (categoriaProductoId) {
+  // --- VALIDACIÓN CLAVE: No permitir asignar a categoría inactiva al CREAR ---
+  if (categoriaProductoId) { // Solo si se proporciona una categoría
     const categoria = await db.CategoriaProducto.findOne({
-      where: { idCategoriaProducto: categoriaProductoId, estado: true },
+      where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Busca la categoría Y que esté activa
     });
     if (!categoria) {
       throw new BadRequestError(
@@ -59,6 +60,7 @@ const crearProducto = async (datosProducto) => {
       );
     }
   }
+  // --- FIN VALIDACIÓN CLAVE ---
 
   try {
     const nuevoProducto = await db.Producto.create({
@@ -101,54 +103,49 @@ const obtenerTodosLosProductos = async (filtros) => {
 
   const offset = (page - 1) * limit;
 
-  let whereCondition = {};
-  if (nombre) {
-    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
-  }
-  if (estado !== undefined) {
-    whereCondition.estado = estado === "true";
-  }
-  if (idCategoria) {
-    whereCondition.categoriaProductoId = idCategoria;
-  }
-  if (tipoUso) {
-    whereCondition.tipoUso = tipoUso;
-  }
+  let whereCondition = {};
+  if (nombre) {
+    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
+  }
+  if (estado !== undefined) {
+    whereCondition.estado = estado === "true";
+  }
+  if (idCategoria) {
+    whereCondition.categoriaProductoId = idCategoria;
+  }
+  if (tipoUso) {
+    whereCondition.tipoUso = tipoUso;
+  }
+  
+  // ✅ --- CORRECCIÓN --- ✅
+  // Se cambia el alias 'as' para que coincida con la definición del modelo.
+  let includeCondition = [
+    {
+      model: db.CategoriaProducto,
+      as: "categoriaProducto", // <-- Este era el error, lo cambiamos de "categoria"
+      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
+    },
+  ];
 
-  let includeCondition = [
-    {
-      model: db.CategoriaProducto,
-      as: "categoria",
-      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
-    },
-  ];
-
-  try {
-    const { count, rows } = await db.Producto.findAndCountAll({
-      where: whereCondition,
-      include: includeCondition,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [["nombre", "ASC"]],
-    });
-
-    return {
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: parseInt(page),
-      productos: rows,
-    };
-  } catch (error) {
-    console.error("Error inesperado al obtener productos:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-    throw new CustomError(
-      "Ocurrió un error inesperado al obtener productos.",
-      500
-    );
-  }
+  try {
+    const { count, rows } = await db.Producto.findAndCountAll({
+      where: whereCondition,
+      include: includeCondition,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["nombre", "ASC"]],
+    });
+    
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      productos: rows,
+    };
+  } catch (error) {
+    console.error("Error en Sequelize al obtener productos:", error);
+    throw new Error("No se pudieron obtener los productos.");
+  }
 };
 
 /**
@@ -160,7 +157,7 @@ const obtenerProductoPorId = async (idProducto) => {
       include: [
         {
           model: db.CategoriaProducto,
-          as: "categoria",
+          as: "categoriaProducto", // Asegúrate de que este alias sea consistente con el modelo
           attributes: ["idCategoriaProducto", "nombre"],
         },
       ],
@@ -206,15 +203,17 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
       );
     }
 
+    // --- VALIDACIÓN CLAVE: No permitir asignar a categoría inactiva al ACTUALIZAR ---
+    // Si la categoría se está actualizando y no se está poniendo a null
     if (
-      categoriaProductoId !== undefined &&
-      categoriaProductoId !== producto.categoriaProductoId
+      categoriaProductoId !== undefined && // Si el campo categoriaProductoId está en los datos de actualización
+      categoriaProductoId !== producto.categoriaProductoId // Y es diferente de la categoría actual del producto
     ) {
       if (categoriaProductoId === null) {
-        datosActualizar.categoriaProductoId = null;
+        datosActualizar.categoriaProductoId = null; // Permite desvincular la categoría
       } else {
         const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoriaProducto: categoriaProductoId, estado: true },
+          where: { idCategoriaProducto: categoriaProductoId, estado: true }, // Busca la nueva categoría Y que esté activa
         });
         if (!categoria) {
           throw new BadRequestError(
@@ -223,6 +222,7 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
         }
       }
     }
+    // --- FIN VALIDACIÓN CLAVE ---
 
     await producto.update(datosActualizar);
     return obtenerProductoPorId(producto.idProducto);
