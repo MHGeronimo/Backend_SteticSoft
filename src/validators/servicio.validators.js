@@ -91,6 +91,23 @@ const cambiarEstadoServicioValidators = [
   handleValidationErrors,
 ];
 
+// ... otros validadores como nombreValidator, descripcionValidator, etc.
+
+// ==================== INICIO DE LA CORRECCIÓN ====================
+
+// Validador para el ID del servicio en los parámetros de la URL
+const idServicioValidator = [
+  param("id")
+    .isInt()
+    .withMessage("El ID del servicio debe ser un número entero.")
+    .notEmpty()
+    .withMessage("El ID del servicio no puede estar vacío."),
+];
+
+// ===================== FIN DE LA CORRECCIÓN ======================
+
+
+
 module.exports = {
   crearServicioValidators,
   actualizarServicioValidators,

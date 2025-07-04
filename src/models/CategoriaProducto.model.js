@@ -57,5 +57,20 @@ module.exports = (sequelize, DataTypes) => {
   };
   // ===================== FIN DE LA CORRECCIÓN ======================
 
+  // ...
+
+  // ==================== INICIO DE LA CORRECCIÓN ====================
+  CategoriaProducto.associate = (models) => {
+    // Una CategoriaProducto puede tener muchos Productos.
+    CategoriaProducto.hasMany(models.Producto, {
+      foreignKey: "categoriaProductoId", 
+      // ✅ CORRECCIÓN: Se añade el alias 'productos' que faltaba.
+      as: "productos",
+    });
+  };
+  // ===================== FIN DE LA CORRECCIÓN ======================
+
+// ...
+
   return CategoriaProducto;
 };
