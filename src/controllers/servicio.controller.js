@@ -1,4 +1,12 @@
-// src/controllers/servicio.controller.js
+const db = require("../models");
+const { Op } = db.Sequelize;
+const {
+  NotFoundError,
+  ConflictError,
+  CustomError,
+  BadRequestError,
+} = require("../errors");
+
 const servicioService = require("../services/servicio.service.js");
 
 /**
@@ -8,10 +16,8 @@ const crearServicio = async (req, res, next) => {
   try {
     const servicioData = { ...req.body };
     if (req.file) {
-      // Normalize path to be platform-independent and web-accessible
+      // Esta lógica para extraer la ruta de la imagen es correcta.
       const imagePath = req.file.path.replace(/\\/g, "/");
-      // Construct a web-accessible URL if 'uploads' is served statically
-      // Assuming 'uploads' is at the root of the served static files
       servicioData.imagen = imagePath.substring(imagePath.indexOf("uploads"));
     }
     const nuevoServicio = await servicioService.crearServicio(servicioData);
@@ -26,31 +32,21 @@ const crearServicio = async (req, res, next) => {
 };
 
 /**
- * Obtiene una lista de todos los servicios.
+ * Obtiene una lista de todos los servicios con filtros y búsqueda.
  */
 const listarServicios = async (req, res, next) => {
   try {
-    const opcionesDeFiltro = {};
-    if (req.query.estado === "true") {
-      opcionesDeFiltro.estado = true;
-    } else if (req.query.estado === "false") {
-      opcionesDeFiltro.estado = false;
-    }
-    if (req.query.categoriaServicioId) {
-      const idCategoria = Number(req.query.categoriaServicioId);
-      if (!isNaN(idCategoria) && idCategoria > 0) {
-        opcionesDeFiltro.categoriaServicioId = idCategoria;
-      }
-    }
-    if (req.query.especialidadId) {
-      const idEspecialidad = Number(req.query.especialidadId);
-      if (!isNaN(idEspecialidad) && idEspecialidad > 0) {
-        opcionesDeFiltro.especialidadId = idEspecialidad;
-      }
-    }
+    const opcionesDeFiltro = {
+      busqueda: req.query.busqueda,
+      estado: req.query.estado,
+      categoriaServicioId: req.query.categoriaServicioId,
+    };
+
     const servicios = await servicioService.obtenerTodosLosServicios(
       opcionesDeFiltro
     );
+    
+    // El servicio ahora devuelve directamente el array de datos.
     res.status(200).json({
       success: true,
       data: servicios,
@@ -79,18 +75,17 @@ const obtenerServicioPorId = async (req, res, next) => {
 };
 
 /**
- * Actualiza (Edita) un servicio existente por su ID.
+ * Actualiza un servicio existente por su ID.
  */
 const actualizarServicio = async (req, res, next) => {
   try {
     const { idServicio } = req.params;
     const datosActualizar = { ...req.body };
     if (req.file) {
-      // Normalize path to be platform-independent and web-accessible
       const imagePath = req.file.path.replace(/\\/g, "/");
-      // Construct a web-accessible URL if 'uploads' is served statically
-      // Assuming 'uploads' is at the root of the served static files
-      datosActualizar.imagen = imagePath.substring(imagePath.indexOf("uploads"));
+      datosActualizar.imagen = imagePath.substring(
+        imagePath.indexOf("uploads")
+      );
     }
     const servicioActualizado = await servicioService.actualizarServicio(
       Number(idServicio),
@@ -112,54 +107,15 @@ const actualizarServicio = async (req, res, next) => {
 const cambiarEstadoServicio = async (req, res, next) => {
   try {
     const { idServicio } = req.params;
-    const { estado } = req.body; // Se espera un booleano
-
+    const { estado } = req.body;
     const servicioActualizado = await servicioService.cambiarEstadoServicio(
       Number(idServicio),
       estado
     );
     res.status(200).json({
       success: true,
-      message: `Estado del servicio ID ${idServicio} cambiado a ${estado} exitosamente.`,
+      message: `Estado del servicio cambiado exitosamente.`,
       data: servicioActualizado,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Anula un servicio (borrado lógico, estado = false).
- */
-const anularServicio = async (req, res, next) => {
-  try {
-    const { idServicio } = req.params;
-    const servicioAnulado = await servicioService.anularServicio(
-      Number(idServicio)
-    );
-    res.status(200).json({
-      success: true,
-      message: "Servicio anulado (deshabilitado) exitosamente.",
-      data: servicioAnulado,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Habilita un servicio (estado = true).
- */
-const habilitarServicio = async (req, res, next) => {
-  try {
-    const { idServicio } = req.params;
-    const servicioHabilitado = await servicioService.habilitarServicio(
-      Number(idServicio)
-    );
-    res.status(200).json({
-      success: true,
-      message: "Servicio habilitado exitosamente.",
-      data: servicioHabilitado,
     });
   } catch (error) {
     next(error);
@@ -184,8 +140,6 @@ module.exports = {
   listarServicios,
   obtenerServicioPorId,
   actualizarServicio,
-  anularServicio,
-  habilitarServicio,
+  cambiarEstadoServicio, // Esta función es más genérica y puede reemplazar a anular/habilitar
   eliminarServicioFisico,
-  cambiarEstadoServicio, // <-- Nueva función exportada
 };

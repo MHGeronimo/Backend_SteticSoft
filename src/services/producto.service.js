@@ -1,4 +1,4 @@
-// src/shared/src_api/services/producto.service.js
+// RUTA: src/shared/src_api/services/producto.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -17,7 +17,7 @@ const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
     throw new NotFoundError("Producto no encontrado para cambiar estado.");
   }
   if (producto.estado === nuevoEstado) {
-    return producto; // Ya está en el estado deseado
+    return producto;
   }
   await producto.update({ estado: nuevoEstado });
   return producto;
@@ -74,17 +74,20 @@ const crearProducto = async (datosProducto) => {
     });
     return nuevoProducto;
   } catch (error) {
-    console.error(
-      "Error al crear el producto en el servicio:",
-      error.message,
-      error.stack
+    console.error("Error inesperado al crear producto:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    throw new CustomError(
+      "Ocurrió un error inesperado en el servicio de productos.",
+      500
     );
-    throw new CustomError(`Error al crear el producto: ${error.message}`, 500);
   }
 };
 
 /**
- * Obtener todos los productos.
+ * Obtener todos los productos con paginación y filtros.
  */
 const obtenerTodosLosProductos = async (filtros) => {
   const {
@@ -93,7 +96,7 @@ const obtenerTodosLosProductos = async (filtros) => {
     nombre,
     estado,
     idCategoria,
-    tipo_uso, 
+    tipoUso,
   } = filtros;
 
   const offset = (page - 1) * limit;
@@ -108,9 +111,10 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  if (tipo_uso) {
-    whereCondition.tipo_uso = tipo_uso;
+  if (tipoUso !== undefined && tipoUso !== "") {
+  whereCondition.tipoUso = { [Op.eq]: tipoUso };
   }
+
 
   let includeCondition = [
     {
@@ -136,11 +140,17 @@ const obtenerTodosLosProductos = async (filtros) => {
       productos: rows,
     };
   } catch (error) {
-    console.error("Error al obtener productos con paginación:", error);
-    throw new Error("No se pudieron obtener los productos.");
+    console.error("Error inesperado al obtener productos:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    throw new CustomError(
+      "Ocurrió un error inesperado al obtener productos.",
+      500
+    );
   }
 };
-
 
 /**
  * Obtener un producto por su ID.
@@ -161,13 +171,14 @@ const obtenerProductoPorId = async (idProducto) => {
     }
     return producto;
   } catch (error) {
+    console.error("Error inesperado al obtener producto por ID:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al obtener el producto con ID ${idProducto} en el servicio:`,
-      error.message
-    );
     throw new CustomError(
-      `Error al obtener el producto: ${error.message}`,
+      "Ocurrió un error inesperado al obtener el producto.",
       500
     );
   }
@@ -217,19 +228,19 @@ const actualizarProducto = async (idProducto, datosActualizar) => {
     await producto.update(datosActualizar);
     return obtenerProductoPorId(producto.idProducto);
   } catch (error) {
+    console.error("Error inesperado al actualizar producto:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     if (
       error instanceof NotFoundError ||
       error instanceof BadRequestError ||
       error instanceof ConflictError
     )
       throw error;
-    console.error(
-      `Error al actualizar el producto con ID ${idProducto} en el servicio:`,
-      error.message,
-      error.stack
-    );
     throw new CustomError(
-      `Error al actualizar el producto: ${error.message}`,
+      "Ocurrió un error inesperado al actualizar el producto.",
       500
     );
   }
@@ -242,12 +253,13 @@ const anularProducto = async (idProducto) => {
   try {
     return await cambiarEstadoProducto(idProducto, false);
   } catch (error) {
+    console.error("Error inesperado al anular producto:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al anular el producto con ID ${idProducto} en el servicio:`,
-      error.message
-    );
-    throw new CustomError(`Error al anular el producto: ${error.message}`, 500);
+    throw new CustomError("Ocurrió un error al anular el producto.", 500);
   }
 };
 
@@ -258,15 +270,13 @@ const habilitarProducto = async (idProducto) => {
   try {
     return await cambiarEstadoProducto(idProducto, true);
   } catch (error) {
+    console.error("Error inesperado al habilitar producto:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     if (error instanceof NotFoundError) throw error;
-    console.error(
-      `Error al habilitar el producto con ID ${idProducto} en el servicio:`,
-      error.message
-    );
-    throw new CustomError(
-      `Error al habilitar el producto: ${error.message}`,
-      500
-    );
+    throw new CustomError("Ocurrió un error al habilitar el producto.", 500);
   }
 };
 
@@ -287,18 +297,22 @@ const eliminarProductoFisico = async (idProducto) => {
     });
     return filasEliminadas;
   } catch (error) {
+    console.error("Error inesperado al eliminar producto físicamente:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+
     if (error instanceof NotFoundError) throw error;
+
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new ConflictError(
-        "No se puede eliminar el producto porque está siendo referenciado en abastecimientos, compras o ventas. Considere anularlo en su lugar."
+        "No se puede eliminar el producto porque está siendo referenciado. Considere anularlo."
       );
     }
-    console.error(
-      `Error al eliminar físicamente el producto con ID ${idProducto} en el servicio:`,
-      error.message
-    );
+
     throw new CustomError(
-      `Error al eliminar físicamente el producto: ${error.message}`,
+      "Ocurrió un error inesperado al eliminar el producto.",
       500
     );
   }

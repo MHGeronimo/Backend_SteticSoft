@@ -6,179 +6,73 @@ const {
 const db = require("../models");
 
 const crearServicioValidators = [
+  // 1. Validador para 'nombre'
   body("nombre")
     .trim()
-    .notEmpty()
-    .withMessage("El nombre del servicio es obligatorio.")
-    .isString()
-    .withMessage("El nombre del servicio debe ser texto.")
-    .isLength({ min: 3, max: 100 })
-    .withMessage("El nombre del servicio debe tener entre 3 y 100 caracteres.")
+    .notEmpty().withMessage("El nombre del servicio es obligatorio.")
+    .isString().withMessage("El nombre debe ser texto.")
+    .isLength({ min: 3, max: 100 }).withMessage("El nombre debe tener entre 3 y 100 caracteres.")
     .custom(async (value) => {
-      const servicioExistente = await db.Servicio.findOne({
-        where: { nombre: value },
-      });
-      if (servicioExistente) {
-        return Promise.reject("El nombre del servicio ya existe.");
+      const servicio = await db.Servicio.findOne({ where: { nombre: value } });
+      if (servicio) {
+        return Promise.reject("Ya existe un servicio con este nombre.");
       }
     }),
+
+  // 2. Validador para 'descripcion' (opcional)
   body("descripcion")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .isString()
-    .withMessage("La descripción debe ser texto."),
+    .isString().withMessage("La descripción debe ser texto."),
+
+  // 3. Validador para 'precio'
   body("precio")
-    .notEmpty()
-    .withMessage("El precio es obligatorio.")
-    .isFloat({ gt: -0.01 })
-    .withMessage("El precio debe ser un número no negativo.")
-    .toFloat(),
+    .notEmpty().withMessage("El precio es obligatorio.")
+    .isFloat({ gt: 0 }).withMessage("El precio debe ser un número mayor a cero.")
+    .toFloat(), // Convierte el string a número
+
+  // 4. Validador para 'duracionEstimada' (opcional)
   body("duracionEstimada")
-    .optional({ nullable: true })
-    .isInt({ min: 0 })
-    .withMessage(
-      "La duración estimada debe ser un número entero no negativo (en minutos)."
-    )
-    .toInt(),
-  body("categoriaServicioId")
-    .notEmpty()
-    .withMessage("El ID de la categoría de servicio es obligatorio.")
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID de la categoría de servicio debe ser un entero positivo."
-    )
+    .optional({ nullable: true, checkFalsy: true })
+    .isInt({ min: 1 }).withMessage("La duración debe ser un número entero positivo.")
+    .toInt(), // Convierte el string a número entero
+
+  // 5. Validador para 'categoriaServicioId'
+  body("categoriaServicioId") // Valida el nombre de campo que envía el frontend
+    .notEmpty().withMessage("La categoría es obligatoria.")
+    .isInt({ gt: 0 }).withMessage("El ID de la categoría es un número inválido.")
     .custom(async (value) => {
-      const categoria = await db.CategoriaServicio.findOne({
-        where: { idCategoriaServicio: value, estado: true },
-      });
-      if (!categoria) {
-        return Promise.reject(
-          "La categoría de servicio especificada no existe o no está activa."
-        );
+      // Verifica que la categoría exista y esté activa en la BD
+      const categoria = await db.CategoriaServicio.findByPk(value);
+      if (!categoria || !categoria.estado) {
+        return Promise.reject("La categoría seleccionada no existe o no está activa.");
       }
     }),
-  body("especialidadId")
-    .optional({ nullable: true })
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID de la especialidad debe ser un entero positivo si se proporciona."
-    )
-    .custom(async (value) => {
-      if (value) {
-        const especialidad = await db.Especialidad.findOne({
-          where: { idEspecialidad: value, estado: true },
-        });
-        if (!especialidad) {
-          return Promise.reject(
-            "La especialidad especificada no existe o no está activa."
-          );
-        }
-      }
-    }),
-  body("estado")
-    .optional()
-    .isBoolean()
-    .withMessage("El estado debe ser un valor booleano (true o false)."),
+
   handleValidationErrors,
 ];
 
+
+// --- Validador para la ACTUALIZACIÓN ---
 const actualizarServicioValidators = [
-  param("idServicio")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del servicio debe ser un entero positivo."),
+  param("idServicio").isInt({ gt: 0 }).withMessage("El ID del servicio en la URL es inválido."),
   body("nombre")
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage(
-      "El nombre del servicio no puede estar vacío si se proporciona."
-    )
-    .isString()
-    .withMessage("El nombre del servicio debe ser texto.")
-    .isLength({ min: 3, max: 100 })
-    .withMessage("El nombre del servicio debe tener entre 3 y 100 caracteres.")
+    .notEmpty().withMessage("El nombre no puede ser un texto vacío.")
+    .isLength({ min: 3, max: 100 }).withMessage("El nombre debe tener entre 3 y 100 caracteres.")
     .custom(async (value, { req }) => {
-      if (value) {
-        const idServicio = Number(req.params.idServicio);
-        const servicioExistente = await db.Servicio.findOne({
-          where: {
-            nombre: value,
-            idServicio: { [db.Sequelize.Op.ne]: idServicio },
-          },
-        });
-        if (servicioExistente) {
-          return Promise.reject(
-            "El nombre del servicio ya está en uso por otro registro."
-          );
-        }
+      const servicio = await db.Servicio.findOne({
+        where: {
+          nombre: value,
+          idServicio: { [db.Sequelize.Op.ne]: req.params.idServicio },
+        },
+      });
+      if (servicio) {
+        return Promise.reject("Este nombre ya está en uso por otro servicio.");
       }
     }),
-  body("descripcion")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
-    .withMessage("La descripción debe ser texto."),
-  body("precio")
-    .optional()
-    .isFloat({ gt: -0.01 })
-    .withMessage("El precio debe ser un número no negativo si se actualiza.")
-    .toFloat(),
-  body("duracionEstimada")
-    .optional({ nullable: true })
-    .isInt({ min: 0 })
-    .withMessage(
-      "La duración estimada debe ser un número entero no negativo si se actualiza."
-    )
-    .toInt(),
-  body("categoriaServicioId")
-    .optional()
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID de la categoría de servicio debe ser un entero positivo si se actualiza."
-    )
-    .custom(async (value) => {
-      if (value) {
-        const categoria = await db.CategoriaServicio.findOne({
-          where: { idCategoriaServicio: value, estado: true },
-        });
-        if (!categoria) {
-          return Promise.reject(
-            "La nueva categoría de servicio especificada no existe o no está activa."
-          );
-        }
-      }
-    }),
-  body("especialidadId")
-    .optional({ nullable: true })
-    .custom(async (value) => {
-      if (value !== null && value !== undefined) {
-        if (!(Number.isInteger(value) && value > 0)) {
-          throw new Error(
-            "El ID de la especialidad debe ser un entero positivo o null."
-          );
-        }
-        const especialidad = await db.Especialidad.findOne({
-          where: { idEspecialidad: value, estado: true },
-        });
-        if (!especialidad) {
-          return Promise.reject(
-            "La nueva especialidad especificada no existe o no está activa."
-          );
-        }
-      }
-      return true;
-    }),
-  body("estado")
-    .optional()
-    .isBoolean()
-    .withMessage("El estado debe ser un valor booleano (true o false)."),
-  handleValidationErrors,
-];
 
-const idServicioValidator = [
-  param("idServicio")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del servicio debe ser un entero positivo."),
   handleValidationErrors,
 ];
 

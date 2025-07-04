@@ -40,30 +40,43 @@ const crearProveedor = async (datosProveedor) => {
     estado,
   } = datosProveedor;
 
-  if (nitEmpresa) {
-    const proveedorConNit = await db.Proveedor.findOne({
-      where: { nitEmpresa },
-    });
-    if (proveedorConNit) {
-      throw new ConflictError(
-        `El NIT de empresa '${nitEmpresa}' ya está registrado.`
-      );
-    }
-  }
-  const proveedorConNombreTipo = await db.Proveedor.findOne({
-    where: { nombre, tipo },
+  if (numeroDocumento) {
+    const proveedorConDocumento = await db.Proveedor.findOne({
+      where: { numeroDocumento, estado: true }, // <-- CORRECCIÓN
+      });
+    if (proveedorConDocumento) {
+      throw new ConflictError(
+        `El número de documento '${numeroDocumento}' ya está registrado en un proveedor activo.`
+      );
+    }
+  }
+
+  if (nitEmpresa) {
+    const proveedorConNit = await db.Proveedor.findOne({
+      where: { nitEmpresa, estado: true }, // <-- CORRECCIÓN
+    });
+    if (proveedorConNit) {
+      throw new ConflictError(
+        `El NIT de empresa '${nitEmpresa}' ya está registrado en un proveedor activo.`
+      );
+    }
+  }
+  const proveedorConNombreTipo = await db.Proveedor.findOne({
+    where: { nombre, tipo, estado: true }, // <-- CORRECCIÓN
+  });
+  if (proveedorConNombreTipo) {
+    throw new ConflictError(
+      `Ya existe un proveedor activo con el nombre '${nombre}' y tipo '${tipo}'.`
+    );
+  }
+  const proveedorConCorreo = await db.Proveedor.findOne({ 
+    where: { correo, estado: true } // <-- CORRECCIÓN
   });
-  if (proveedorConNombreTipo) {
-    throw new ConflictError(
-      `Ya existe un proveedor con el nombre '${nombre}' y tipo '${tipo}'.`
-    );
-  }
-  const proveedorConCorreo = await db.Proveedor.findOne({ where: { correo } });
-  if (proveedorConCorreo) {
-    throw new ConflictError(
-      `El correo electrónico '${correo}' ya está registrado para otro proveedor.`
-    );
-  }
+  if (proveedorConCorreo) {
+    throw new ConflictError(
+      `El correo electrónico '${correo}' ya está registrado para otro proveedor activo.`
+    );
+  }
 
   try {
     const nuevoProveedor = await db.Proveedor.create({
@@ -86,6 +99,11 @@ const crearProveedor = async (datosProveedor) => {
       let campoConflictivo = "un campo único";
       if (error.fields) {
         if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
+        // --- INICIO DE CORRECCIÓN ---
+        // Se añade el caso para el error de restricción de la base de datos.
+        else if (error.fields.numero_documento)
+          campoConflictivo = "Número de Documento";
+        // --- FIN DE CORRECCIÓN ---
         else if (
           error.fields.proveedor_nombre_tipo_key ||
           (error.fields.nombre && error.fields.tipo)
@@ -178,109 +196,105 @@ const obtenerProveedorPorId = async (idProveedor) => {
  */
 const actualizarProveedor = async (idProveedor, datosActualizar) => {
   try {
+    // 1. Buscamos el proveedor que vamos a actualizar
     const proveedor = await db.Proveedor.findByPk(idProveedor);
     if (!proveedor) {
       throw new NotFoundError("Proveedor no encontrado para actualizar.");
     }
 
-    const { nombre, tipo, nitEmpresa, correo } = datosActualizar;
+    const { nombre, tipo, nitEmpresa, correo, numeroDocumento } = datosActualizar;
 
     if (nitEmpresa && nitEmpresa !== proveedor.nitEmpresa) {
       const otroProveedorConNit = await db.Proveedor.findOne({
         where: {
           nitEmpresa: nitEmpresa,
-          idProveedor: { [Op.ne]: idProveedor },
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
         },
       });
       if (otroProveedorConNit) {
         throw new ConflictError(
-          `El NIT de empresa '${nitEmpresa}' ya está registrado para otro proveedor.`
+          `El NIT de empresa '${nitEmpresa}' ya está registrado para otro proveedor activo.`
         );
       }
     }
 
+    // VALIDACIÓN 2: Correo electrónico
+    // Solo validamos si se envió un correo y si es DIFERENTE al que ya tenía.
     if (correo && correo !== proveedor.correo) {
       const otroProveedorConCorreo = await db.Proveedor.findOne({
-        where: { correo: correo, idProveedor: { [Op.ne]: idProveedor } },
+        where: {
+          correo: correo,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
+        },
       });
       if (otroProveedorConCorreo) {
         throw new ConflictError(
-          `El correo electrónico '${correo}' ya está registrado para otro proveedor.`
+          `El correo electrónico '${correo}' ya está registrado para otro proveedor activo.`
+        );
+      }
+    }
+    
+    // VALIDACIÓN 3: Número de Documento
+    // Solo validamos si se envió un documento y si es DIFERENTE al que ya tenía.
+    if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
+      const otroProveedorConDocumento = await db.Proveedor.findOne({
+        where: {
+          numeroDocumento: numeroDocumento,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
+        },
+      });
+      if (otroProveedorConDocumento) {
+        throw new ConflictError(
+          `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor activo.`
         );
       }
     }
 
-    const nombreActualizado = datosActualizar.hasOwnProperty("nombre")
-      ? nombre
-      : proveedor.nombre;
-    const tipoActualizado = datosActualizar.hasOwnProperty("tipo")
-      ? tipo
-      : proveedor.tipo;
+    // VALIDACIÓN 4: Combinación de Nombre y Tipo
+    // Esta es la validación más compleja y la que probablemente fallaba.
+    const nombreCambiado = nombre !== undefined && nombre !== proveedor.nombre;
+    const tipoCambiado = tipo !== undefined && tipo !== proveedor.tipo;
 
-    if (
-      (datosActualizar.hasOwnProperty("nombre") ||
-        datosActualizar.hasOwnProperty("tipo")) &&
-      (nombreActualizado !== proveedor.nombre ||
-        tipoActualizado !== proveedor.tipo)
-    ) {
+    // Solo validamos si el nombre o el tipo han cambiado.
+    if (nombreCambiado || tipoCambiado) {
+      const nombreFinal = nombre !== undefined ? nombre : proveedor.nombre;
+      const tipoFinal = tipo !== undefined ? tipo : proveedor.tipo;
+
       const otroProveedorConNombreTipo = await db.Proveedor.findOne({
         where: {
-          nombre: nombreActualizado,
-          tipo: tipoActualizado,
-          idProveedor: { [Op.ne]: idProveedor },
+          nombre: nombreFinal,
+          tipo: tipoFinal,
+          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
+          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
         },
       });
       if (otroProveedorConNombreTipo) {
         throw new ConflictError(
-          `Ya existe un proveedor con el nombre '${nombreActualizado}' y tipo '${tipoActualizado}'.`
+          `Ya existe un proveedor activo con el nombre '${nombreFinal}' y tipo '${tipoFinal}'.`
         );
       }
     }
-    const camposAActualizar = { ...datosActualizar };
-    if (
-      datosActualizar.hasOwnProperty("tipoDocumento") &&
-      datosActualizar.tipoDocumento === null
-    )
-      camposAActualizar.tipoDocumento = null;
-    if (
-      datosActualizar.hasOwnProperty("numeroDocumento") &&
-      datosActualizar.numeroDocumento === null
-    )
-      camposAActualizar.numeroDocumento = null;
-    if (
-      datosActualizar.hasOwnProperty("nitEmpresa") &&
-      datosActualizar.nitEmpresa === null
-    )
-      camposAActualizar.nitEmpresa = null;
-    if (
-      datosActualizar.hasOwnProperty("telefonoPersonaEncargada") &&
-      datosActualizar.telefonoPersonaEncargada === null
-    )
-      camposAActualizar.telefonoPersonaEncargada = null;
-    if (
-      datosActualizar.hasOwnProperty("emailPersonaEncargada") &&
-      datosActualizar.emailPersonaEncargada === null
-    )
-      camposAActualizar.emailPersonaEncargada = null;
-    if (
-      datosActualizar.hasOwnProperty("nombrePersonaEncargada") &&
-      datosActualizar.nombrePersonaEncargada === null
-    )
-      camposAActualizar.nombrePersonaEncargada = null;
 
-    await proveedor.update(camposAActualizar);
+    // --- FIN DE LA LÓGICA DE VALIDACIÓN ---
+
+    // 2. Si todas las validaciones pasan, actualizamos el proveedor.
+    await proveedor.update(datosActualizar);
     return proveedor;
+
   } catch (error) {
-    if (error instanceof NotFoundError || error instanceof ConflictError)
+    if (error instanceof NotFoundError || error instanceof ConflictError) {
       throw error;
+    }
+    // Manejo de errores de restricción única a nivel de base de datos (como respaldo)
     if (error.name === "SequelizeUniqueConstraintError") {
       let campoConflictivo = "un campo único";
       if (error.fields) {
         if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
-        else if (
-          error.fields.proveedor_nombre_tipo_key ||
-          (error.fields.nombre && error.fields.tipo)
-        )
+        else if (error.fields.numero_documento) campoConflictivo = "Número de Documento";
+        else if (error.fields.proveedor_nombre_tipo_key || (error.fields.nombre && error.fields.tipo))
           campoConflictivo = `la combinación de nombre y tipo`;
         else if (error.fields.correo) campoConflictivo = "correo electrónico";
       }
@@ -299,6 +313,7 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
     );
   }
 };
+
 
 /**
  * Anular un proveedor.
@@ -338,9 +353,10 @@ const habilitarProveedor = async (idProveedor) => {
   }
 };
 
-/**
- * Eliminar un proveedor físicamente.
- */
+// src/shared/src_api/services/proveedor.service.js
+
+// src/shared/src_api/services/proveedor.service.js
+
 const eliminarProveedorFisico = async (idProveedor) => {
   try {
     const proveedor = await db.Proveedor.findByPk(idProveedor);
@@ -349,15 +365,32 @@ const eliminarProveedorFisico = async (idProveedor) => {
         "Proveedor no encontrado para eliminar físicamente."
       );
     }
+
+    const comprasAsociadas = await db.Compra.count({
+      where: { idProveedor: idProveedor },
+    });
+
+    if (comprasAsociadas > 0) {
+      // --- LÍNEA MODIFICADA ---
+      // Cambiamos el mensaje para que sea más específico según tu solicitud.
+      throw new ConflictError(
+        `El proveedor '${proveedor.nombre}' está asociado con compras y por ello no puede ser eliminado.`
+      );
+      // --- FIN DE LA MODIFICACIÓN ---
+    }
+
     const filasEliminadas = await db.Proveedor.destroy({
       where: { idProveedor },
     });
     return filasEliminadas;
   } catch (error) {
-    if (error instanceof NotFoundError) throw error;
+    if (error instanceof NotFoundError || error instanceof ConflictError) {
+      throw error;
+    }
     if (error.name === "SequelizeForeignKeyConstraintError") {
+      // Este error de respaldo también se puede ajustar si lo deseas.
       throw new ConflictError(
-        "No se puede eliminar el proveedor porque está siendo referenciado en Compras."
+        "No se puede eliminar el proveedor porque está asociado con compras."
       );
     }
     console.error(
@@ -380,7 +413,10 @@ const eliminarProveedorFisico = async (idProveedor) => {
  */
 const verificarDatosUnicos = async (campos, idExcluir = null) => {
     const errores = {};
-    const whereClause = idExcluir ? { idProveedor: { [Op.ne]: idExcluir } } : {};
+    const whereClause = { estado: true }; // <-- CORRECCIÓN
+    if (idExcluir) {
+        whereClause.idProveedor = { [Op.ne]: idExcluir };
+    }
 
     const camposAValidar = {
         correo: "Este correo ya está registrado.",

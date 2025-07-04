@@ -7,11 +7,29 @@ const permisosXRolService = require("../services/permisosXRol.service.js");
  */
 const crearRol = async (req, res, next) => {
   try {
-    const nuevoRol = await rolService.crearRol(req.body);
+    // El servicio rolService.crearRol ahora maneja la creación del rol y la asignación de permisos
+    // y devuelve el rol con sus permisos.
+    const rolCreado = await rolService.crearRol(req.body);
+
+    let message = "Rol creado exitosamente.";
+    // rolCreado incluye los permisos asociados desde el servicio.
+    // Verificamos si el array de permisos tiene elementos.
+    if (rolCreado.permisos && rolCreado.permisos.length > 0) {
+      message = "Rol y permisos asignados creados exitosamente.";
+    } else if (req.body.idPermisos && req.body.idPermisos.length === 0) {
+      // Si se envió un array vacío de permisos, se puede reflejar en el mensaje.
+      message =
+        "Rol creado exitosamente sin permisos asignados (se recibió un array de permisos vacío).";
+    } else if (!req.body.idPermisos) {
+      // Si no se enviaron permisos en absoluto.
+      message =
+        "Rol creado exitosamente sin permisos asignados (no se proporcionaron permisos).";
+    }
+
     res.status(201).json({
       success: true,
-      message: "Rol creado exitosamente.",
-      data: nuevoRol,
+      message: message,
+      data: rolCreado,
     });
   } catch (error) {
     next(error);
@@ -224,5 +242,5 @@ module.exports = {
   asignarPermisosARol,
   quitarPermisosDeRol,
   listarPermisosDeRol,
-  cambiarEstadoRol, // <-- Nueva función exportada
+  cambiarEstadoRol,
 };

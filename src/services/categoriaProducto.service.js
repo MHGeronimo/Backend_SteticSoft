@@ -1,6 +1,6 @@
 // src/services/categoriaProducto.service.js
 const db = require("../models");
-const { Op } = db.Sequelize;
+const { Op } = db.Sequelize; // Asegúrate de que Op esté importado
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
 /**
@@ -78,12 +78,40 @@ const crearCategoriaProducto = async (datosCategoria) => {
 };
 
 /**
- * Obtener todas las categorías de producto.
+ * Obtener todas las categorías de producto con soporte para búsqueda y filtrado.
  */
 const obtenerTodasLasCategoriasProducto = async (opcionesDeFiltro = {}) => {
+  const whereClause = {};
+
+  // Si hay un término de búsqueda, construir la cláusula OR
+  if (opcionesDeFiltro.search) {
+    const searchTerm = opcionesDeFiltro.search.toLowerCase();
+    whereClause[Op.or] = [
+      { nombre: { [Op.like]: `%${searchTerm}%` } },
+      { descripcion: { [Op.like]: `%${searchTerm}%` } },
+      // Para vidaUtilDias (INTEGER), convertir a string para buscar
+      db.Sequelize.where(db.Sequelize.cast(db.Sequelize.col('vidaUtilDias'), 'VARCHAR'), {
+        [Op.like]: `%${searchTerm}%`
+      }),
+      { tipoUso: { [Op.like]: `%${searchTerm}%` } },
+      // Para estado (BOOLEAN), buscar por 'activo' o 'inactivo'
+      db.Sequelize.where(
+        db.Sequelize.literal(`CASE WHEN CategoriaProducto.estado = TRUE THEN 'activo' ELSE 'inactivo' END`),
+        { [Op.like]: `%${searchTerm}%` }
+      ),
+    ];
+  }
+
+  // Si hay un filtro de estado explícito (true/false), aplicarlo
+  // Esto puede coexistir con la búsqueda general si se desea, o ser exclusivo.
+  // Aquí lo combinamos con AND si ya hay otros filtros.
+  if (opcionesDeFiltro.hasOwnProperty('estado')) {
+    whereClause.estado = opcionesDeFiltro.estado;
+  }
+
   try {
     return await db.CategoriaProducto.findAll({
-      where: opcionesDeFiltro,
+      where: whereClause, // Aplica la cláusula where construida
       order: [["nombre", "ASC"]],
     });
   } catch (error) {
@@ -139,7 +167,6 @@ const actualizarCategoriaProducto = async (idCategoria, datosActualizar) => {
       const categoriaConMismoNombre = await db.CategoriaProducto.findOne({
         where: {
           nombre: nombre,
-          // CAMBIO CLAVE: Referenciar la columna correcta 'idCategoriaProducto'
           idCategoriaProducto: { [Op.ne]: idCategoria },
         },
       });
@@ -227,13 +254,25 @@ const eliminarCategoriaProductoFisica = async (idCategoria) => {
       );
     }
 
+    // --- VALIDACIÓN DE PRODUCTOS ASOCIADOS ---
+    // Asumo que tienes un modelo `Producto` y que tiene una FK a `CategoriaProducto`.
+    // Si una categoría tiene productos asociados, no debería poder eliminarse.
+    const productosCount = await db.Producto.count({
+        where: { categoriaProductoId: idCategoria } // Asegúrate de que 'categoriaProductoId' sea el nombre de la FK en tu modelo Producto
+    });
+    if (productosCount > 0) {
+        throw new ConflictError(
+            `No se puede eliminar la categoría porque tiene ${productosCount} producto(s) asociado(s).`
+        );
+    }
+    // --- FIN VALIDACIÓN DE PRODUCTOS ASOCIADOS ---
+
     const filasEliminadas = await db.CategoriaProducto.destroy({
-      // CAMBIO CLAVE: Referenciar la columna correcta 'idCategoriaProducto'
       where: { idCategoriaProducto: idCategoria },
     });
     return filasEliminadas;
   } catch (error) {
-    if (error instanceof NotFoundError) throw error;
+    if (error instanceof NotFoundError || error instanceof ConflictError) throw error;
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new ConflictError(
         "No se puede eliminar la categoría porque está siendo referenciada de una manera que impide su borrado."

@@ -1,5 +1,5 @@
 // src/services/venta.service.js
-"use strict";
+"use strict"; 
 
 const db = require("../models");
 const { Op } = db.Sequelize;

@@ -1,20 +1,23 @@
-// src/config/env.config.js
 require('dotenv').config();
 
 const env = process.env.NODE_ENV || 'development';
 const isProduction = env === 'production';
 const isDevelopment = env === 'development';
 
-const getCorsOriginLogic = () => {
-  const originString = process.env.CORS_ORIGIN;
-  if (!originString) {
-    // Fallback si CORS_ORIGIN no está definido en el .env
-    return isProduction ? false : "http://localhost:5173"; // Restrictivo en prod, abierto en dev local
+// ✅ Lista de orígenes permitidos desde el .env o valores por defecto
+const ALLOWED_ORIGINS = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
+  : isProduction
+  ? []
+  : ["http://localhost:5173"]; // Permitir localhost en desarrollo por defecto
+
+// ✅ Función para lógica dinámica de CORS
+const getCorsOriginLogic = (origin, callback) => {
+  if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    callback(null, true);
+  } else {
+    callback(new Error("CORS: Origin no permitido → " + origin));
   }
-  if (originString.includes(",")) {
-    return originString.split(",").map((url) => url.trim()); // Array de URLs
-  }
-  return originString; // Una sola URL
 };
 
 module.exports = {
@@ -52,9 +55,8 @@ module.exports = {
     `"La fuente del peluquero - Notificaciones" <Lafuentedelpeluquero.com>`,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL,
 
-  // CORS
-  CORS_ORIGIN: getCorsOriginLogic(), // <--- Así se usa
-  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173", // Ajustado
+  // ✅ CORS corregido: se exporta la función sin ejecutarla
+  CORS_ORIGIN: getCorsOriginLogic,
 
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || (isProduction ? "short" : "dev"),
