@@ -111,9 +111,10 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  if (tipoUso) {
-    whereCondition.tipoUso = tipoUso;
+  if (tipoUso !== undefined && tipoUso !== "") {
+  whereCondition.tipoUso = { [Op.eq]: tipoUso };
   }
+
 
   let includeCondition = [
     {
