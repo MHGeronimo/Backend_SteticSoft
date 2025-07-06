@@ -30,13 +30,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0.0,
         field: "precio",
       },
-      // ✅ CORREGIDO: Estandarizado a camelCase
       stockMinimo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         field: "stock_minimo",
       },
-      // ✅ CORREGIDO: Estandarizado a camelCase
       stockMaximo: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
@@ -52,20 +50,17 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "estado",
       },
-      // ✅ CORREGIDO: Estandarizado a camelCase
       tipoUso: {
         type: DataTypes.ENUM("Interno", "Venta Directa", "Otro"),
         allowNull: false,
         defaultValue: "Venta Directa",
         field: "tipo_uso",
       },
-      // ✅ CORREGIDO: Estandarizado a camelCase
       vidaUtilDias: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: "vida_util_dias",
       },
-      // ✅ CORREGIDO: Estandarizado a camelCase
       categoriaProductoId: {
         type: DataTypes.INTEGER,
         allowNull: true,

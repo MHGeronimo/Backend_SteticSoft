@@ -86,10 +86,6 @@ const crearProducto = async (datosProducto) => {
   }
 };
 
-// RUTA: src/shared/src_api/services/producto.service.js
-
-// ... (mantén las importaciones y la función cambiarEstadoProducto igual)
-
 const obtenerTodosLosProductos = async (filtros) => {
   const {
     page = 1,
@@ -97,7 +93,7 @@ const obtenerTodosLosProductos = async (filtros) => {
     nombre,
     estado,
     idCategoria,
-    tipoUso, // El filtro se recibe aquí
+    tipoUso,
   } = filtros;
 
   const offset = (page - 1) * limit;
@@ -112,18 +108,19 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  // ✅ CORRECCIÓN: El filtro para tipoUso ahora es más simple y robusto.
   if (tipoUso) {
     whereCondition.tipoUso = tipoUso;
   }
 
-  // ✅ CORRECCIÓN CLAVE: La condición 'include' ahora coincide perfectamente
-  // con la asociación definida en el modelo.
+  // ✅ CORRECCIÓN CLAVE: La forma en que se incluye la categoría.
+  // Nos aseguramos que el alias 'categoria' coincide exactamente con el definido en Producto.model.js
   let includeCondition = [
     {
       model: db.CategoriaProducto,
-      as: "categoria", // Este alias 'categoria' DEBE coincidir con el del modelo
-      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
+      as: "categoria",
+      // required: false -> Hace que la consulta sea un LEFT JOIN.
+      // Traerá productos incluso si no tienen una categoría asignada, evitando errores.
+      required: false,
     },
   ];
 
@@ -134,6 +131,9 @@ const obtenerTodosLosProductos = async (filtros) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["nombre", "ASC"]],
+      // distinct: true -> Es importante para asegurar que el conteo de filas sea correcto
+      // cuando se usa `include` con `limit`.
+      distinct: true,
     });
 
     return {
@@ -148,8 +148,9 @@ const obtenerTodosLosProductos = async (filtros) => {
       stack: error.stack,
       name: error.name,
     });
+    // Lanzamos un error más específico para facilitar la depuración futura.
     throw new CustomError(
-      "Ocurrió un error inesperado al obtener productos.",
+      `Ocurrió un error inesperado al obtener productos: ${error.message}`,
       500
     );
   }
