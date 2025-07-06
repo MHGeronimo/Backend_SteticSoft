@@ -83,34 +83,42 @@ const crearCategoriaProducto = async (datosCategoria) => {
 const obtenerTodasLasCategoriasProducto = async (opcionesDeFiltro = {}) => {
   const whereClause = {};
 
-  // Si hay un término de búsqueda, construir la cláusula OR
+  // Filtros explícitos (se mantienen por si los usas en otro lugar)
+  if (opcionesDeFiltro.hasOwnProperty("estado")) {
+    whereClause.estado = opcionesDeFiltro.estado;
+  }
+  if (opcionesDeFiltro.hasOwnProperty("tipoUso")) {
+    whereClause.tipoUso = opcionesDeFiltro.tipoUso;
+  }
+
+  // Lógica de búsqueda general
   if (opcionesDeFiltro.search) {
-    const searchTerm = opcionesDeFiltro.search.toLowerCase();
+    const searchTerm = `%${opcionesDeFiltro.search.toLowerCase()}%`;
+
+    // Reemplazamos la lógica anterior por una más segura y correcta
     whereClause[Op.or] = [
-      { nombre: { [Op.like]: `%${searchTerm}%` } },
-      { descripcion: { [Op.like]: `%${searchTerm}%` } },
-      // Para vidaUtilDias (INTEGER), convertir a string para buscar
-      db.Sequelize.where(db.Sequelize.cast(db.Sequelize.col('vidaUtilDias'), 'VARCHAR'), {
-        [Op.like]: `%${searchTerm}%`
-      }),
-      { tipoUso: { [Op.like]: `%${searchTerm}%` } },
-      // Para estado (BOOLEAN), buscar por 'activo' o 'inactivo'
-      db.Sequelize.where(
-        db.Sequelize.literal(`CASE WHEN ${db.sequelize.col('estado')} = TRUE THEN 'activo' ELSE 'inactivo' END`),
-        { [Op.like]: `%${searchTerm}%` }
-      ),
+      { nombre: { [Op.iLike]: searchTerm } },
+      { descripcion: { [Op.iLike]: searchTerm } },
+      { tipoUso: { [Op.iLike]: searchTerm } },
+      // CORRECCIÓN: Búsqueda segura en campos numéricos y booleanos usando `literal`
+      // y especificando el nombre real de la columna en la base de datos.
+      db.sequelize.literal(`CAST("vida_util_dias" AS TEXT) ILIKE '${searchTerm}'`),
+      db.sequelize.literal(`
+        CASE 
+          WHEN estado = true THEN 'activo' 
+          ELSE 'inactivo' 
+        END ILIKE '${searchTerm}'
+      `),
     ];
   }
 
-  if (opcionesDeFiltro.hasOwnProperty('estado')) {
-    whereClause.estado = opcionesDeFiltro.estado;
-  }
-
   try {
-    return await db.CategoriaProducto.findAll({
-      where: whereClause, // Aplica la cláusula where construida
+    const categorias = await db.CategoriaProducto.findAll({
+      where: whereClause,
       order: [["nombre", "ASC"]],
+      // Puedes añadir `include` si necesitas datos de modelos asociados
     });
+    return categorias;
   } catch (error) {
     console.error(
       "Error al obtener todas las categorías de producto en el servicio:",
