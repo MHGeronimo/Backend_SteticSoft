@@ -96,15 +96,12 @@ const obtenerTodasLasCategoriasProducto = async (opcionesDeFiltro = {}) => {
       { tipoUso: { [Op.like]: `%${searchTerm}%` } },
       // Para estado (BOOLEAN), buscar por 'activo' o 'inactivo'
       db.Sequelize.where(
-        db.Sequelize.literal(`CASE WHEN CategoriaProducto.estado = TRUE THEN 'activo' ELSE 'inactivo' END`),
+        db.Sequelize.literal(`CASE WHEN ${db.sequelize.col('estado')} = TRUE THEN 'activo' ELSE 'inactivo' END`),
         { [Op.like]: `%${searchTerm}%` }
       ),
     ];
   }
 
-  // Si hay un filtro de estado explícito (true/false), aplicarlo
-  // Esto puede coexistir con la búsqueda general si se desea, o ser exclusivo.
-  // Aquí lo combinamos con AND si ya hay otros filtros.
   if (opcionesDeFiltro.hasOwnProperty('estado')) {
     whereClause.estado = opcionesDeFiltro.estado;
   }
