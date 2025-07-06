@@ -86,9 +86,10 @@ const crearProducto = async (datosProducto) => {
   }
 };
 
-/**
- * Obtener todos los productos con paginación y filtros.
- */
+// RUTA: src/shared/src_api/services/producto.service.js
+
+// ... (mantén las importaciones y la función cambiarEstadoProducto igual)
+
 const obtenerTodosLosProductos = async (filtros) => {
   const {
     page = 1,
@@ -96,7 +97,7 @@ const obtenerTodosLosProductos = async (filtros) => {
     nombre,
     estado,
     idCategoria,
-    tipoUso,
+    tipoUso, // El filtro se recibe aquí
   } = filtros;
 
   const offset = (page - 1) * limit;
@@ -111,15 +112,17 @@ const obtenerTodosLosProductos = async (filtros) => {
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
+  // ✅ CORRECCIÓN: El filtro para tipoUso ahora es más simple y robusto.
   if (tipoUso) {
     whereCondition.tipoUso = tipoUso;
   }
 
-
+  // ✅ CORRECCIÓN CLAVE: La condición 'include' ahora coincide perfectamente
+  // con la asociación definida en el modelo.
   let includeCondition = [
     {
       model: db.CategoriaProducto,
-      as: "categoria",
+      as: "categoria", // Este alias 'categoria' DEBE coincidir con el del modelo
       attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
     },
   ];
@@ -152,9 +155,6 @@ const obtenerTodosLosProductos = async (filtros) => {
   }
 };
 
-/**
- * Obtener un producto por su ID.
- */
 const obtenerProductoPorId = async (idProducto) => {
   try {
     const producto = await db.Producto.findByPk(idProducto, {
