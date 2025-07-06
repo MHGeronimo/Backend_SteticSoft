@@ -26,7 +26,13 @@ const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
 /**
  * Crear un nuevo producto.
  */
+// RUTA: src/shared/src_api/services/producto.service.js
+
+/**
+ * Crear un nuevo producto.
+ */
 const crearProducto = async (datosProducto) => {
+  // ✅ CORRECCIÓN: Añadimos 'tipoUso' y 'vidaUtilDias' a la desestructuración
   const {
     nombre,
     descripcion,
@@ -37,7 +43,11 @@ const crearProducto = async (datosProducto) => {
     imagen,
     estado,
     categoriaProductoId,
+    tipoUso,       // <-- Campo añadido
+    vidaUtilDias,  // <-- Campo añadido
   } = datosProducto;
+
+  // ... (la lógica de validación de stock y categoría se mantiene igual)
 
   if (
     stockMinimo !== undefined &&
@@ -71,6 +81,9 @@ const crearProducto = async (datosProducto) => {
       imagen: imagen || null,
       estado: typeof estado === "boolean" ? estado : true,
       categoriaProductoId: categoriaProductoId || null,
+      // ✅ CORRECCIÓN: Pasamos los nuevos campos al método de creación
+      tipoUso: tipoUso || 'Venta Directa', // Valor por defecto si no se provee
+      vidaUtilDias: vidaUtilDias || null,
     });
     return nuevoProducto;
   } catch (error) {

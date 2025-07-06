@@ -338,6 +338,8 @@ CREATE TABLE IF NOT EXISTS producto (
     stock_minimo INT DEFAULT 0,
     stock_maximo INT DEFAULT 0,
     imagen TEXT,
+    vida_util_dias INT,
+    tipo_uso VARCHAR(255) NOT NULL DEFAULT 'Venta Directa',
     estado BOOLEAN DEFAULT TRUE NOT NULL,
     id_categoria_producto INT REFERENCES categoria_producto(id_categoria_producto) ON DELETE RESTRICT
 );
