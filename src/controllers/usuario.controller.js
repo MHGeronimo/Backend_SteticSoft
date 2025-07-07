@@ -6,18 +6,14 @@ const usuarioService = require("../services/usuario.service.js");
  */
 const crearUsuario = async (req, res, next) => {
   try {
-    // --- INICIO DE MODIFICACIÓN ---
-    // El servicio ahora maneja toda la lógica, incluida la creación del empleado.
-    const usuarioCreado = await usuarioService.crearUsuario(req.body);
-
+    const nuevoUsuario = await usuarioService.crearUsuario(req.body);
     res.status(201).json({
       success: true,
       message: "Usuario creado exitosamente.",
-      data: usuarioCreado,
+      data: nuevoUsuario,
     });
-    // --- FIN DE MODIFICACIÓN ---
   } catch (error) {
-    next(error); // Pasamos el error al middleware de errores
+    next(error);
   }
 };
 

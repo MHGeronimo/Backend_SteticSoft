@@ -11,9 +11,7 @@ const {
 
 const saltRounds = 10;
 
-// ANÁLISIS Y CORRECCIÓN:
-// Se crea una función auxiliar para no repetir la configuración de 'include' en múltiples funciones.
-// Esto centraliza la lógica para obtener un usuario con su perfil completo.
+// Helper para no repetir la configuración de 'include'
 const includeConfig = [
   { model: db.Rol, as: "rol", attributes: ["idRol", "nombre"] },
   { model: db.Cliente, as: "clienteInfo", required: false },
@@ -22,9 +20,6 @@ const includeConfig = [
 
 /**
  * Obtiene un usuario por su PK con toda la información de su perfil.
- * @param {number} idUsuario - El ID del usuario.
- * @param {object} [options] - Opciones de Sequelize, como la transacción.
- * @returns {Promise<object|null>}
  */
 const findUsuarioConPerfil = (idUsuario, options = {}) => {
   return db.Usuario.findByPk(idUsuario, {
@@ -34,90 +29,110 @@ const findUsuarioConPerfil = (idUsuario, options = {}) => {
   });
 };
 
-/**
- * Crea un nuevo usuario y su empleado asociado de forma transaccional.
- * @param {object} datosUsuario - Datos del usuario y del empleado.
- * @returns {Promise<object>} El usuario creado.
- */
-const crearUsuario = async (datosUsuario) => {
-  // --- INICIO DE MODIFICACIÓN ---
-  const t = await db.sequelize.transaction(); // 1. Iniciar transacción
+const crearUsuario = async (datosCompletosUsuario) => {
+  const { correo, contrasena, idRol, estado, ...datosPerfil } =
+    datosCompletosUsuario;
+
+  if (await db.Usuario.findOne({ where: { correo } })) {
+    throw new ConflictError(
+      `La dirección de correo '${correo}' ya está registrada.`
+    );
+  }
+
+  const rol = await db.Rol.findByPk(idRol);
+  if (!rol || !rol.estado) {
+    throw new BadRequestError(
+      `El rol con ID ${idRol} no existe o no está activo.`
+    );
+  }
+
+  // --- VALIDACIÓN ADICIONAL ---
+  // Se añade esta verificación ANTES de la transacción para fallar rápido.
+  // Si el rol requiere un perfil, validamos que el número de documento no exista ya.
+  if (rol.nombre !== "Administrador" && datosPerfil.numeroDocumento) {
+    const perfilModel = rol.nombre === "Empleado" ? db.Empleado : db.Cliente;
+    if (
+      await perfilModel.findOne({
+        where: { numeroDocumento: datosPerfil.numeroDocumento },
+      })
+    ) {
+      throw new ConflictError(
+        `El número de documento '${datosPerfil.numeroDocumento}' ya está registrado.`
+      );
+    }
+  }
+  // --- FIN DE VALIDACIÓN ADICIONAL ---
+
+  const transaction = await db.sequelize.transaction();
 
   try {
-    const {
-      nombre,
-      apellido,
-      tipoDocumento,
-      numeroDocumento,
-      telefono,
-      email,
-      password,
-      idRol,
-    } = datosUsuario;
-
-    // 2. Validar si ya existe un empleado o usuario con los mismos datos únicos
-    const existingUser = await db.Usuario.findOne({
-      where: { email },
-      transaction: t,
-    });
-    if (existingUser) {
-      throw new ConflictError("El correo electrónico ya está en uso.");
-    }
-
-    const existingEmployee = await db.Empleado.findOne({
-      where: { numeroDocumento },
-      transaction: t,
-    });
-    if (existingEmployee) {
-      throw new ConflictError("El número de documento ya está registrado.");
-    }
-
-    // 3. Crear primero el Empleado
-    const nuevoEmpleado = await db.Empleado.create(
-      {
-        nombre,
-        apellido,
-        tipoDocumento,
-        numeroDocumento,
-        telefono,
-        email,
-        estado: true, // Por defecto, el nuevo empleado está activo
-      },
-      { transaction: t }
-    );
-
-    // 4. Crear el Usuario usando el ID del empleado recién creado
+    const contrasenaHasheada = await bcrypt.hash(contrasena, saltRounds);
     const nuevoUsuario = await db.Usuario.create(
       {
-        idEmpleado: nuevoEmpleado.idEmpleado,
+        correo,
+        contrasena: contrasenaHasheada,
         idRol,
-        email,
-        password, // El hook en el modelo se encargará del hash
-        estado: true, // Por defecto, el nuevo usuario está activo
+        estado: typeof estado === "boolean" ? estado : true,
       },
-      { transaction: t }
+      { transaction }
     );
 
-    await t.commit(); // 5. Confirmar la transacción si todo fue exitoso
+    if (rol.nombre !== "Administrador") {
+      const {
+        nombre,
+        apellido,
+        telefono,
+        tipoDocumento,
+        numeroDocumento,
+        fechaNacimiento,
+      } = datosPerfil;
+      if (
+        !nombre ||
+        !apellido ||
+        !telefono ||
+        !tipoDocumento ||
+        !numeroDocumento ||
+        !fechaNacimiento
+      ) {
+        throw new BadRequestError(
+          "Para este rol, se requieren los campos de perfil completos."
+        );
+      }
 
-    // 6. Devolver el usuario recién creado con su información de rol y empleado
-    const usuarioCreado = await db.Usuario.findByPk(nuevoUsuario.idUsuario, {
-      include: [
-        { model: db.Empleado, as: "empleado" },
-        { model: db.Rol, as: "rol" },
-      ],
-    });
+      const perfilModel = db.Cliente; // Asumimos Cliente por defecto
 
-    return usuarioCreado.toJSON();
+      await perfilModel.create(
+        {
+          ...datosPerfil,
+          idUsuario: nuevoUsuario.idUsuario,
+          correo,
+          estado: true,
+        },
+        { transaction }
+      );
+    }
+
+    await transaction.commit();
+    return await findUsuarioConPerfil(nuevoUsuario.idUsuario);
   } catch (error) {
-    await t.rollback(); // 7. Revertir la transacción en caso de cualquier error
-    // Propagar el error para que el controlador lo maneje
-    throw error;
+    await transaction.rollback();
+    if (
+      error instanceof ConflictError ||
+      error instanceof BadRequestError ||
+      error instanceof CustomError
+    ) {
+      throw error;
+    }
+    if (error.name === "SequelizeUniqueConstraintError") {
+      const field = Object.keys(error.fields)[0];
+      const value = error.fields[field];
+      throw new ConflictError(
+        `El valor '${value}' para el campo '${field}' ya está en uso.`
+      );
+    }
+    throw new CustomError(`Error al crear el usuario: ${error.message}`, 500);
   }
-  // --- FIN DE MODIFICACIÓN ---
 };
-
-
 
 const actualizarUsuario = async (idUsuario, datosActualizar) => {
   const transaction = await db.sequelize.transaction();
@@ -130,12 +145,10 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
     const { contrasena, idRol, correo, estado, ...datosParaPerfil } =
       datosActualizar;
 
-    // 1. Actualizar datos del modelo Usuario
     const datosParaUsuario = { idRol, correo, estado };
     if (contrasena) {
       datosParaUsuario.contrasena = await bcrypt.hash(contrasena, saltRounds);
     }
-    // Eliminar claves undefined para que no se actualicen a null
     Object.keys(datosParaUsuario).forEach(
       (key) =>
         datosParaUsuario[key] === undefined && delete datosParaUsuario[key]
@@ -145,8 +158,6 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
       await usuario.update(datosParaUsuario, { transaction });
     }
 
-    // 2. Actualizar datos del Perfil asociado (Cliente o Empleado)
-    // ANÁLISIS Y CORRECCIÓN: La lógica ahora se basa en el rol final del usuario (sea el viejo o el nuevo).
     const rolFinalId = idRol || usuario.idRol;
     const rolFinal = await db.Rol.findByPk(rolFinalId, { transaction });
 
@@ -158,7 +169,6 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
       rolFinal.nombre !== "Administrador" &&
       Object.keys(datosParaPerfil).length > 0
     ) {
-      // Determinar qué modelo de perfil usar
       const PerfilModel =
         rolFinal.nombre === "Empleado" ? db.Empleado : db.Cliente;
       const perfil = await PerfilModel.findOne({
@@ -168,10 +178,6 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
 
       if (perfil) {
         await perfil.update(datosParaPerfil, { transaction });
-      } else {
-        // Opcional: Si el usuario cambia a un rol con perfil pero no tiene uno, se podría crear.
-        // Por ahora, solo actualizamos si existe.
-        // Ejemplo: await PerfilModel.create({ idUsuario, ...datosParaPerfil }, { transaction });
       }
     }
 
@@ -205,7 +211,7 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
     return await db.Usuario.findAll({
       where: opcionesDeFiltro,
       attributes: ["idUsuario", "correo", "estado", "idRol"],
-      include: includeConfig, // Reutilizamos la configuración
+      include: includeConfig,
       order: [["idUsuario", "ASC"]],
     });
   } catch (error) {
@@ -217,7 +223,7 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
 };
 
 const obtenerUsuarioPorId = async (idUsuario) => {
-  const usuario = await findUsuarioConPerfil(idUsuario); // Reutilizamos la función
+  const usuario = await findUsuarioConPerfil(idUsuario);
   if (!usuario) {
     throw new NotFoundError("Usuario no encontrado.");
   }
@@ -230,14 +236,12 @@ const cambiarEstadoUsuario = async (idUsuario, nuevoEstado) => {
     throw new NotFoundError("Usuario no encontrado para cambiar estado.");
   }
   if (usuario.estado === nuevoEstado) {
-    return usuario; // Ya está en el estado deseado
+    return usuario;
   }
   return await usuario.update({ estado: nuevoEstado });
 };
 
 const eliminarUsuarioFisico = async (idUsuario) => {
-  // ANÁLISIS Y CORRECCIÓN: Simplificado. Dejamos que el motor de la BD y Sequelize
-  // manejen la validación de Foreign Key. El catch se encargará del error.
   const transaction = await db.sequelize.transaction();
   try {
     const usuario = await db.Usuario.findByPk(idUsuario, { transaction });
@@ -247,12 +251,10 @@ const eliminarUsuarioFisico = async (idUsuario) => {
       );
     }
 
-    // La restricción 'onDelete: RESTRICT' en los modelos Cliente/Empleado
-    // causará un error si intentamos borrar un usuario con perfil asociado.
     await usuario.destroy({ transaction });
 
     await transaction.commit();
-    return true; // Éxito
+    return true;
   } catch (error) {
     await transaction.rollback();
     if (error instanceof NotFoundError) throw error;
@@ -268,8 +270,6 @@ const eliminarUsuarioFisico = async (idUsuario) => {
   }
 };
 
-// Se exportan las funciones principales.
-// Las funciones de habilitar/anular usan cambiarEstadoUsuario.
 module.exports = {
   crearUsuario,
   obtenerTodosLosUsuarios,
