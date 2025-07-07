@@ -52,7 +52,7 @@ const crearRol = async (datosRol) => {
         through: { attributes: [] }
       }]
     });
-    return rolConPermisos;
+    return rolConPermisos.toJSON();
 
   } catch (error) {
     await t.rollback();
