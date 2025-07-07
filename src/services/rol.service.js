@@ -176,36 +176,39 @@ const actualizarRol = async (idRol, datosActualizar) => {
 
   try {
     // 1. Buscar el rol que se va a actualizar
-    const rol = await db.Rol.findByPk(idRol, { transaction: t });
+    const rol = await db.Rol.findByPk(idRol, { transaction: t }); // <-- Se usa idRol
     if (!rol) {
-      throw new NotFoundError('Rol no encontrado para actualizar.');
+      // Esta es la fuente del error 404 si el ID es incorrecto.
+      throw new NotFoundError("Rol no encontrado para actualizar.");
     }
 
     // 2. Si se está cambiando el nombre, verificar que no entre en conflicto con otro existente
-    if (datosPrincipalesRol.nombre && datosPrincipalesRol.nombre !== rol.nombre) {
+    if (
+      datosPrincipalesRol.nombre &&
+      datosPrincipalesRol.nombre !== rol.nombre
+    ) {
       const rolConMismoNombre = await db.Rol.findOne({
         where: {
           nombre: datosPrincipalesRol.nombre,
-          idRol: { [Op.ne]: idRol } // Excluir el rol actual de la búsqueda
+          idRol: { [Op.ne]: idRol },
         },
-        transaction: t
+        transaction: t,
       });
       if (rolConMismoNombre) {
-        throw new ConflictError(`Ya existe otro rol con el nombre '${datosPrincipalesRol.nombre}'.`);
+        throw new ConflictError(
+          `Ya existe otro rol con el nombre '${datosPrincipalesRol.nombre}'.`
+        );
       }
     }
-
     // 3. Actualizar los datos principales del rol (nombre, descripción, estado)
     await rol.update(datosPrincipalesRol, { transaction: t });
 
     // 4. Actualizar los permisos si el array 'idPermisos' fue proporcionado
     if (idPermisos !== undefined) {
-      // Eliminar todas las asociaciones de permisos existentes para este rol
       await db.PermisosXRol.destroy({ where: { idRol }, transaction: t });
-      
-      // Si el array no está vacío, crear las nuevas asociaciones
+
       if (idPermisos.length > 0) {
-        const nuevosPermisos = idPermisos.map(idPermiso => ({
+        const nuevosPermisos = idPermisos.map((idPermiso) => ({
           idRol,
           idPermiso,
         }));
@@ -218,27 +221,32 @@ const actualizarRol = async (idRol, datosActualizar) => {
 
     // 6. Devolver el rol actualizado con su lista de permisos final
     const rolActualizadoConPermisos = await db.Rol.findByPk(idRol, {
-      include: [{
-        model: db.Permisos,
-        as: 'permisos',
-        attributes: ['idPermiso', 'nombre', 'descripcion'],
-        through: { attributes: [] }
-      }]
+      include: [
+        {
+          model: db.Permisos,
+          as: "permisos",
+          attributes: ["idPermiso", "nombre", "descripcion"],
+          through: { attributes: [] },
+        },
+      ],
     });
-    
+
     // Devolvemos un objeto JSON plano
     return rolActualizadoConPermisos.toJSON();
-
+    
   } catch (error) {
     // Si algo falla, revertir todos los cambios
     await t.rollback();
-    
+
     // Re-lanzar errores conocidos
     if (error instanceof NotFoundError || error instanceof ConflictError) {
       throw error;
     }
     // Para cualquier otro error, lo registramos y lanzamos uno genérico
-    console.error(`Error al actualizar el rol con ID ${idRol} en el servicio:`, error.message);
+    console.error(
+      `Error al actualizar el rol con ID ${idRol} en el servicio:`,
+      error.message
+    );
     throw new CustomError(`Error al actualizar el rol: ${error.message}`, 500);
   }
 };
