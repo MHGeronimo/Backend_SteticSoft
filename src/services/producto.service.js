@@ -103,7 +103,7 @@ const obtenerTodosLosProductos = async (filtros) => {
   const {
     page = 1,
     limit = 10,
-    search, // <-- LEEMOS EL FILTRO GENÉRICO
+    search, 
     estado,
     idCategoria,
     tipoUso,
@@ -117,8 +117,16 @@ const obtenerTodosLosProductos = async (filtros) => {
     whereCondition[Op.or] = [
       { nombre: { [Op.iLike]: `%${search}%` } },
       { descripcion: { [Op.iLike]: `%${search}%` } },
+      // ✅ --- INICIO DE LA CORRECCIÓN ---
+      // Se agregan las columnas adicionales a la búsqueda.
+      // Para buscar en campos numéricos (como precio y existencia),
+      // los convertimos a texto dentro de la consulta.
+      db.sequelize.literal(`"Producto"."precio"::text ILIKE '%${search}%'`),
+      db.sequelize.literal(`"Producto"."existencia"::text ILIKE '%${search}%'`),
+      // --- FIN DE LA CORRECIÓN ---
     ];
   }
+
   if (estado !== undefined) {
     whereCondition.estado = estado === "true";
   }
@@ -129,14 +137,10 @@ const obtenerTodosLosProductos = async (filtros) => {
     whereCondition.tipoUso = tipoUso;
   }
 
-  // ✅ CORRECCIÓN CLAVE: La forma en que se incluye la categoría.
-  // Nos aseguramos que el alias 'categoria' coincide exactamente con el definido en Producto.model.js
   let includeCondition = [
     {
       model: db.CategoriaProducto,
       as: "categoria",
-      // required: false -> Hace que la consulta sea un LEFT JOIN.
-      // Traerá productos incluso si no tienen una categoría asignada, evitando errores.
       required: false,
     },
   ];
@@ -148,8 +152,6 @@ const obtenerTodosLosProductos = async (filtros) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["nombre", "ASC"]],
-      // distinct: true -> Es importante para asegurar que el conteo de filas sea correcto
-      // cuando se usa `include` con `limit`.
       distinct: true,
     });
 
@@ -165,7 +167,6 @@ const obtenerTodosLosProductos = async (filtros) => {
       stack: error.stack,
       name: error.name,
     });
-    // Lanzamos un error más específico para facilitar la depuración futura.
     throw new CustomError(
       `Ocurrió un error inesperado al obtener productos: ${error.message}`,
       500
