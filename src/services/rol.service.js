@@ -48,6 +48,7 @@ const crearRol = async (datosRol) => {
       include: [{
         model: db.Permisos,
         as: 'permisos',
+        attributes: ['idPermiso', 'nombre'], // Especificar atributos a incluir para permisos
         through: { attributes: [] }
       }]
     });
