@@ -33,12 +33,14 @@ const crearUsuario = async (datosCompletosUsuario) => {
   const { correo, contrasena, idRol, estado, ...datosPerfil } =
     datosCompletosUsuario;
 
+  // 1. Validar correo de usuario
   if (await db.Usuario.findOne({ where: { correo } })) {
     throw new ConflictError(
       `La dirección de correo '${correo}' ya está registrada.`
     );
   }
 
+  // 2. Validar rol
   const rol = await db.Rol.findByPk(idRol);
   if (!rol || !rol.estado) {
     throw new BadRequestError(
@@ -46,11 +48,9 @@ const crearUsuario = async (datosCompletosUsuario) => {
     );
   }
 
-  // --- VALIDACIÓN ADICIONAL ---
-  // Se añade esta verificación ANTES de la transacción para fallar rápido.
-  // Si el rol requiere un perfil, validamos que el número de documento no exista ya.
+  // 3. Validación crucial ANTES de la transacción
   if (rol.nombre !== "Administrador" && datosPerfil.numeroDocumento) {
-    const perfilModel = rol.nombre === "Empleado" ? db.Empleado : db.Cliente;
+    const perfilModel = db.Cliente; // Asumimos Cliente por ahora
     if (
       await perfilModel.findOne({
         where: { numeroDocumento: datosPerfil.numeroDocumento },
@@ -61,8 +61,8 @@ const crearUsuario = async (datosCompletosUsuario) => {
       );
     }
   }
-  // --- FIN DE VALIDACIÓN ADICIONAL ---
 
+  // 4. Si todas las validaciones pasan, iniciar la transacción
   const transaction = await db.sequelize.transaction();
 
   try {
@@ -99,9 +99,7 @@ const crearUsuario = async (datosCompletosUsuario) => {
         );
       }
 
-      const perfilModel = db.Cliente; // Asumimos Cliente por defecto
-
-      await perfilModel.create(
+      await db.Cliente.create(
         {
           ...datosPerfil,
           idUsuario: nuevoUsuario.idUsuario,
