@@ -34,98 +34,90 @@ const findUsuarioConPerfil = (idUsuario, options = {}) => {
   });
 };
 
-const crearUsuario = async (datosCompletosUsuario) => {
-  const { correo, contrasena, idRol, estado, ...datosPerfil } =
-    datosCompletosUsuario;
-
-  if (await db.Usuario.findOne({ where: { correo } })) {
-    throw new ConflictError(
-      `La dirección de correo '${correo}' ya está registrada.`
-    );
-  }
-
-  const rol = await db.Rol.findByPk(idRol);
-  if (!rol || !rol.estado) {
-    throw new BadRequestError(
-      `El rol con ID ${idRol} no existe o no está activo.`
-    );
-  }
-
-  const transaction = await db.sequelize.transaction();
+/**
+ * Crea un nuevo usuario y su empleado asociado de forma transaccional.
+ * @param {object} datosUsuario - Datos del usuario y del empleado.
+ * @returns {Promise<object>} El usuario creado.
+ */
+const crearUsuario = async (datosUsuario) => {
+  // --- INICIO DE MODIFICACIÓN ---
+  const t = await db.sequelize.transaction(); // 1. Iniciar transacción
 
   try {
-    const contrasenaHasheada = await bcrypt.hash(contrasena, saltRounds);
-    const nuevoUsuario = await db.Usuario.create(
-      {
-        correo,
-        contrasena: contrasenaHasheada,
-        idRol,
-        estado: typeof estado === "boolean" ? estado : true,
-      },
-      { transaction }
-    );
+    const {
+      nombre,
+      apellido,
+      tipoDocumento,
+      numeroDocumento,
+      telefono,
+      email,
+      password,
+      idRol,
+    } = datosUsuario;
 
-    // La lógica para crear perfiles ahora es más genérica.
-    if (rol.nombre !== "Administrador") {
-      const {
+    // 2. Validar si ya existe un empleado o usuario con los mismos datos únicos
+    const existingUser = await db.Usuario.findOne({
+      where: { email },
+      transaction: t,
+    });
+    if (existingUser) {
+      throw new ConflictError("El correo electrónico ya está en uso.");
+    }
+
+    const existingEmployee = await db.Empleado.findOne({
+      where: { numeroDocumento },
+      transaction: t,
+    });
+    if (existingEmployee) {
+      throw new ConflictError("El número de documento ya está registrado.");
+    }
+
+    // 3. Crear primero el Empleado
+    const nuevoEmpleado = await db.Empleado.create(
+      {
         nombre,
         apellido,
-        telefono,
         tipoDocumento,
         numeroDocumento,
-        fechaNacimiento,
-      } = datosPerfil;
-      if (
-        !nombre ||
-        !apellido ||
-        !telefono ||
-        !tipoDocumento ||
-        !numeroDocumento ||
-        !fechaNacimiento
-      ) {
-        // ANÁLISIS Y CORRECCIÓN: No es necesario el rollback aquí, el catch lo gestiona.
-        throw new BadRequestError(
-          "Para este rol, se requieren los campos de perfil completos."
-        );
-      }
+        telefono,
+        email,
+        estado: true, // Por defecto, el nuevo empleado está activo
+      },
+      { transaction: t }
+    );
 
-      // Decidimos qué perfil crear. Asumimos "Cliente" por defecto para roles no-admin.
-      // Esta lógica podría expandirse si existieran más tipos de perfiles.
-      const perfilModel = db.Cliente; // O db.Empleado según el rol si fuera necesario.
+    // 4. Crear el Usuario usando el ID del empleado recién creado
+    const nuevoUsuario = await db.Usuario.create(
+      {
+        idEmpleado: nuevoEmpleado.idEmpleado,
+        idRol,
+        email,
+        password, // El hook en el modelo se encargará del hash
+        estado: true, // Por defecto, el nuevo usuario está activo
+      },
+      { transaction: t }
+    );
 
-      await perfilModel.create(
-        {
-          ...datosPerfil,
-          idUsuario: nuevoUsuario.idUsuario,
-          correo, // Aseguramos que el correo se guarde también en el perfil.
-          estado: true,
-        },
-        { transaction }
-      );
-    }
+    await t.commit(); // 5. Confirmar la transacción si todo fue exitoso
 
-    await transaction.commit();
-    return await findUsuarioConPerfil(nuevoUsuario.idUsuario);
+    // 6. Devolver el usuario recién creado con su información de rol y empleado
+    const usuarioCreado = await db.Usuario.findByPk(nuevoUsuario.idUsuario, {
+      include: [
+        { model: db.Empleado, as: "empleado" },
+        { model: db.Rol, as: "rol" },
+      ],
+    });
+
+    return usuarioCreado.toJSON();
   } catch (error) {
-    await transaction.rollback();
-    if (
-      error instanceof ConflictError ||
-      error instanceof BadRequestError ||
-      error instanceof CustomError
-    ) {
-      throw error;
-    }
-    // Manejo de errores de unicidad de Sequelize de forma más genérica.
-    if (error.name === "SequelizeUniqueConstraintError") {
-      const field = Object.keys(error.fields)[0];
-      const value = error.fields[field];
-      throw new ConflictError(
-        `El valor '${value}' para el campo '${field}' ya está en uso.`
-      );
-    }
-    throw new CustomError(`Error al crear el usuario: ${error.message}`, 500);
+    await t.rollback(); // 7. Revertir la transacción en caso de cualquier error
+    // Propagar el error para que el controlador lo maneje
+    throw error;
   }
+  // --- FIN DE MODIFICACIÓN ---
 };
+
+
 
 const actualizarUsuario = async (idUsuario, datosActualizar) => {
   const transaction = await db.sequelize.transaction();
