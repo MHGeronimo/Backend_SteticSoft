@@ -196,7 +196,7 @@ const actualizarRol = async (idRol, datosActualizar) => {
         through: { attributes: [] }
       }]
     });
-    return rolActualizadoConPermisos;
+    return rolActualizadoConPermisos.toJSON();
 
   } catch (error) {
     if (error instanceof NotFoundError || error instanceof ConflictError) {
