@@ -9,8 +9,7 @@ const crearCompraValidators = [
   body("fecha")
     .optional()
     .isISO8601()
-    .withMessage("La fecha debe ser válida (YYYY-MM-DD).")
-    .toDate(),
+    .withMessage("La fecha debe ser válida (YYYY-MM-DD)."),
   body("proveedorId")
     .notEmpty()
     .withMessage("El ID del proveedor es obligatorio.")
