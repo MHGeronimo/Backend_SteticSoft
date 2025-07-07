@@ -103,7 +103,7 @@ const obtenerTodosLosProductos = async (filtros) => {
   const {
     page = 1,
     limit = 10,
-    nombre,
+    search, // <-- LEEMOS EL FILTRO GENÉRICO
     estado,
     idCategoria,
     tipoUso,
@@ -111,9 +111,11 @@ const obtenerTodosLosProductos = async (filtros) => {
 
   const offset = (page - 1) * limit;
 
-  let whereCondition = {};
-  if (nombre) {
-    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
+  if (search) {
+    whereCondition[Op.or] = [
+      { nombre: { [Op.iLike]: `%${search}%` } },
+      { descripcion: { [Op.iLike]: `%${search}%` } },
+    ];
   }
   if (estado !== undefined) {
     whereCondition.estado = estado === "true";
