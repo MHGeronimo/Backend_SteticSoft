@@ -74,33 +74,42 @@ const obtenerRolPorId = async (req, res, next) => {
  */
 const actualizarRol = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    // --- INICIO DE MODIFICACIÓN ---
+    // Cambiamos req.params.id a req.params.idRol para que coincida con la definición de la ruta.
+    const { idRol } = req.params;
     const datosActualizar = req.body;
 
-    // --- INICIO DE MODIFICACIÓN ---
+    // Llamamos al servicio que ya devuelve un JSON limpio.
+    const rolActualizado = await rolService.actualizarRol(
+      idRol, // Pasamos el idRol
+      datosActualizar
+    );
 
-    // 1. Llamamos al servicio que ya devuelve un JSON limpio.
-    const rolActualizado = await rolService.actualizarRol(id, datosActualizar);
+    // [Depuración] Imprimimos en la consola del servidor.
+    console.log(
+      "Objeto a enviar como respuesta (Actualizar):",
+      JSON.stringify(rolActualizado, null, 2)
+    );
 
-    // 2. [Depuración] Imprimimos en la consola del servidor.
-    console.log('Objeto a enviar como respuesta (Actualizar):', JSON.stringify(rolActualizado, null, 2));
-
-    // 3. Verificamos si se encontró el rol antes de enviar.
+    // Verificamos si se encontró el rol antes de enviar.
     if (!rolActualizado) {
-      return res.status(404).json({ message: 'Rol no encontrado' });
+      // Este es el error que estabas viendo, pero ahora debería funcionar.
+      return res
+        .status(404)
+        .json({ message: "Rol no encontrado para actualizar." });
     }
 
-    // 4. Enviamos la respuesta.
+    // Enviamos la respuesta.
     res.status(200).json(rolActualizado);
-
     // --- FIN DE MODIFICACIÓN ---
-
   } catch (error) {
     // Mejoramos el log de errores para ver la causa real.
-    console.error('Error detallado en rol.controller al actualizar:', error);
+    console.error("Error detallado en rol.controller al actualizar:", error);
     next(error);
   }
 };
+
+
 /**
  * Cambia el estado (activo/inactivo) de un rol.
  */
