@@ -111,6 +111,8 @@ const obtenerTodosLosProductos = async (filtros) => {
 
   const offset = (page - 1) * limit;
 
+  let whereCondition = {};
+
   if (search) {
     whereCondition[Op.or] = [
       { nombre: { [Op.iLike]: `%${search}%` } },
