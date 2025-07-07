@@ -200,21 +200,22 @@ const obtenerUsuarioPorId = async (idUsuario) => {
 
 /**
  * Cambia el estado (activo/inactivo) de un usuario.
- * @param {string} idUsuario - ID del usuario.
+ * @param {number|string} idUsuario - ID del usuario.
  * @param {boolean} nuevoEstado - El nuevo estado (true para activo, false para inactivo).
- * @returns {Promise<Usuario>} El usuario con su estado actualizado.
+ * @returns {Promise<Usuario>} El usuario con su estado actualizado y perfiles asociados.
  */
 const cambiarEstadoUsuario = async (idUsuario, nuevoEstado) => {
-  const usuario = await Usuario.findByPk(idUsuario);
+  const numericIdUsuario = Number(idUsuario); // Asegurar que el ID es numérico
+  const usuario = await Usuario.findByPk(numericIdUsuario);
   if (!usuario) {
     throw new NotFoundError("Usuario no encontrado para cambiar estado.");
   }
   if (usuario.estado === nuevoEstado) {
-    return usuario; // No hay cambios, devolvemos el usuario tal cual.
+    // Devolver consistentemente el usuario con sus perfiles, incluso si no hay cambio de estado.
+    return findUsuarioConPerfil(numericIdUsuario);
   }
-  // REFINAMIENTO: Devolver el usuario completo con perfiles tras la actualización.
   await usuario.update({ estado: nuevoEstado });
-  return findUsuarioConPerfil(idUsuario);
+  return findUsuarioConPerfil(numericIdUsuario); // Devolver el usuario actualizado con perfiles.
 };
 
 /**
@@ -266,8 +267,7 @@ module.exports = {
   obtenerTodosLosUsuarios,
   obtenerUsuarioPorId,
   actualizarUsuario,
-  anularUsuario: (id) => cambiarEstadoUsuario(id, false),
-  habilitarUsuario: (id) => cambiarEstadoUsuario(id, true),
+  cambiarEstadoUsuario, // Se mantiene esta función como la principal para cambiar estado
   eliminarUsuarioFisico,
   verificarCorreoExistente,
 };

@@ -98,7 +98,7 @@ const cambiarEstadoUsuario = async (req, res, next) => {
     );
     res.status(200).json({
       success: true,
-      message: `Estado del usuario ID ${idUsuario} cambiado a ${estado} exitosamente.`,
+      message: `Estado del usuario ID ${idUsuario} cambiado a ${estado ? "activo" : "inactivo"} exitosamente.`,
       data: usuarioActualizado,
     });
   } catch (error) {
@@ -107,13 +107,19 @@ const cambiarEstadoUsuario = async (req, res, next) => {
 };
 
 /**
- * Anula un usuario (borrado lógico, estado = false).
+ * Anula un usuario (borrado lógico, establece estado = false).
+ * Llama internamente al servicio cambiarEstadoUsuario.
+ * @param {object} req - El objeto de solicitud Express.
+ * @param {object} res - El objeto de respuesta Express.
+ * @param {function} next - La función middleware next.
  */
 const anularUsuario = async (req, res, next) => {
   try {
     const { idUsuario } = req.params;
-    const usuarioAnulado = await usuarioService.anularUsuario(
-      Number(idUsuario)
+    // REFACTOR: Llamar directamente a cambiarEstadoUsuario con 'false'
+    const usuarioAnulado = await usuarioService.cambiarEstadoUsuario(
+      Number(idUsuario),
+      false
     );
     res.status(200).json({
       success: true,
@@ -126,13 +132,19 @@ const anularUsuario = async (req, res, next) => {
 };
 
 /**
- * Habilita un usuario (estado = true).
+ * Habilita un usuario (establece estado = true).
+ * Llama internamente al servicio cambiarEstadoUsuario.
+ * @param {object} req - El objeto de solicitud Express.
+ * @param {object} res - El objeto de respuesta Express.
+ * @param {function} next - La función middleware next.
  */
 const habilitarUsuario = async (req, res, next) => {
   try {
     const { idUsuario } = req.params;
-    const usuarioHabilitado = await usuarioService.habilitarUsuario(
-      Number(idUsuario)
+    // REFACTOR: Llamar directamente a cambiarEstadoUsuario con 'true'
+    const usuarioHabilitado = await usuarioService.cambiarEstadoUsuario(
+      Number(idUsuario),
+      true
     );
     res.status(200).json({
       success: true,
