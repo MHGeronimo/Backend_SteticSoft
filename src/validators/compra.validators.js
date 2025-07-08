@@ -9,7 +9,30 @@ const crearCompraValidators = [
   body("fecha")
     .optional()
     .isISO8601()
-    .withMessage("La fecha debe ser válida (YYYY-MM-DD)."),
+    .withMessage("La fecha debe ser válida (YYYY-MM-DD).")
+    .custom((value) => {
+      if (!value) return true; // Si es opcional y no se provee, está bien
+      const fechaIngresada = new Date(value);
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Ignorar la hora para la comparación
+
+      if (fechaIngresada > hoy) {
+        throw new Error("La fecha de la compra no puede ser futura.");
+      }
+      return true;
+    })
+    .custom((value) => {
+      if (!value) return true; // Si es opcional y no se provee, está bien
+      const fechaIngresada = new Date(value);
+      const hoy = new Date();
+      const fechaMinima = new Date(hoy.setFullYear(hoy.getFullYear() - 5)); // Resta 5 años
+      fechaMinima.setHours(0, 0, 0, 0); // Ignorar la hora
+
+      if (fechaIngresada < fechaMinima) {
+        throw new Error("La fecha de la compra no puede ser de hace más de 5 años.");
+      }
+      return true;
+    }),
   body("proveedorId")
     .notEmpty()
     .withMessage("El ID del proveedor es obligatorio.")
@@ -98,7 +121,32 @@ const actualizarCompraValidators = [
     .optional()
     .isISO8601()
     .withMessage("La fecha debe ser válida (YYYY-MM-DD).")
-    .toDate(),
+    .toDate()
+    .custom((value) => {
+      if (!value) return true; // Si es opcional y no se provee, está bien
+      // value ya es un objeto Date gracias a .toDate()
+      const fechaIngresada = value;
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Ignorar la hora para la comparación
+
+      if (fechaIngresada > hoy) {
+        throw new Error("La fecha de la compra no puede ser futura.");
+      }
+      return true;
+    })
+    .custom((value) => {
+      if (!value) return true; // Si es opcional y no se provee, está bien
+      // value ya es un objeto Date
+      const fechaIngresada = value;
+      const hoy = new Date(); // Necesitamos una nueva instancia de 'hoy' porque setFullYear la modifica
+      const fechaMinima = new Date(hoy.setFullYear(hoy.getFullYear() - 5)); // Resta 5 años
+      fechaMinima.setHours(0, 0, 0, 0); // Ignorar la hora
+
+      if (fechaIngresada < fechaMinima) {
+        throw new Error("La fecha de la compra no puede ser de hace más de 5 años.");
+      }
+      return true;
+    }),
   body("proveedorId")
     .optional()
     .isInt({ gt: 0 })
