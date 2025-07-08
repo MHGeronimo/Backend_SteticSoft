@@ -26,7 +26,13 @@ const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
 /**
  * Crear un nuevo producto.
  */
+// RUTA: src/shared/src_api/services/producto.service.js
+
+/**
+ * Crear un nuevo producto.
+ */
 const crearProducto = async (datosProducto) => {
+  // ✅ CORRECCIÓN: Añadimos 'tipoUso' y 'vidaUtilDias' a la desestructuración
   const {
     nombre,
     descripcion,
@@ -37,7 +43,11 @@ const crearProducto = async (datosProducto) => {
     imagen,
     estado,
     categoriaProductoId,
+    tipoUso,       // <-- Campo añadido
+    vidaUtilDias,  // <-- Campo añadido
   } = datosProducto;
+
+  // ... (la lógica de validación de stock y categoría se mantiene igual)
 
   if (
     stockMinimo !== undefined &&
@@ -71,6 +81,9 @@ const crearProducto = async (datosProducto) => {
       imagen: imagen || null,
       estado: typeof estado === "boolean" ? estado : true,
       categoriaProductoId: categoriaProductoId || null,
+      // ✅ CORRECCIÓN: Pasamos los nuevos campos al método de creación
+      tipoUso: tipoUso || 'Venta Directa', // Valor por defecto si no se provee
+      vidaUtilDias: vidaUtilDias || null,
     });
     return nuevoProducto;
   } catch (error) {
@@ -86,14 +99,11 @@ const crearProducto = async (datosProducto) => {
   }
 };
 
-/**
- * Obtener todos los productos con paginación y filtros.
- */
 const obtenerTodosLosProductos = async (filtros) => {
   const {
     page = 1,
     limit = 10,
-    nombre,
+    search, 
     estado,
     idCategoria,
     tipoUso,
@@ -102,25 +112,36 @@ const obtenerTodosLosProductos = async (filtros) => {
   const offset = (page - 1) * limit;
 
   let whereCondition = {};
-  if (nombre) {
-    whereCondition.nombre = { [Op.iLike]: `%${nombre}%` };
+
+  if (search) {
+    whereCondition[Op.or] = [
+      { nombre: { [Op.iLike]: `%${search}%` } },
+      { descripcion: { [Op.iLike]: `%${search}%` } },
+      // ✅ --- INICIO DE LA CORRECCIÓN ---
+      // Se agregan las columnas adicionales a la búsqueda.
+      // Para buscar en campos numéricos (como precio y existencia),
+      // los convertimos a texto dentro de la consulta.
+      db.sequelize.literal(`"Producto"."precio"::text ILIKE '%${search}%'`),
+      db.sequelize.literal(`"Producto"."existencia"::text ILIKE '%${search}%'`),
+      // --- FIN DE LA CORRECIÓN ---
+    ];
   }
+
   if (estado !== undefined) {
     whereCondition.estado = estado === "true";
   }
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }
-  if (tipoUso !== undefined && tipoUso !== "") {
-  whereCondition.tipoUso = { [Op.eq]: tipoUso };
+  if (tipoUso) {
+    whereCondition.tipoUso = tipoUso;
   }
-
 
   let includeCondition = [
     {
       model: db.CategoriaProducto,
       as: "categoria",
-      attributes: ["idCategoriaProducto", "nombre", "vidaUtilDias", "tipoUso"],
+      required: false,
     },
   ];
 
@@ -131,6 +152,7 @@ const obtenerTodosLosProductos = async (filtros) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["nombre", "ASC"]],
+      distinct: true,
     });
 
     return {
@@ -146,15 +168,12 @@ const obtenerTodosLosProductos = async (filtros) => {
       name: error.name,
     });
     throw new CustomError(
-      "Ocurrió un error inesperado al obtener productos.",
+      `Ocurrió un error inesperado al obtener productos: ${error.message}`,
       500
     );
   }
 };
 
-/**
- * Obtener un producto por su ID.
- */
 const obtenerProductoPorId = async (idProducto) => {
   try {
     const producto = await db.Producto.findByPk(idProducto, {

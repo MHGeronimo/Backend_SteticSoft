@@ -75,22 +75,6 @@ router.patch(
   servicioController.cambiarEstadoServicio
 );
 
-router.patch(
-  "/:idServicio/anular",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_SERVICIOS),
-  servicioValidators.idServicioValidator,
-  servicioController.anularServicio
-);
-
-router.patch(
-  "/:idServicio/habilitar",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_SERVICIOS),
-  servicioValidators.idServicioValidator,
-  servicioController.habilitarServicio
-);
-
 router.delete(
   "/:idServicio",
   authMiddleware,

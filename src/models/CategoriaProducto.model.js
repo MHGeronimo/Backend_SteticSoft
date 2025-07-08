@@ -57,5 +57,7 @@ module.exports = (sequelize, DataTypes) => {
   };
   // ===================== FIN DE LA CORRECCIÓN ======================
 
+// ...
+
   return CategoriaProducto;
 };

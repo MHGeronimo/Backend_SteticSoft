@@ -7,31 +7,27 @@ const permisosXRolService = require("../services/permisosXRol.service.js");
  */
 const crearRol = async (req, res, next) => {
   try {
-    // El servicio rolService.crearRol ahora maneja la creación del rol y la asignación de permisos
-    // y devuelve el rol con sus permisos.
-    const rolCreado = await rolService.crearRol(req.body);
+    const datosRol = req.body;
 
-    let message = "Rol creado exitosamente.";
-    // rolCreado incluye los permisos asociados desde el servicio.
-    // Verificamos si el array de permisos tiene elementos.
-    if (rolCreado.permisos && rolCreado.permisos.length > 0) {
-      message = "Rol y permisos asignados creados exitosamente.";
-    } else if (req.body.idPermisos && req.body.idPermisos.length === 0) {
-      // Si se envió un array vacío de permisos, se puede reflejar en el mensaje.
-      message =
-        "Rol creado exitosamente sin permisos asignados (se recibió un array de permisos vacío).";
-    } else if (!req.body.idPermisos) {
-      // Si no se enviaron permisos en absoluto.
-      message =
-        "Rol creado exitosamente sin permisos asignados (no se proporcionaron permisos).";
-    }
+    // --- INICIO DE MODIFICACIÓN ---
 
-    res.status(201).json({
-      success: true,
-      message: message,
-      data: rolCreado,
-    });
+    // 1. Llamamos al servicio que ya devuelve un JSON limpio.
+    const rolCreado = await rolService.crearRol(datosRol);
+
+    // 2. [Depuración] Imprimimos en la consola del servidor lo que vamos a enviar.
+    // Esto te permitirá ver en los logs de Render exactamente el objeto final.
+    console.log(
+      "Objeto a enviar como respuesta (Crear):",
+      JSON.stringify(rolCreado, null, 2)
+    );
+
+    // 3. Enviamos la respuesta.
+    res.status(201).json(rolCreado);
+
+    // --- FIN DE MODIFICACIÓN ---
   } catch (error) {
+    // Mejoramos el log de errores para ver la causa real.
+    console.error("Error detallado en rol.controller al crear:", error);
     next(error);
   }
 };
@@ -78,20 +74,41 @@ const obtenerRolPorId = async (req, res, next) => {
  */
 const actualizarRol = async (req, res, next) => {
   try {
+    // --- INICIO DE MODIFICACIÓN ---
+    // Cambiamos req.params.id a req.params.idRol para que coincida con la definición de la ruta.
     const { idRol } = req.params;
+    const datosActualizar = req.body;
+
+    // Llamamos al servicio que ya devuelve un JSON limpio.
     const rolActualizado = await rolService.actualizarRol(
-      Number(idRol),
-      req.body
+      idRol, // Pasamos el idRol
+      datosActualizar
     );
-    res.status(200).json({
-      success: true,
-      message: "Rol actualizado exitosamente.",
-      data: rolActualizado,
-    });
+
+    // [Depuración] Imprimimos en la consola del servidor.
+    console.log(
+      "Objeto a enviar como respuesta (Actualizar):",
+      JSON.stringify(rolActualizado, null, 2)
+    );
+
+    // Verificamos si se encontró el rol antes de enviar.
+    if (!rolActualizado) {
+      // Este es el error que estabas viendo, pero ahora debería funcionar.
+      return res
+        .status(404)
+        .json({ message: "Rol no encontrado para actualizar." });
+    }
+
+    // Enviamos la respuesta.
+    res.status(200).json(rolActualizado);
+    // --- FIN DE MODIFICACIÓN ---
   } catch (error) {
+    // Mejoramos el log de errores para ver la causa real.
+    console.error("Error detallado en rol.controller al actualizar:", error);
     next(error);
   }
 };
+
 
 /**
  * Cambia el estado (activo/inactivo) de un rol.
