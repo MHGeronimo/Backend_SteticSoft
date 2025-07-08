@@ -20,6 +20,7 @@ router.post(
   novedadesController.crearNovedad
 );
 
+
 router.get(
   "/",
   authMiddleware,
