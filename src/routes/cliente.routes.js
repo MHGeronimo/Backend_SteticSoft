@@ -35,10 +35,9 @@ router.get(
 );
 
 router.get(
-  "/",
+  "/todos",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CLIENTES),
-  clienteValidators.idClienteValidator,
   clienteController.obtenerTodosLosClientes
 );
 
@@ -84,4 +83,3 @@ router.delete(
 );
 
 module.exports = router;
- 
