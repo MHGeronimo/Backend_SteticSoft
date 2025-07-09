@@ -157,7 +157,6 @@ const eliminarUsuarioFisico = async (req, res, next) => {
   }
 };
 
-// NUEVA FUNCIÓN para verificar correo
 const verificarCorreo = async (req, res, next) => {
   try {
     const { correo } = req.query;
