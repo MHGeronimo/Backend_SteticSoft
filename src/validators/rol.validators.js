@@ -24,6 +24,12 @@ const crearRolValidators = [
     .optional()
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
+  body("tipoPerfil")
+    .trim()
+    .notEmpty()
+    .withMessage("El tipo de perfil es obligatorio.")
+    .isIn(['CLIENTE', 'EMPLEADO', 'NINGUNO'])
+    .withMessage("El tipo de perfil debe ser CLIENTE, EMPLEADO o NINGUNO."),
   handleValidationErrors, // Middleware para manejar los errores de estas validaciones
 ];
 
@@ -51,6 +57,13 @@ const actualizarRolValidators = [
     .optional()
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
+  body("tipoPerfil")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("El tipo de perfil no puede estar vacío si se proporciona.")
+    .isIn(['CLIENTE', 'EMPLEADO', 'NINGUNO'])
+    .withMessage("El tipo de perfil debe ser CLIENTE, EMPLEADO o NINGUNO si se proporciona."),
   handleValidationErrors,
 ];
 
