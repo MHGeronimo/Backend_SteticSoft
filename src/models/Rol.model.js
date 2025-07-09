@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("CLIENTE", "EMPLEADO", "NINGUNO"),
         allowNull: false,
         defaultValue: "EMPLEADO",
+        field: 'tipo_perfil',
         comment:
           'Define el tipo de perfil asociado a este rol. "CLIENTE" para clientes, "EMPLEADO" para personal, "NINGUNO" para roles sin perfil de datos (ej. Admin).',
       },
