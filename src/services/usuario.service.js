@@ -32,93 +32,90 @@ const cambiarEstadoUsuario = async (idUsuario, nuevoEstado) => {
 };
 
 /**
- * @function crearUsuario
- * @description Crea un nuevo usuario, su perfil asociado (Cliente o Empleado) según el tipo de rol,
- * y devuelve el objeto completo del usuario con sus asociaciones.
- * @param {object} usuarioData - Datos del usuario y su perfil.
- * @returns {Promise<object>} El objeto del usuario recién creado con todas sus relaciones.
- */
+* @function crearUsuario
+* @description Crea un nuevo usuario, su perfil asociado (Cliente o Empleado) según el tipo de rol,
+* y devuelve el objeto completo del usuario con sus asociaciones.
+* @param {object} usuarioData - Datos del usuario y su perfil.
+* @returns {Promise<object>} El objeto del usuario recién creado con todas sus relaciones.
+*/
 export const crearUsuario = async (usuarioData) => {
-  const t = await sequelize.transaction();
-  try {
-    const { email, password, rolId, nombres, apellidos, telefono } = usuarioData;
+ const t = await sequelize.transaction();
+ try {
+   // --- INICIO DE CORRECCIÓN ---
 
-    // --- INICIO DE MODIFICACIÓN ---
+   // 1. Desestructuramos TODOS los campos necesarios del objeto que llega.
+   const { 
+     email, password, rolId, 
+     nombres, apellidos, telefono, 
+     tipoDocumento, numeroDocumento, fechaNacimiento 
+   } = usuarioData;
 
-    // 1. Buscamos el rol para determinar qué tipo de perfil crear.
-    const rol = await Rol.findByPk(rolId, { transaction: t });
-    if (!rol) {
-      throw new Error('El rol especificado no existe.');
-    }
+   // 2. Buscamos el rol para determinar qué tipo de perfil crear.
+   const rol = await Rol.findByPk(rolId, { transaction: t });
+   if (!rol) {
+     throw new Error('El rol especificado no existe.');
+   }
 
-    // 2. Hasheamos la contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+   // 3. Hasheamos la contraseña
+   const salt = await bcrypt.genSalt(10);
+   const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. Creamos el registro en la tabla 'usuarios'
-    const nuevoUsuario = await Usuario.create({
-      email,
-      password: hashedPassword,
-      rolId,
-    }, { transaction: t });
+   // 4. Creamos el registro en la tabla 'usuarios'
+   const nuevoUsuario = await Usuario.create({
+     email,
+     password: hashedPassword,
+     rolId,
+   }, { transaction: t });
 
-    // 4. Lógica condicional basada en el nuevo campo 'tipoPerfil' del rol.
-    if (rol.tipoPerfil === 'CLIENTE') {
-      await Cliente.create({
-        nombres,
-        apellidos,
-        telefono,
-        usuarioId: nuevoUsuario.id,
-      }, { transaction: t });
-    } else if (rol.tipoPerfil === 'EMPLEADO') {
-      // Todos los nuevos roles de personal (Gerente, Recepcionista, etc.)
-      // crearán un perfil de Empleado.
-      await Empleado.create({
-        nombres,
-        apellidos,
-        telefono,
-        usuarioId: nuevoUsuario.id,
-      }, { transaction: t });
-    }
-    // Si tipoPerfil es 'NINGUNO' (ej. Administrador), no se crea ningún perfil adicional.
+   // 5. Lógica condicional basada en 'tipoPerfil' del rol.
+   //    Ahora pasamos TODOS los campos obligatorios al crear el perfil.
+   if (rol.tipoPerfil === 'CLIENTE') {
+     await Cliente.create({
+       nombres,
+       apellidos,
+       telefono,
+       correo: email, // El correo es el mismo de la cuenta
+       tipoDocumento,
+       numeroDocumento,
+       fechaNacimiento,
+       usuarioId: nuevoUsuario.id,
+     }, { transaction: t });
+   } else if (rol.tipoPerfil === 'EMPLEADO') {
+     await Empleado.create({
+       nombres,
+       apellidos,
+       telefono,
+       correo: email, // El correo es el mismo de la cuenta
+       tipoDocumento,
+       numeroDocumento,
+       fechaNacimiento,
+       usuarioId: nuevoUsuario.id,
+     }, { transaction: t });
+   }
 
-    // 5. Confirmamos la transacción
-    await t.commit();
+   // 6. Confirmamos la transacción
+   await t.commit();
 
-    // 6. ¡CLAVE DE LA SOLUCIÓN! Obtenemos y devolvemos el usuario completo.
-    // En lugar de devolver 'nuevoUsuario', que solo tiene los datos básicos,
-    // buscamos en la base de datos el registro que acabamos de crear para que incluya
-    // TODAS sus asociaciones (rol, clienteInfo, empleadoInfo).
-    const usuarioCompleto = await Usuario.findByPk(nuevoUsuario.id, {
-      include: [
-        {
-          model: Rol,
-          as: 'rol',
-          attributes: ['id', 'nombre'],
-        },
-        {
-          model: Cliente,
-          as: 'clienteInfo',
-          attributes: { exclude: ['usuarioId', 'createdAt', 'updatedAt'] },
-        },
-        {
-          model: Empleado,
-          as: 'empleadoInfo',
-          attributes: { exclude: ['usuarioId', 'createdAt', 'updatedAt'] },
-        },
-      ],
-      attributes: { exclude: ['password'] },
-    });
+   // 7. Obtenemos y devolvemos el usuario completo (sin cambios aquí, ya estaba bien).
+   const usuarioCompleto = await Usuario.findByPk(nuevoUsuario.id, {
+     include: [
+       { model: Rol, as: 'rol', attributes: ['id', 'nombre'] },
+       { model: Cliente, as: 'clienteInfo', attributes: { exclude: ['usuarioId', 'createdAt', 'updatedAt'] } },
+       { model: Empleado, as: 'empleadoInfo', attributes: { exclude: ['usuarioId', 'createdAt', 'updatedAt'] } },
+     ],
+     attributes: { exclude: ['password'] },
+   });
 
-    return usuarioCompleto;
+   return usuarioCompleto;
 
-    // --- FIN DE MODIFICACIÓN ---
+   // --- FIN DE CORRECCIÓN ---
 
-  } catch (error) {
-    await t.rollback();
-    console.error('Error al crear el usuario:', error);
-    throw new Error(`Error en el servicio al crear usuario: ${error.message}`);
-  }
+ } catch (error) {
+   await t.rollback();
+   console.error('Error al crear el usuario:', error);
+   // Ahora, si hay un error de Sequelize, se propagará un mensaje más claro.
+   throw new Error(`Error en el servicio al crear usuario: ${error.message}`);
+ }
 };
 
 /**
