@@ -4,8 +4,6 @@ const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js"); // Asegúrate que la ruta sea correcta
 
-const tipoPerfilValues = ["CLIENTE", "EMPLEADO", "NINGUNO"];
-
 
 const crearRolValidators = [
   body("nombre")
