@@ -38,7 +38,7 @@ const cambiarEstadoUsuario = async (idUsuario, nuevoEstado) => {
 * @param {object} usuarioData - Datos del usuario y su perfil.
 * @returns {Promise<object>} El objeto del usuario recién creado con todas sus relaciones.
 */
-export const crearUsuario = async (usuarioData) => {
+const crearUsuario = async (usuarioData) => {
  const t = await sequelize.transaction();
  try {
    // --- INICIO DE CORRECCIÓN ---
