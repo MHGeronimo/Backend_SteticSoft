@@ -24,6 +24,14 @@ const crearRolValidators = [
     .optional()
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
+  body("tipoPerfil")
+    .optional() // Lo hacemos opcional para que si no se envía, tome el defaultValue del modelo.
+    .isString()
+    .withMessage("El tipo de perfil debe ser un string.")
+    .isIn(tipoPerfilValues)
+    .withMessage(
+      `El tipo de perfil debe ser uno de los siguientes valores: ${tipoPerfilValues.join(", ")}`
+    ),
   handleValidationErrors, // Middleware para manejar los errores de estas validaciones
 ];
 
@@ -51,6 +59,14 @@ const actualizarRolValidators = [
     .optional()
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
+  body("tipoPerfil")
+    .optional()
+    .isString()
+    .withMessage("El tipo de perfil debe ser un string.")
+    .isIn(tipoPerfilValues)
+    .withMessage(
+      `El tipo de perfil debe ser uno de los siguientes valores: ${tipoPerfilValues.join(", ")}`
+    ),
   handleValidationErrors,
 ];
 
