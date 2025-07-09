@@ -34,6 +34,14 @@ router.get(
   clienteController.obtenerClientePorId
 );
 
+router.get(
+  "/",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CLIENTES),
+  clienteValidators.idClienteValidator,
+  clienteController.obtenerTodosLosClientes
+);
+
 router.put(
   "/:idCliente",
   authMiddleware,

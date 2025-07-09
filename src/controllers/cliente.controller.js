@@ -50,26 +50,8 @@ const listarClientes = async (req, res, next) => {
         { correo: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
         { telefono: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
         { numeroDocumento: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
-        // Para el estado, si es booleano, buscamos por las palabras "activo" o "inactivo"
-        // Esto asume que 'estado' es un BOOLEAN en la DB y necesitamos mapearlo para la búsqueda por texto
-        // Si tu DB guarda "Activo"/"Inactivo" como strings, esto debería ser más directo.
-        // Aquí asumimos BOOLEAN y mapeamos 'true' -> 'activo', 'false' -> 'inactivo'
-        // NOTA: La búsqueda por estado en el backend puede ser un poco tricky con `LIKE` si el campo es BOOLEAN.
-        // Lo ideal sería un filtro separado para el estado si quieres precisión.
-        // Para una búsqueda tipo "fuzzy" por "activo" o "inactivo" en un campo BOOLEAN,
-        // tendríamos que hacer un poco más de magia o cargar los datos y filtrarlos después
-        // o añadir un campo virtual en el modelo.
-        // Por simplicidad y eficiencia, mantengamos la búsqueda de estado manejada por el `if (estado === "true")` de arriba.
-        // La búsqueda general (`search`) se enfocará en los campos de texto.
       ];
     }
-    // Si quieres que la búsqueda por 'estado' también sea parte del `search` genérico,
-    // tendrías que adaptar tu modelo de Cliente para tener un campo "virtual" o una forma
-    // de que el "estado" booleano se convierta a "activo"/"inactivo" en la consulta SQL.
-    // Por ahora, el filtro de `estado` de `req.query.estado` y el `search` son complementarios.
-
-    // Llamar al servicio con las nuevas opciones de filtro y paginación
-    // El servicio `obtenerTodosLosClientes` ya está diseñado para recibir un objeto `where`.
     const { totalItems, clientes, currentPage, totalPages } = await clienteService.obtenerTodosLosClientes(
       opcionesDeFiltro
     );
@@ -199,6 +181,22 @@ const eliminarClienteFisico = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtiene todos los clientes (sin paginación, para selects, etc).
+ */
+const obtenerTodosLosClientes = async (req, res, next) => {
+  try {
+    const clientes = await clienteService.obtenerTodosLosClientes();
+    res.status(200).json({
+      success: true,
+      message: "Todos los clientes obtenidos exitosamente.",
+      data: clientes,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearCliente,
   listarClientes,
@@ -208,4 +206,5 @@ module.exports = {
   habilitarCliente,
   eliminarClienteFisico,
   cambiarEstadoCliente,
+  obtenerTodosLosClientes,
 };
