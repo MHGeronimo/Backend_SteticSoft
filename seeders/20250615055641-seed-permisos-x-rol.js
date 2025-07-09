@@ -56,16 +56,22 @@ module.exports = {
       // estado: true // ELIMINADO
     }));
 
-    // Define permissions for Empleado role
+    // Define permissions for Empleado role (usando los nombres generales del schema.sql)
     const nombresPermisosEmpleado = [
-      'MODULO_CLIENTES_VER', 'MODULO_CLIENTES_CREAR', 'MODULO_CLIENTES_EDITAR',
-      'MODULO_PRODUCTOS_VER',
-      'MODULO_SERVICIOS_VER',
-      'MODULO_CITAS_VER_TODAS', 'MODULO_CITAS_CREAR', 'MODULO_CITAS_EDITAR', 'MODULO_CITAS_CANCELAR',
-      'MODULO_VENTAS_VER', 'MODULO_VENTAS_CREAR',
-      'MODULO_ABASTECIMIENTO_VER', 'MODULO_ABASTECIMIENTO_REGISTRAR',
-      'MODULO_DASHBOARD_VER_EMPLEADO',
-      'MODULO_NOVEDADES_VER'
+      'MODULO_CLIENTES_GESTIONAR',
+      'MODULO_PRODUCTOS_GESTIONAR', // Empleados gestionan productos, no solo ven
+      'MODULO_SERVICIOS_GESTIONAR', // Empleados gestionan servicios
+      'MODULO_CITAS_GESTIONAR',
+      'MODULO_VENTAS_GESTIONAR',
+      'MODULO_ABASTECIMIENTOS_GESTIONAR',
+      'MODULO_DASHBOARD_VER', // Dashboard general, la lógica interna mostrará datos de empleado
+      'MODULO_NOVEDADES_EMPLEADOS_GESTIONAR',
+      'MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR',
+      'MODULO_CATEGORIAS_SERVICIOS_GESTIONAR',
+      'MODULO_ESPECIALIDADES_GESTIONAR',
+      'MODULO_COMPRAS_GESTIONAR', // Generalmente los empleados pueden registrar compras
+      'MODULO_ESTADOS_GESTIONAR' // Pueden necesitar cambiar estados de citas/ventas
+      // 'MODULO_PROVEEDORES_GESTIONAR' // Podría ser solo de admin, dependiendo del negocio
     ];
 
     const permisosParaEmpleado = [];

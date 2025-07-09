@@ -32,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "tipo_perfil",
         validate: {
-          isIn: [["CLIENTE", "EMPLEADO"]],
+          isIn: [["CLIENTE", "EMPLEADO", "NINGUNO"]],
         },
       },
     },
