@@ -140,7 +140,7 @@ const obtenerTodosLosClientes = async (opcionesDeFiltro = {}) => {
               model: db.Rol,
               as: "rol",
               attributes: ["nombre"],
-              where: { nombre: "Cliente" }, // 🔥 Filtro por rol
+              where: { nombre: "cliente" }, // 🔥 Filtro por rol
             }
           ]
         }
