@@ -25,11 +25,13 @@ const crearRolValidators = [
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano (true o false)."),
   body("tipoPerfil")
-    .trim()
-    .notEmpty()
-    .withMessage("El tipo de perfil es obligatorio.")
-    .isIn(['CLIENTE', 'EMPLEADO', 'NINGUNO'])
-    .withMessage("El tipo de perfil debe ser CLIENTE, EMPLEADO o NINGUNO."),
+    .optional() // Lo hacemos opcional para que si no se envía, tome el defaultValue del modelo.
+    .isString()
+    .withMessage("El tipo de perfil debe ser un string.")
+    .isIn(tipoPerfilValues)
+    .withMessage(
+      `El tipo de perfil debe ser uno de los siguientes valores: ${tipoPerfilValues.join(", ")}`
+    ),
   handleValidationErrors, // Middleware para manejar los errores de estas validaciones
 ];
 
@@ -59,11 +61,12 @@ const actualizarRolValidators = [
     .withMessage("El estado debe ser un valor booleano (true o false)."),
   body("tipoPerfil")
     .optional()
-    .trim()
-    .notEmpty()
-    .withMessage("El tipo de perfil no puede estar vacío si se proporciona.")
-    .isIn(['CLIENTE', 'EMPLEADO', 'NINGUNO'])
-    .withMessage("El tipo de perfil debe ser CLIENTE, EMPLEADO o NINGUNO si se proporciona."),
+    .isString()
+    .withMessage("El tipo de perfil debe ser un string.")
+    .isIn(tipoPerfilValues)
+    .withMessage(
+      `El tipo de perfil debe ser uno de los siguientes valores: ${tipoPerfilValues.join(", ")}`
+    ),
   handleValidationErrors,
 ];
 

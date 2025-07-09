@@ -9,10 +9,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: "id_rol", 
+        field: "id_rol",
       },
       nombre: {
-        type: DataTypes.STRING(50), 
+        type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
         field: "nombre",
@@ -28,10 +28,12 @@ module.exports = (sequelize, DataTypes) => {
         field: "estado",
       },
       tipoPerfil: {
-        type: DataTypes.ENUM('CLIENTE', 'EMPLEADO', 'NINGUNO'),
+        type: DataTypes.ENUM("CLIENTE", "EMPLEADO", "NINGUNO"),
         allowNull: false,
-        field: "tipo_perfil",
-      }
+        defaultValue: "EMPLEADO",
+        comment:
+          'Define el tipo de perfil asociado a este rol. "CLIENTE" para clientes, "EMPLEADO" para personal, "NINGUNO" para roles sin perfil de datos (ej. Admin).',
+      },
     },
     {
       tableName: "rol",
