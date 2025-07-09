@@ -29,8 +29,6 @@ router.get(
 // Ruta para verificar correo (PÚBLICA)
 router.get(
   "/verificar-correo",
-  // authMiddleware, // Eliminado para que sea pública
-  // No se necesita checkPermission para una ruta pública
   usuarioValidators.verificarCorreoValidators,
   usuarioController.verificarCorreo
 );
