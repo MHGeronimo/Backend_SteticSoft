@@ -64,6 +64,15 @@ const crearUsuario = async (datosCompletosUsuario) => {
     );
   }
 
+  // Validar que el rol tenga un tipoPerfil definido
+  if (!rol.tipoPerfil) {
+    // Esto podría ser un error de configuración del rol, así que es bueno registrarlo o manejarlo.
+    console.error(`Rol con ID ${idRol} no tiene un tipoPerfil definido.`);
+    throw new BadRequestError(
+      `The role with ID ${idRol} does not have a profile type defined. Please contact support.`
+    );
+  }
+
   const transaction = await db.sequelize.transaction(); // Start transaction
 
   try {
@@ -76,85 +85,90 @@ const crearUsuario = async (datosCompletosUsuario) => {
       estado: typeof estado === "boolean" ? estado : true,
     }, { transaction });
 
-    // Create associated profile based on role
-    if (rol.nombre === "Cliente") {
-      // Basic validation of client profile fields (could be in validators)
+    // Create associated profile based on rol.tipoPerfil
+    if (rol.tipoPerfil === "CLIENTE") {
       if (!nombre || !apellido || !telefono || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
         await transaction.rollback();
         throw new BadRequestError("Missing required client profile fields.");
       }
-       // Validate if client's document number already exists
       const clienteConDocumento = await db.Cliente.findOne({ where: { numeroDocumento }, transaction });
       if (clienteConDocumento) {
         await transaction.rollback();
         throw new ConflictError(`The document number '${numeroDocumento}' is already registered for a client.`);
       }
-       // Validate if client's email already exists (if Cliente.correo is UNIQUE)
-      const clienteConCorreo = await db.Cliente.findOne({ where: { correo }, transaction }); // Assuming client's email is the same
+      const clienteConCorreo = await db.Cliente.findOne({ where: { correo }, transaction });
       if (clienteConCorreo) {
         await transaction.rollback();
         throw new ConflictError(`The email '${correo}' is already registered for a client profile.`);
       }
-
       await db.Cliente.create({
         idUsuario: nuevoUsuario.idUsuario,
         nombre,
         apellido,
-        correo, // The client's email is the same as the user's
+        correo,
         telefono,
         tipoDocumento,
         numeroDocumento,
         fechaNacimiento,
-        // direccion: datosCompletosUsuario.direccion, // If included
-        estado: true, // Client profile active by default
+        estado: true,
       }, { transaction });
 
-    } else if (rol.nombre === "Empleado") {
-      // Similar logic to create an Employee if the role is "Employee"
-      // Now, Employee has the same personal information fields as Client
+    } else if (rol.tipoPerfil === "EMPLEADO") {
       if (!nombre || !apellido || !telefono || !tipoDocumento || !numeroDocumento || !fechaNacimiento) {
         await transaction.rollback();
         throw new BadRequestError("Missing required employee profile fields.");
       }
-      
       const empleadoConDocumento = await db.Empleado.findOne({ where: { numeroDocumento }, transaction });
       if (empleadoConDocumento) {
           await transaction.rollback();
           throw new ConflictError(`The document number '${numeroDocumento}' is already registered for an employee.`);
       }
-      
       const empleadoConCorreo = await db.Empleado.findOne({ where: { correo }, transaction });
       if (empleadoConCorreo) {
           await transaction.rollback();
           throw new ConflictError(`The email '${correo}' is already registered for an employee profile.`);
       }
-
       await db.Empleado.create({
         idUsuario: nuevoUsuario.idUsuario,
         nombre,
-        apellido,       // Added
-        correo,         // Added
-        telefono,       // Added
+        apellido,
+        correo,
+        telefono,
         tipoDocumento,
         numeroDocumento,
         fechaNacimiento,
         estado: true,
       }, { transaction });
     }
+    // Si rol.tipoPerfil es 'NINGUNO', no se crea ningún perfil adicional.
 
     await transaction.commit(); // Commit transaction
 
-    // Return the user with their profile for consistency with obtenerUsuarioPorId and obtenerTodosLosUsuarios
-    const usuarioConPerfil = await db.Usuario.findByPk(nuevoUsuario.idUsuario, {
-        attributes: ["idUsuario", "correo", "estado", "idRol"],
-        include: [
-            { model: db.Rol, as: "rol", attributes: ["idRol", "nombre"] },
-            { model: db.Cliente, as: "clienteInfo", required: false },
-            { model: db.Empleado, as: "empleadoInfo", required: false } // If configured
-        ]
+    // Devolver el usuario recién creado con TODAS sus asociaciones cargadas.
+    // Esto incluye el rol, y clienteInfo o empleadoInfo si aplican.
+    const usuarioConTodo = await db.Usuario.findByPk(nuevoUsuario.idUsuario, {
+      attributes: ["idUsuario", "correo", "estado", "idRol"], // Asegúrate de que los atributos sean los que necesitas
+      include: [
+        { 
+          model: db.Rol, 
+          as: "rol", 
+          // Incluir tipoPerfil aquí si es útil para el frontend, aunque la decisión ya se tomó.
+          attributes: ["idRol", "nombre", "tipoPerfil"] 
+        },
+        { 
+          model: db.Cliente, 
+          as: "clienteInfo", 
+          required: false // `required: false` para que no falle si no hay perfil de cliente
+        },
+        { 
+          model: db.Empleado, 
+          as: "empleadoInfo", 
+          required: false // `required: false` para que no falle si no hay perfil de empleado
+        }
+      ]
     });
-    // Sequelize returns a model instance, toJSON() converts it to a plain object.
-    return usuarioConPerfil ? usuarioConPerfil.toJSON() : null; 
+
+    return usuarioConTodo ? usuarioConTodo.toJSON() : null;
     
   } catch (error) {
     await transaction.rollback(); // Rollback transaction in case of error

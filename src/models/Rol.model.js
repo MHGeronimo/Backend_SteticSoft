@@ -27,6 +27,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "estado",
       },
+      tipoPerfil: {
+        type: DataTypes.ENUM('CLIENTE', 'EMPLEADO', 'NINGUNO'),
+        allowNull: false,
+        field: "tipo_perfil",
+      }
     },
     {
       tableName: "rol",
