@@ -29,7 +29,8 @@ const cambiarEstadoRol = async (idRol, nuevoEstado) => {
  * @returns {Promise<object>} El rol recién creado con sus permisos.
  */
 const crearRol = async (datosRol) => {
-  const { nombre, descripcion, estado, idPermisos } = datosRol;
+  // Extraer tipoPerfil de datosRol
+  const { nombre, descripcion, estado, tipoPerfil, idPermisos } = datosRol;
   
   // Se utiliza una única transacción para toda la operación.
   const t = await db.sequelize.transaction();
@@ -46,6 +47,7 @@ const crearRol = async (datosRol) => {
       nombre,
       descripcion,
       estado: typeof estado === 'boolean' ? estado : true, // Valor por defecto si no se especifica
+      tipoPerfil, // Añadir tipoPerfil aquí
     }, { transaction: t });
 
     // 3. Asignar los permisos si se proporcionaron en el array
@@ -176,9 +178,8 @@ const actualizarRol = async (idRol, datosActualizar) => {
 
   try {
     // 1. Buscar el rol que se va a actualizar
-    const rol = await db.Rol.findByPk(idRol, { transaction: t }); // <-- Se usa idRol
+    const rol = await db.Rol.findByPk(idRol, { transaction: t });
     if (!rol) {
-      // Esta es la fuente del error 404 si el ID es incorrecto.
       throw new NotFoundError("Rol no encontrado para actualizar.");
     }
 
@@ -200,7 +201,9 @@ const actualizarRol = async (idRol, datosActualizar) => {
         );
       }
     }
-    // 3. Actualizar los datos principales del rol (nombre, descripción, estado)
+    
+    // 3. Actualizar los datos principales del rol (nombre, descripción, estado, tipoPerfil)
+    // datosPrincipalesRol ya contiene tipoPerfil si fue enviado en datosActualizar
     await rol.update(datosPrincipalesRol, { transaction: t });
 
     // 4. Actualizar los permisos si el array 'idPermisos' fue proporcionado
