@@ -161,22 +161,22 @@ const eliminarUsuarioFisico = async (req, res, next) => {
 const verificarCorreo = async (req, res, next) => {
   try {
     const { correo } = req.query;
-    const estaEnUso = await usuarioService.verificarCorreoExistente(correo);
+    // El servicio ahora devuelve true si está en uso, false si no.
+    const enUso = await usuarioService.verificarCorreoExistente(correo);
 
-    if (estaEnUso) {
-      return res.status(200).json({
-        success: true,
-        estaEnUso: true,
-        message: "El correo electrónico ya está registrado.",
-      });
-    } else {
-      return res.status(200).json({
-        success: true,
-        estaEnUso: false,
-        message: "El correo electrónico está disponible.",
-      });
-    }
+    // La respuesta al frontend es la misma que antes, solo cambia cómo se obtiene 'enUso'
+    return res.status(200).json({
+      success: true,
+      estaEnUso: enUso, // Usar el valor booleano directamente
+      message: enUso
+        ? "El correo electrónico ya está registrado."
+        : "El correo electrónico está disponible.",
+    });
   } catch (error) {
+    // Asegurarse de que los errores de BadRequestError o CustomError del servicio
+    // se propaguen correctamente con su statusCode.
+    // El errorHandler global debería manejar esto.
+    console.error("[usuario.controller.js] Error en verificarCorreo:", error);
     next(error);
   }
 };
@@ -186,9 +186,9 @@ module.exports = {
   listarUsuarios,
   obtenerUsuarioPorId,
   actualizarUsuario,
-  anularUsuario,
-  habilitarUsuario,
-  eliminarUsuarioFisico,
-  cambiarEstadoUsuario,
-  verificarCorreo, // <-- EXPORTACIÓN AÑADIDA
+  anularUsuario, // Considerar si esta y la siguiente deben usar cambiarEstadoUsuario
+  habilitarUsuario, // Considerar si esta y la anterior deben usar cambiarEstadoUsuario
+  eliminarUsuarioFisico, // Esta es una eliminación física, diferente de anular/deshabilitar
+  cambiarEstadoUsuario, // Esta es la función PATCH /:idUsuario/estado
+  verificarCorreo,
 };
