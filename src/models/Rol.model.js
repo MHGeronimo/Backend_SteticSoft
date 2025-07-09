@@ -28,12 +28,11 @@ module.exports = (sequelize, DataTypes) => {
         field: "estado",
       },
       tipoPerfil: {
-        type: DataTypes.ENUM("CLIENTE", "EMPLEADO", "NINGUNO"),
+        type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: "EMPLEADO",
-        field: 'tipo_perfil',
-        comment:
-          'Define el tipo de perfil asociado a este rol. "CLIENTE" para clientes, "EMPLEADO" para personal, "NINGUNO" para roles sin perfil de datos (ej. Admin).',
+        validate: {
+          isIn: [["CLIENTE", "EMPLEADO"]],
+        },
       },
     },
     {
@@ -51,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
 
     // Un rol puede tener muchos permisos a través de la tabla de unión.
     Rol.belongsToMany(models.Permisos, {
-      through: "permisos_x_rol", 
+      through: "permisos_x_rol",
       foreignKey: "id_rol", // Clave foránea en la tabla de unión.
       otherKey: "id_permiso", // La otra clave foránea en la tabla de unión.
       as: "permisos",
