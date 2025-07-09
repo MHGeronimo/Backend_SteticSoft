@@ -6,25 +6,26 @@ module.exports = {
       {
         nombre: 'Administrador',
         descripcion: 'Acceso total al sistema y configuración.',
-        estado: true
-        // id_rol will be auto-generated
+        estado: true,
+        tipo_perfil: 'NINGUNO'
       },
       {
         nombre: 'Empleado',
         descripcion: 'Acceso a módulos operativos y de gestión designados.',
-        estado: true
+        estado: true,
+        tipo_perfil: 'EMPLEADO'
       },
       {
         nombre: 'Cliente',
         descripcion: 'Acceso limitado para consulta de citas y datos personales.',
-        estado: true
+        estado: true,
+        tipo_perfil: 'CLIENTE'
       }
     ], {});
   },
 
   async down(queryInterface, Sequelize) {
-    // This will delete all entries. If specific deletion is needed, add conditions.
-    // Example: await queryInterface.bulkDelete('rol', { nombre: ['Administrador', 'Empleado', 'Cliente'] }, {});
+    // This will delete all entries.
     await queryInterface.bulkDelete('rol', null, {});
   }
 };

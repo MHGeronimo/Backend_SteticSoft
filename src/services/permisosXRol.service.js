@@ -47,7 +47,7 @@ const obtenerPermisosDeRol = async (idRol) => {
     const rolConPermisos = await db.Rol.findByPk(idRol, {
         include: [{
             model: db.Permisos,
-            as: 'permiso',
+            as: 'permisos', // CORREGIDO: de 'permiso' a 'permisos'
             through: { attributes: [] },
         }],
     });
