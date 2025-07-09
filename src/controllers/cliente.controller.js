@@ -1,4 +1,4 @@
-// src/controllers/cliente.controller.js
+// src/controllers/cliente.controller.js 
 const clienteService = require("../services/cliente.service.js");
 const db = require("../models"); // Importar db para acceder a Sequelize.Op
 
