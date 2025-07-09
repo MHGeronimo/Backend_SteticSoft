@@ -93,7 +93,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
         },
       ],
       order: [
-        ["id_empleado", "ASC"],
+        ["idempleado", "ASC"],
         ["dia_semana", "ASC"], // Corregido por si acaso, usando el nombre de la columna real
       ],
     });
