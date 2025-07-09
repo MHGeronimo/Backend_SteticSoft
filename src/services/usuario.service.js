@@ -529,4 +529,5 @@ module.exports = {
   habilitarUsuario,
   eliminarUsuarioFisico,
   cambiarEstadoUsuario,
+  verificarCorreoExistente,
 };
