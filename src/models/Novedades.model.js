@@ -47,6 +47,12 @@ module.exports = (sequelize, DataTypes) => {
       // Nombre exacto de la tabla en la base de datos
       tableName: 'novedades',
       timestamps: false,
+      indexes: [
+        {
+          unique: true,
+          fields: ['id_empleado', 'dia_semana']
+        }
+      ]
     }
   );
 
