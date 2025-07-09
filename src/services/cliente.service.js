@@ -1,4 +1,4 @@
-// src/shared/src_api/services/cliente.service.js 
+// src/shared/src_api/services/cliente.service.js  
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const { Op } = db.Sequelize;
@@ -129,27 +129,31 @@ const crearCliente = async (datosCompletos) => {
 const obtenerTodosLosClientes = async (opcionesDeFiltro = {}) => {
   try {
     const clientes = await db.Cliente.findAll({
-      where: opcionesDeFiltro.where || {}, // Asegúrate de que `where` sea un objeto si no se provee
+      where: opcionesDeFiltro.where || {}, // Filtros por estado o búsqueda
       include: [
         {
           model: db.Usuario,
-          as: "usuarioCuenta", // Alias definido en Cliente.model.js
-          attributes: ["idUsuario", "correo", "estado", "idRol"], // Incluir idRol del Usuario
-          include: [{ // Anidar para obtener el nombre del rol
-            model: db.Rol,
-            as: "rol", // Alias definido en Usuario.model.js
-            attributes: ["nombre"]
-          }]
-        },
+          as: "usuarioCuenta",
+          attributes: ["idUsuario", "correo", "estado", "idRol"],
+          include: [
+            {
+              model: db.Rol,
+              as: "rol",
+              attributes: ["nombre"],
+              where: { nombre: "Cliente" }, // 🔥 Filtro por rol
+            }
+          ]
+        }
       ],
       order: [["apellido", "ASC"], ["nombre", "ASC"]],
     });
+
     return clientes;
   } catch (error) {
-    // console.error("Error al obtener todos los clientes en el servicio:", error.message); // Comentado
     throw new CustomError(`Error al obtener clientes: ${error.message}`, 500);
   }
 };
+
 
 /**
  * Obtener un cliente por su ID, incluyendo la información de su cuenta de Usuario.

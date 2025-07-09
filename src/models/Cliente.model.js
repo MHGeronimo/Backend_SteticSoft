@@ -1,4 +1,4 @@
-// src/models/Cliente.model.js
+// src/models/Cliente.model.js 
 "use strict"; 
 
 module.exports = (sequelize, DataTypes) => {

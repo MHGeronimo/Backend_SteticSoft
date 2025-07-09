@@ -1,4 +1,4 @@
-// src/shared/src_api/validators/cliente.validators.js 
+// src/shared/src_api/validators/cliente.validators.js  
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
