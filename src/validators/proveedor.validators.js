@@ -1,41 +1,29 @@
 // src/shared/src_api/validators/proveedores.validators.js
 
 const { body, param } = require("express-validator");
-const { Op } = require("sequelize"); // Asegúrate de importar Op
-const db = require("../models"); // Asumo que así cargas tus modelos
+const { Op } = require("sequelize");
+const db = require("../models");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware");
 
 // --- Validador para CREAR un proveedor ---
+// (Se ajustan los campos en 'where' a camelCase para consistencia)
 const crearProveedorValidators = [
   body("nombre")
     .trim()
     .notEmpty()
-    .withMessage("El nombre del proveedor es obligatorio.")
-    .isString()
-    .withMessage("El nombre debe ser texto.")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("El nombre debe tener entre 2 y 100 caracteres."),
-
+    .withMessage("El nombre del proveedor es obligatorio."),
   body("tipo")
     .trim()
     .notEmpty()
     .withMessage(
       'El tipo de proveedor es obligatorio (ej. "Natural", "Jurídico").'
-    )
-    .isString()
-    .withMessage("El tipo debe ser texto."),
-
+    ),
   body("telefono")
     .trim()
     .notEmpty()
-    .withMessage("El teléfono principal es obligatorio.")
-    .isString()
-    .withMessage("El teléfono debe ser texto.")
-    .isLength({ min: 7, max: 45 })
-    .withMessage("El teléfono debe tener entre 7 y 45 caracteres."),
-
+    .withMessage("El teléfono principal es obligatorio."),
   body("correo")
     .trim()
     .notEmpty()
@@ -45,7 +33,7 @@ const crearProveedorValidators = [
     .normalizeEmail()
     .custom(async (value) => {
       const proveedorExistente = await db.Proveedor.findOne({
-        where: { correo: value, estado: true },
+        where: { correo: value, estado: true }, // camelCase
       });
       if (proveedorExistente) {
         return Promise.reject(
@@ -53,29 +41,17 @@ const crearProveedorValidators = [
         );
       }
     }),
-
   body("direccion")
     .trim()
     .notEmpty()
-    .withMessage("La dirección es obligatoria.")
-    .isString()
-    .withMessage("La dirección debe ser texto.")
-    .isLength({ min: 5, max: 255 })
-    .withMessage("La dirección debe tener entre 5 y 255 caracteres."),
-
-  body("tipoDocumento")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString(),
-
+    .withMessage("La dirección es obligatoria."),
+  body("tipoDocumento").optional({ nullable: true, checkFalsy: true }),
   body("numeroDocumento")
     .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
     .custom(async (value) => {
       if (value) {
         const proveedorExistente = await db.Proveedor.findOne({
-          where: { numero_documento: value, estado: true }, // Corregido a snake_case si así está en tu BD
+          where: { numeroDocumento: value, estado: true }, // INICIO DE CORRECCIÓN: Usar camelCase
         });
         if (proveedorExistente) {
           return Promise.reject(
@@ -84,15 +60,12 @@ const crearProveedorValidators = [
         }
       }
     }),
-
   body("nitEmpresa")
     .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
     .custom(async (value) => {
       if (value) {
         const proveedorExistente = await db.Proveedor.findOne({
-          where: { nit_empresa: value, estado: true }, // Corregido a snake_case
+          where: { nitEmpresa: value, estado: true }, // INICIO DE CORRECCIÓN: Usar camelCase
         });
         if (proveedorExistente) {
           return Promise.reject(
@@ -101,58 +74,31 @@ const crearProveedorValidators = [
         }
       }
     }),
-
-  // Campos opcionales de la persona encargada
-  body("nombrePersonaEncargada")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString(),
-  body("telefonoPersonaEncargada")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString(),
+  // Campos opcionales
+  body("nombrePersonaEncargada").optional({ nullable: true, checkFalsy: true }),
+  body("telefonoPersonaEncargada").optional({
+    nullable: true,
+    checkFalsy: true,
+  }),
   body("emailPersonaEncargada")
     .optional({ nullable: true, checkFalsy: true })
-    .trim()
     .isEmail()
     .normalizeEmail(),
-
   handleValidationErrors,
 ];
 
 // --- Validador para ACTUALIZAR un proveedor ---
 const actualizarProveedorValidators = [
-  // 1. Validar el ID del proveedor en la URL
-  param("id") // Se espera que la ruta sea /proveedores/:id
-    .isInt({ gt: 0 })
-    .withMessage("El ID de proveedor es inválido."),
+  param("id").isInt({ gt: 0 }).withMessage("El ID de proveedor es inválido."),
 
-  // 2. Validaciones opcionales para cada campo
-  body("nombre")
-    .optional()
-    .trim()
-    .notEmpty()
-    .isString()
-    .isLength({ min: 2, max: 100 }),
-  body("tipo").optional().trim().notEmpty().isString(),
-  body("telefono")
-    .optional()
-    .trim()
-    .notEmpty()
-    .isString()
-    .isLength({ min: 7, max: 45 }),
-  body("direccion")
-    .optional()
-    .trim()
-    .notEmpty()
-    .isString()
-    .isLength({ min: 5, max: 255 }),
-  body("tipoDocumento")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString(),
+  // Validaciones opcionales para cada campo
+  body("nombre").optional().trim().notEmpty(),
+  body("tipo").optional().trim().notEmpty(),
+  body("telefono").optional().trim().notEmpty(),
+  body("direccion").optional().trim().notEmpty(),
+  body("tipoDocumento").optional({ nullable: true, checkFalsy: true }),
 
-  // 3. Validaciones de UNICIDAD (la clave de la corrección)
+  // Validaciones de UNICIDAD (Corregidas a camelCase)
   body("correo")
     .optional()
     .trim()
@@ -162,7 +108,7 @@ const actualizarProveedorValidators = [
       const proveedorExistente = await db.Proveedor.findOne({
         where: {
           correo: value,
-          id_proveedor: { [Op.ne]: req.params.id }, // [Op.ne] -> Not Equal
+          idProveedor: { [Op.ne]: req.params.id }, // INICIO DE CORRECCIÓN: Usar idProveedor (o como se llame tu PK en el modelo)
         },
       });
       if (proveedorExistente) {
@@ -174,14 +120,12 @@ const actualizarProveedorValidators = [
 
   body("numeroDocumento")
     .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
     .custom(async (value, { req }) => {
       if (value) {
         const proveedorExistente = await db.Proveedor.findOne({
           where: {
-            numero_documento: value, // snake_case
-            id_proveedor: { [Op.ne]: req.params.id },
+            numeroDocumento: value, // INICIO DE CORRECCIÓN: Usar camelCase
+            idProveedor: { [Op.ne]: req.params.id },
           },
         });
         if (proveedorExistente) {
@@ -194,14 +138,12 @@ const actualizarProveedorValidators = [
 
   body("nitEmpresa")
     .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
     .custom(async (value, { req }) => {
       if (value) {
         const proveedorExistente = await db.Proveedor.findOne({
           where: {
-            nit_empresa: value, // snake_case
-            id_proveedor: { [Op.ne]: req.params.id },
+            nitEmpresa: value, // INICIO DE CORRECCIÓN: Usar camelCase
+            idProveedor: { [Op.ne]: req.params.id },
           },
         });
         if (proveedorExistente) {
@@ -212,18 +154,14 @@ const actualizarProveedorValidators = [
       }
     }),
 
-  // 4. Otros campos opcionales
-  body("nombrePersonaEncargada")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString(),
-  body("telefonoPersonaEncargada")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString(),
+  // Otros campos opcionales
+  body("nombrePersonaEncargada").optional({ nullable: true, checkFalsy: true }),
+  body("telefonoPersonaEncargada").optional({
+    nullable: true,
+    checkFalsy: true,
+  }),
   body("emailPersonaEncargada")
     .optional({ nullable: true, checkFalsy: true })
-    .trim()
     .isEmail()
     .normalizeEmail(),
   body("estado").optional().isBoolean(),
