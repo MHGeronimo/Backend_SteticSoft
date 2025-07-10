@@ -1,20 +1,17 @@
-const productoService = require("../services/producto.service.js"); 
+const productoService = require("../services/producto.service.js");
 
 /**
  * Crea un nuevo producto.
  */
 const crearProducto = async (req, res, next) => {
   try {
-    // Se extraen los datos del cuerpo de la solicitud.
     const datosProducto = { ...req.body };
 
-    // Si se subió un archivo, 'req.file' existirá gracias a multer.
+    // Si se subió un archivo, multer nos deja la info en req.file
     if (req.file) {
-      // Se construye la URL completa y accesible para la imagen.
-      // Esto asume que la carpeta 'public' se sirve estáticamente.
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
-      // La ruta de la imagen será, por ejemplo: http://localhost:3000/uploads/productos/producto-1678886400000.jpg
-      datosProducto.imagen = `${baseUrl}/uploads/productos/${req.file.filename}`;
+      // CORRECCIÓN: Guardamos solo la ruta relativa en la base de datos.
+      // Es más portable y flexible para diferentes entornos (desarrollo, producción).
+      datosProducto.imagen = `/uploads/productos/${req.file.filename}`;
     }
 
     const nuevoProducto = await productoService.crearProducto(datosProducto);
@@ -70,10 +67,10 @@ const actualizarProducto = async (req, res, next) => {
     const { idProducto } = req.params;
     const datosActualizar = { ...req.body };
 
-    // Lógica similar para la actualización de la imagen.
+    // CORRECCIÓN: Lógica similar para la actualización de la imagen.
     if (req.file) {
-        const baseUrl = `${req.protocol}://${req.get("host")}`;
-        datosActualizar.imagen = `${baseUrl}/uploads/productos/${req.file.filename}`;
+      datosActualizar.imagen = `/uploads/productos/${req.file.filename}`;
+      // Opcional: Aquí se podría añadir lógica para borrar la imagen anterior.
     }
 
     const productoActualizado = await productoService.actualizarProducto(
