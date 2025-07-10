@@ -1,4 +1,4 @@
-// src/shared/src_api/validators/proveedores.validators.js
+// src/shared/src_api/validators/proveedor.validators.js
 
 const { body, param } = require("express-validator");
 const { Op } = require("sequelize");
@@ -8,7 +8,6 @@ const {
 } = require("../middlewares/validation.middleware");
 
 // --- Validador para CREAR un proveedor ---
-// (Se ajustan los campos en 'where' a camelCase para consistencia)
 const crearProveedorValidators = [
   body("nombre")
     .trim()
@@ -29,13 +28,12 @@ const crearProveedorValidators = [
     .notEmpty()
     .withMessage("El correo principal es obligatorio.")
     .isEmail()
-    .withMessage("Debe proporcionar un correo electrónico válido.")
     .normalizeEmail()
     .custom(async (value) => {
-      const proveedorExistente = await db.Proveedor.findOne({
-        where: { correo: value, estado: true }, // camelCase
+      const proveedor = await db.Proveedor.findOne({
+        where: { correo: value, estado: true },
       });
-      if (proveedorExistente) {
+      if (proveedor) {
         return Promise.reject(
           "El correo electrónico ya está registrado en un proveedor activo."
         );
@@ -45,15 +43,14 @@ const crearProveedorValidators = [
     .trim()
     .notEmpty()
     .withMessage("La dirección es obligatoria."),
-  body("tipoDocumento").optional({ nullable: true, checkFalsy: true }),
   body("numeroDocumento")
     .optional({ nullable: true, checkFalsy: true })
     .custom(async (value) => {
       if (value) {
-        const proveedorExistente = await db.Proveedor.findOne({
-          where: { numeroDocumento: value, estado: true }, // INICIO DE CORRECCIÓN: Usar camelCase
+        const proveedor = await db.Proveedor.findOne({
+          where: { numeroDocumento: value, estado: true },
         });
-        if (proveedorExistente) {
+        if (proveedor) {
           return Promise.reject(
             "El número de documento ya está registrado en un proveedor activo."
           );
@@ -64,17 +61,16 @@ const crearProveedorValidators = [
     .optional({ nullable: true, checkFalsy: true })
     .custom(async (value) => {
       if (value) {
-        const proveedorExistente = await db.Proveedor.findOne({
-          where: { nitEmpresa: value, estado: true }, // INICIO DE CORRECCIÓN: Usar camelCase
+        const proveedor = await db.Proveedor.findOne({
+          where: { nitEmpresa: value, estado: true },
         });
-        if (proveedorExistente) {
+        if (proveedor) {
           return Promise.reject(
             "El NIT de empresa ya está registrado en un proveedor activo."
           );
         }
       }
     }),
-  // Campos opcionales
   body("nombrePersonaEncargada").optional({ nullable: true, checkFalsy: true }),
   body("telefonoPersonaEncargada").optional({
     nullable: true,
@@ -89,97 +85,76 @@ const crearProveedorValidators = [
 
 // --- Validador para ACTUALIZAR un proveedor ---
 const actualizarProveedorValidators = [
-  param("id").isInt({ gt: 0 }).withMessage("El ID de proveedor es inválido."),
+  // INICIO DE CORRECCIÓN: Usar 'idProveedor' para coincidir con el archivo de rutas.
+  param("idProveedor")
+    .isInt({ gt: 0 })
+    .withMessage("El ID de proveedor es inválido."),
 
-  // Validaciones opcionales para cada campo
   body("nombre").optional().trim().notEmpty(),
   body("tipo").optional().trim().notEmpty(),
   body("telefono").optional().trim().notEmpty(),
   body("direccion").optional().trim().notEmpty(),
-  body("tipoDocumento").optional({ nullable: true, checkFalsy: true }),
 
-  // Validaciones de UNICIDAD (Corregidas a camelCase)
   body("correo")
     .optional()
-    .trim()
     .isEmail()
     .normalizeEmail()
     .custom(async (value, { req }) => {
-      const proveedorExistente = await db.Proveedor.findOne({
+      const proveedor = await db.Proveedor.findOne({
         where: {
           correo: value,
-          idProveedor: { [Op.ne]: req.params.id }, // INICIO DE CORRECCIÓN: Usar idProveedor (o como se llame tu PK en el modelo)
+          idProveedor: { [Op.ne]: req.params.idProveedor }, // Se usa req.params.idProveedor
         },
       });
-      if (proveedorExistente) {
-        return Promise.reject(
-          "El correo electrónico ya está en uso por otro proveedor."
-        );
-      }
+      if (proveedor)
+        return Promise.reject("El correo ya está en uso por otro proveedor.");
     }),
-
   body("numeroDocumento")
     .optional({ nullable: true, checkFalsy: true })
     .custom(async (value, { req }) => {
       if (value) {
-        const proveedorExistente = await db.Proveedor.findOne({
+        const proveedor = await db.Proveedor.findOne({
           where: {
-            numeroDocumento: value, // INICIO DE CORRECCIÓN: Usar camelCase
-            idProveedor: { [Op.ne]: req.params.id },
+            numeroDocumento: value,
+            idProveedor: { [Op.ne]: req.params.idProveedor }, // Se usa req.params.idProveedor
           },
         });
-        if (proveedorExistente) {
+        if (proveedor)
           return Promise.reject(
             "El número de documento ya está en uso por otro proveedor."
           );
-        }
       }
     }),
-
   body("nitEmpresa")
     .optional({ nullable: true, checkFalsy: true })
     .custom(async (value, { req }) => {
       if (value) {
-        const proveedorExistente = await db.Proveedor.findOne({
+        const proveedor = await db.Proveedor.findOne({
           where: {
-            nitEmpresa: value, // INICIO DE CORRECCIÓN: Usar camelCase
-            idProveedor: { [Op.ne]: req.params.id },
+            nitEmpresa: value,
+            idProveedor: { [Op.ne]: req.params.idProveedor }, // Se usa req.params.idProveedor
           },
         });
-        if (proveedorExistente) {
-          return Promise.reject(
-            "El NIT de empresa ya está en uso por otro proveedor."
-          );
-        }
+        if (proveedor)
+          return Promise.reject("El NIT ya está en uso por otro proveedor.");
       }
     }),
-
-  // Otros campos opcionales
-  body("nombrePersonaEncargada").optional({ nullable: true, checkFalsy: true }),
-  body("telefonoPersonaEncargada").optional({
-    nullable: true,
-    checkFalsy: true,
-  }),
-  body("emailPersonaEncargada")
-    .optional({ nullable: true, checkFalsy: true })
-    .isEmail()
-    .normalizeEmail(),
   body("estado").optional().isBoolean(),
-
   handleValidationErrors,
 ];
+// FIN DE CORRECCIÓN
 
-// --- Validador para OBTENER/ELIMINAR por ID ---
+// --- Validador de ID (Corregido para consistencia) ---
 const idProveedorValidator = [
-  param("id")
+  param("idProveedor")
     .isInt({ gt: 0 })
     .withMessage("El ID del proveedor debe ser un entero positivo."),
   handleValidationErrors,
 ];
 
-// --- Validador para CAMBIAR ESTADO ---
+// --- Validador para CAMBIAR ESTADO (Corregido para consistencia) ---
 const cambiarEstadoProveedorValidators = [
-  param("id")
+  param("idProveedor")
     .isInt({ gt: 0 })
     .withMessage("El ID del proveedor debe ser un entero positivo."),
   body("estado")
