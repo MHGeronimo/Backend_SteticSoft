@@ -431,13 +431,13 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
     if (Object.keys(datosParaPerfil).length > 0) {
       if (rolActual.tipoPerfil === "CLIENTE") {
         const cliente = await db.Cliente.findOne({
-          where: { usuarioId: idUsuario },
+          where: { idUsuario: idUsuario }, // ✅ CORRECTO
           transaction,
         });
         if (cliente) await cliente.update(datosParaPerfil, { transaction });
       } else if (rolActual.tipoPerfil === "EMPLEADO") {
         const empleado = await db.Empleado.findOne({
-          where: { usuarioId: idUsuario },
+          where: { idUsuario: idUsuario }, // ✅ CORRECTO
           transaction,
         });
         if (empleado) await empleado.update(datosParaPerfil, { transaction });
