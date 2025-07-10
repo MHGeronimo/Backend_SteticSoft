@@ -398,7 +398,28 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
       }
     }
 
-    // ... (lógica para validar correo y hashear contraseña sin cambios)
+    if (datosParaUsuario.correo && datosParaUsuario.correo !== usuario.correo) {
+      const existe = await db.Usuario.findOne({
+        where: {
+          correo: datosParaUsuario.correo,
+          idUsuario: { [Op.ne]: idUsuario },
+        },
+        transaction,
+      });
+      if (existe) {
+        await transaction.rollback();
+        throw new ConflictError(
+          `The email address '${datosParaUsuario.correo}' is already registered.`
+        );
+      }
+    }
+
+    if (datosParaUsuario.contrasena) {
+      datosParaUsuario.contrasena = await bcrypt.hash(
+        datosParaUsuario.contrasena,
+        saltRounds
+      );
+    }
 
     if (Object.keys(datosParaUsuario).length > 0) {
       await usuario.update(datosParaUsuario, { transaction });
@@ -406,32 +427,33 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
 
     const rolActual = await db.Rol.findByPk(usuario.idRol, { transaction });
 
-    // --- INICIO DE LA CORRECCIÓN EN `actualizarUsuario` ---
+    // Solo dependemos de tipoPerfil
     if (Object.keys(datosParaPerfil).length > 0) {
-      // Usamos el nombre de campo correcto 'idUsuario' que coincide con el modelo
-      const commonWhere = { idUsuario };
-
       if (rolActual.tipoPerfil === "CLIENTE") {
         const cliente = await db.Cliente.findOne({
-          where: commonWhere,
+          where: { usuarioId: idUsuario },
           transaction,
         });
         if (cliente) await cliente.update(datosParaPerfil, { transaction });
       } else if (rolActual.tipoPerfil === "EMPLEADO") {
         const empleado = await db.Empleado.findOne({
-          where: commonWhere,
+          where: { usuarioId: idUsuario },
           transaction,
         });
         if (empleado) await empleado.update(datosParaPerfil, { transaction });
       }
     }
-    // --- FIN DE LA CORRECCIÓN EN `actualizarUsuario` ---
 
     await transaction.commit();
     return obtenerUsuarioPorId(idUsuario);
   } catch (error) {
     await transaction.rollback();
-    // ... (resto del catch sin cambios)
+    if (
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof BadRequestError
+    )
+      throw error;
     throw new CustomError(`Error al update user: ${error.message}`, 500);
   }
 };
@@ -472,17 +494,22 @@ const eliminarUsuarioFisico = async (idUsuario) => {
       throw new NotFoundError("User not found to physically delete.");
     }
 
-    // --- INICIO DE LA CORRECCIÓN EN `eliminarUsuarioFisico` ---
+    // Solo dependemos de tipoPerfil
     const rol = await db.Rol.findByPk(usuario.idRol, { transaction });
-    // Usamos el nombre de campo correcto 'idUsuario'
-    const commonWhere = { idUsuario };
 
-    if (rol.tipoPerfil === "CLIENTE") {
-      await db.Cliente.destroy({ where: commonWhere, transaction });
-    } else if (rol.tipoPerfil === "EMPLEADO") {
-      await db.Empleado.destroy({ where: commonWhere, transaction });
+    if (rol) { // Verificar que el rol exista
+      if (rol.tipoPerfil === "CLIENTE") {
+        await db.Cliente.destroy({
+          where: { idUsuario: idUsuario }, // Corregido: debe ser idUsuario
+          transaction,
+        });
+      } else if (rol.tipoPerfil === "EMPLEADO") {
+        await db.Empleado.destroy({
+          where: { idUsuario: idUsuario }, // Corregido: debe ser idUsuario
+          transaction,
+        });
+      }
     }
-    // --- FIN DE LA CORRECCIÓN EN `eliminarUsuarioFisico` ---
 
     const filasEliminadas = await db.Usuario.destroy({
       where: { idUsuario },
@@ -493,7 +520,9 @@ const eliminarUsuarioFisico = async (idUsuario) => {
     return filasEliminadas > 0;
   } catch (error) {
     await transaction.rollback();
-    // ... (resto del catch sin cambios)
+    if (error instanceof NotFoundError || error instanceof ConflictError) {
+      throw error;
+    }
     throw new CustomError(
       `Error al physically delete user: ${error.message}`,
       500
