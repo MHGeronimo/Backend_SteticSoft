@@ -263,6 +263,9 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
       const nombreFinal = nombre !== undefined ? nombre : proveedor.nombre;
       const tipoFinal = tipo !== undefined ? tipo : proveedor.tipo;
 
+    console.log(`[DEBUG - Actualizar Proveedor] Verificando conflicto para nombre: '${nombreFinal}', tipo: '${tipoFinal}'.`);
+    console.log(`[DEBUG - Actualizar Proveedor] Excluyendo ID: ${idProveedor}`);
+
       const otroProveedorConNombreTipo = await db.Proveedor.findOne({
         where: {
           nombre: nombreFinal,
