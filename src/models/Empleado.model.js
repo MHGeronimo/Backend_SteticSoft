@@ -76,8 +76,9 @@ module.exports = (sequelize, DataTypes) => {
   Empleado.associate = (models) => {
     // Un Empleado pertenece a una cuenta de Usuario.
     Empleado.belongsTo(models.Usuario, {
-      foreignKey: 'idUsuario', // Se refiere al atributo 'idUsuario' en este mismo modelo.
-      as: 'cuentaUsuario'
+      foreignKey: "idUsuario", // ✅ CORRECCIÓN: Clave foránea explícita
+      targetKey: "idUsuario", // ✅ BUENA PRÁCTICA: Especificar la columna de destino en el modelo Usuario.
+      as: "cuentaUsuario",
     });
 
     // Un Empleado puede tener muchas Especialidades.
