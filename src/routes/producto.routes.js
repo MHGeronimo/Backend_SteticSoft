@@ -1,4 +1,6 @@
-const express = require("express"); 
+// src/shared/src_api/routes/producto.routes.js
+
+const express = require("express");
 const router = express.Router();
 const productoController = require("../controllers/producto.controller.js");
 const productoValidators = require("../validators/producto.validators.js");
@@ -12,18 +14,18 @@ const { uploadProductoImage } = require("../middlewares/upload.middleware.js");
 
 const PERMISO_MODULO_PRODUCTOS = "MODULO_PRODUCTOS_GESTIONAR";
 
-// Ruta para crear un nuevo producto
+// Ruta para crear un nuevo producto, incluye subida de imagen.
 router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_PRODUCTOS),
-  // El middleware de Multer se ejecuta aquí para procesar el campo 'imagen'.
+  // El middleware de Multer procesa el campo 'imagen' antes de la validación.
   uploadProductoImage,
   productoValidators.crearProductoValidators,
   productoController.crearProducto
 );
 
-// Ruta para obtener todos los productos
+// Ruta para obtener todos los productos.
 router.get(
   "/",
   authMiddleware,
@@ -31,7 +33,7 @@ router.get(
   productoController.listarProductos
 );
 
-// Ruta para obtener un producto por su ID
+// Ruta para obtener un producto por su ID.
 router.get(
   "/:idProducto",
   authMiddleware,
@@ -40,7 +42,7 @@ router.get(
   productoController.obtenerProductoPorId
 );
 
-// Ruta para actualizar un producto existente
+// Ruta para actualizar un producto existente, incluye subida de imagen.
 router.put(
   "/:idProducto",
   authMiddleware,
@@ -51,7 +53,7 @@ router.put(
   productoController.actualizarProducto
 );
 
-// Ruta para cambiar el estado de un producto (activo/inactivo)
+// Ruta para cambiar el estado de un producto (activo/inactivo).
 router.patch(
   "/:idProducto/estado",
   authMiddleware,
@@ -60,7 +62,7 @@ router.patch(
   productoController.cambiarEstadoProducto
 );
 
-// Ruta para anular un producto (borrado lógico)
+// Ruta para anular un producto (borrado lógico).
 router.patch(
   "/:idProducto/anular",
   authMiddleware,
@@ -69,7 +71,7 @@ router.patch(
   productoController.anularProducto
 );
 
-// Ruta para habilitar un producto
+// Ruta para habilitar un producto.
 router.patch(
   "/:idProducto/habilitar",
   authMiddleware,
@@ -78,7 +80,7 @@ router.patch(
   productoController.habilitarProducto
 );
 
-// Ruta para eliminar un producto físicamente
+// Ruta para eliminar un producto físicamente.
 router.delete(
   "/:idProducto",
   authMiddleware,
