@@ -26,9 +26,12 @@ const crearServicio = async (datosServicio) => {
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
 
-  const categoriaServicio = await db.CategoriaServicio.findByPk(categoriaServicioId);
+  const categoriaServicio =
+    await db.CategoriaServicio.findByPk(categoriaServicioId);
   if (!categoriaServicio || !categoriaServicio.estado) {
-    throw new BadRequestError(`La categoría de servicio especificada no existe o no está activa.`);
+    throw new BadRequestError(
+      `La categoría de servicio especificada no existe o no está activa.`
+    );
   }
 
   // 2. CORRECCIÓN: Construcción del objeto a crear de forma limpia y directa
@@ -47,14 +50,16 @@ const crearServicio = async (datosServicio) => {
 
     const nuevoServicio = await db.Servicio.create(servicioParaCrear);
     return nuevoServicio;
-
   } catch (error) {
     // Manejo de errores de la base de datos
     console.error("Error al crear el servicio en la base de datos:", error);
-    if (error.name === 'SequelizeForeignKeyConstraintError') {
+    if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new BadRequestError("La categoría proporcionada no es válida.");
     }
-    throw new CustomError(`Error en el servidor al crear el servicio: ${error.message}`, 500);
+    throw new CustomError(
+      `Error en el servidor al crear el servicio: ${error.message}`,
+      500
+    );
   }
 };
 
@@ -63,12 +68,12 @@ const crearServicio = async (datosServicio) => {
  */
 const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   const { busqueda, estado, categoriaServicioId } = opcionesDeFiltro;
-  
+
   const whereClause = {};
 
   // Filtro por estado
-  if (estado === 'true' || estado === 'false') {
-    whereClause.estado = estado === 'true';
+  if (estado === "true" || estado === "false") {
+    whereClause.estado = estado === "true";
   }
   // Filtro por categoría
   if (categoriaServicioId) {
@@ -81,9 +86,9 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
       { nombre: { [Op.iLike]: `%${busqueda}%` } },
       { descripcion: { [Op.iLike]: `%${busqueda}%` } },
       // Para buscar por precio, hay que convertirlo a texto en la consulta
-      db.where(db.cast(db.col('precio'), 'text'), {
-        [Op.iLike]: `%${busqueda}%`
-      })
+      db.where(db.cast(db.col("precio"), "text"), {
+        [Op.iLike]: `%${busqueda}%`,
+      }),
     ];
   }
 
@@ -91,11 +96,15 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
     const servicios = await db.Servicio.findAll({
       where: whereClause,
       include: [
-        { model: db.CategoriaServicio, as: "categoria", attributes: ["nombre"] },
+        {
+          model: db.CategoriaServicio,
+          as: "categoria",
+          attributes: ["nombre"],
+        },
       ],
       order: [["nombre", "ASC"]],
     });
-    return { success: true, data: servicios }; // Devuelve un objeto consistente
+    return servicios; // Devuelve directamente el array de servicios
   } catch (error) {
     console.error("Error al obtener todos los servicios:", error);
     throw new CustomError(`Error al obtener servicios: ${error.message}`, 500);
@@ -112,8 +121,10 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
   }
 
   // CORRECCIÓN: Se mapea correctamente 'duracionEstimada' a 'duracionEstimadaMin'
-  if (datosActualizar.hasOwnProperty('duracionEstimada')) {
-    datosActualizar.duracionEstimadaMin = datosActualizar.duracionEstimada ? Number(datosActualizar.duracionEstimada) : null;
+  if (datosActualizar.hasOwnProperty("duracionEstimada")) {
+    datosActualizar.duracionEstimadaMin = datosActualizar.duracionEstimada
+      ? Number(datosActualizar.duracionEstimada)
+      : null;
     delete datosActualizar.duracionEstimada; // Se elimina el campo original para no confundir a Sequelize
   }
 
@@ -122,10 +133,12 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
     return await obtenerServicioPorId(idServicio); // Devuelve el servicio actualizado con sus relaciones
   } catch (error) {
     console.error("Error al actualizar el servicio en la BD:", error);
-    throw new CustomError(`Error en el servidor al actualizar: ${error.message}`, 500);
+    throw new CustomError(
+      `Error en el servidor al actualizar: ${error.message}`,
+      500
+    );
   }
 };
-
 
 // --- OTRAS FUNCIONES (obtenerServicioPorId, cambiarEstado, etc.) ---
 // Se recomienda revisar y simplificar estas funciones también si es necesario,
@@ -142,23 +155,22 @@ const obtenerServicioPorId = async (idServicio) => {
 };
 
 const cambiarEstadoServicio = async (idServicio, estado) => {
-    const servicio = await db.Servicio.findByPk(idServicio);
-    if (!servicio) {
-        throw new NotFoundError("Servicio no encontrado.");
-    }
-    await servicio.update({ estado });
-    return servicio;
+  const servicio = await db.Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado.");
+  }
+  await servicio.update({ estado });
+  return servicio;
 };
 
 const eliminarServicioFisico = async (idServicio) => {
-    const servicio = await db.Servicio.findByPk(idServicio);
-    if (!servicio) {
-        throw new NotFoundError("Servicio no encontrado.");
-    }
-    // Añadir lógica para verificar si está asociado a ventas/citas si es necesario
-    await servicio.destroy();
+  const servicio = await db.Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado.");
+  }
+  // Añadir lógica para verificar si está asociado a ventas/citas si es necesario
+  await servicio.destroy();
 };
-
 
 module.exports = {
   crearServicio,
@@ -166,5 +178,5 @@ module.exports = {
   obtenerServicioPorId,
   actualizarServicio,
   cambiarEstadoServicio,
-  eliminarServicioFisico
+  eliminarServicioFisico,
 };
