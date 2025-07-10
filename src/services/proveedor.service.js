@@ -284,7 +284,7 @@ const actualizarProveedor = async (idProveedor, datosActualizar) => {
     // --- FIN DE LA LÓGICA DE VALIDACIÓN ---
 
     // 2. Si todas las validaciones pasan, actualizamos el proveedor.
-    await proveedor.update(datosActualizar);
+    await proveedor.update(proveedorData);
     return proveedor;
 
   } catch (error) {
