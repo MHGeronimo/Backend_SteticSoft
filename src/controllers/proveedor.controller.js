@@ -83,25 +83,9 @@ const actualizarProveedor = async (req, res, next) => {
   }
 };
 
-// **CAMBIO CLAVE AQUÍ**: 'anularProveedor' ahora realiza la eliminación física
 /**
- * Anula un proveedor (ahora realiza una eliminación física).
+ * Cambia el estado (activo/inactivo) de un proveedor.
  */
-const anularProveedor = async (req, res, next) => {
-  try {
-    const { idProveedor } = req.params;
-    // Llama a la función del servicio que realiza la eliminación física
-    await proveedorService.eliminarProveedorFisico(Number(idProveedor));
-    res.status(204).send(); // 204 No Content para indicar éxito sin contenido de respuesta
-  } catch (error) {
-    next(error);
-  }
-};
-
-// --- FUNCIONES COMENTADAS / ELIMINADAS SI SOLO QUIERES ELIMINACIÓN FÍSICA ---
-
-/*
-// Cambia el estado (activo/inactivo) de un proveedor.
 const cambiarEstadoProveedor = async (req, res, next) => {
   try {
     const { idProveedor } = req.params;
@@ -120,10 +104,29 @@ const cambiarEstadoProveedor = async (req, res, next) => {
     next(error);
   }
 };
-*/
 
-/*
-// Habilita un proveedor (estado = true).
+/**
+ * Anula un proveedor (borrado lógico, estado = false).
+ */
+const anularProveedor = async (req, res, next) => {
+  try {
+    const { idProveedor } = req.params;
+    const proveedorAnulado = await proveedorService.anularProveedor(
+      Number(idProveedor)
+    );
+    res.status(200).json({
+      success: true,
+      message: "Proveedor anulado (deshabilitado) exitosamente.",
+      data: proveedorAnulado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Habilita un proveedor (estado = true).
+ */
 const habilitarProveedor = async (req, res, next) => {
   try {
     const { idProveedor } = req.params;
@@ -139,10 +142,10 @@ const habilitarProveedor = async (req, res, next) => {
     next(error);
   }
 };
-*/
 
-/*
-// Elimina físicamente un proveedor por su ID. (Esta función fue reubicada/utilizada por anularProveedor)
+/**
+ * Elimina físicamente un proveedor por su ID.
+ */
 const eliminarProveedorFisico = async (req, res, next) => {
   try {
     const { idProveedor } = req.params;
@@ -152,7 +155,6 @@ const eliminarProveedorFisico = async (req, res, next) => {
     next(error);
   }
 };
-*/
 
 /**
  * Verifica si uno o más campos únicos ya existen en la base de datos.
@@ -178,17 +180,16 @@ const verificarUnicidad = async (req, res, next) => {
   }
 };
 
-// --- EXPORTACIONES ACTUALIZADAS ---
+// --- CORRECCIÓN AQUÍ ---
+// Aseguramos que la nueva función `verificarUnicidad` esté incluida en las exportaciones.
 module.exports = {
   crearProveedor,
-  listarProveedores, // Nombre corregido para consistencia
+  listarProveedores: listarProveedores, // Nombre corregido para consistencia
   obtenerProveedorPorId,
   actualizarProveedor,
-  anularProveedor, // anularProveedor ahora es la función para eliminación física
+  anularProveedor,
+  habilitarProveedor,
+  eliminarProveedorFisico,
+  cambiarEstadoProveedor,
   verificarUnicidad, // <-- AÑADIDO A LA EXPORTACIÓN
-
-  // Si comentaste las funciones arriba, quita sus exportaciones también
-  // habilitarProveedor,
-  // eliminarProveedorFisico,
-  // cambiarEstadoProveedor,
 };

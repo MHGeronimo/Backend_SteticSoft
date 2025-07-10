@@ -11,7 +11,7 @@ const {
 
 const PERMISO_MODULO_PROVEEDORES = "MODULO_PROVEEDORES_GESTIONAR";
 
-// --- Rutas de Unicidad (Mantener) ---
+// --- INICIO DE LA CORRECCIÓN ---
 
 // Ruta para verificar unicidad al CREAR un proveedor
 router.post(
@@ -29,8 +29,8 @@ router.post(
   proveedorValidators.idProveedorValidator, // Valida que el ID en la URL sea correcto
   proveedorController.verificarUnicidad
 );
+// --- FIN DE LA CORRECCIÓN ---
 
-// --- Rutas CRUD (Mantener) ---
 
 router.post(
   "/",
@@ -63,24 +63,36 @@ router.put(
   proveedorController.actualizarProveedor
 );
 
-// --- Rutas de Eliminación (Actualizadas para solo eliminación física) ---
+router.patch(
+  "/:idProveedor/estado",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_PROVEEDORES),
+  proveedorValidators.cambiarEstadoProveedorValidators,
+  proveedorController.cambiarEstadoProveedor
+);
 
-// Eliminada la ruta PATCH para cambiar estado /:idProveedor/estado
-// Ya que se ha decidido que la eliminación es solo física.
+router.patch(
+  "/:idProveedor/anular",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_PROVEEDORES),
+  proveedorValidators.idProveedorValidator,
+  proveedorController.anularProveedor
+);
 
-// Eliminada la ruta PATCH para anular /:idProveedor/anular
-// La eliminación física se gestiona ahora con la ruta DELETE principal.
+router.patch(
+  "/:idProveedor/habilitar",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_PROVEEDORES),
+  proveedorValidators.idProveedorValidator,
+  proveedorController.habilitarProveedor
+);
 
-// Eliminada la ruta PATCH para habilitar /:idProveedor/habilitar
-// Ya no habrá proveedores inactivos si la eliminación es siempre física.
-
-// **Ruta para eliminación física**: Ahora esta es la única forma de "eliminar" un proveedor
 router.delete(
   "/:idProveedor",
   authMiddleware,
   checkPermission(PERMISO_MODULO_PROVEEDORES),
   proveedorValidators.idProveedorValidator,
-  proveedorController.anularProveedor // anularProveedor en el controlador ahora llama a eliminarProveedorFisico
+  proveedorController.eliminarProveedorFisico
 );
 
 module.exports = router;
