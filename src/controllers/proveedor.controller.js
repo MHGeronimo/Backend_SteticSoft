@@ -66,20 +66,39 @@ const obtenerProveedorPorId = async (req, res, next) => {
 /**
  * Actualiza (Edita) un proveedor existente por su ID.
  */
-const actualizarProveedor = async (req, res, next) => {
+const actualizarProveedor = async (req, res) => {
+  // La validación de express-validator ya se ejecutó y fue manejada
+  // por `handleValidationErrors` en el middleware.
+  
   try {
     const { idProveedor } = req.params;
-    const proveedorActualizado = await proveedorService.actualizarProveedor(
-      Number(idProveedor),
-      req.body
-    );
-    res.status(200).json({
-      success: true,
-      message: "Proveedor actualizado exitosamente.",
-      data: proveedorActualizado,
-    });
+    const datosProveedor = req.body; // <-- ESTA LÍNEA ES CLAVE
+
+    // Nos aseguramos de que no se envíe un body vacío
+    if (Object.keys(datosProveedor).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se proporcionaron datos para actualizar.',
+      });
+    }
+
+    // Llamamos al servicio y le pasamos tanto el ID como los datos a actualizar
+    const resultado = await proveedorService.actualizarProveedor(idProveedor, datosProveedor);
+
+    if (!resultado.success) {
+      // Si el servicio devuelve un error (ej. proveedor no encontrado), lo retornamos
+      return res.status(resultado.status || 400).json(resultado);
+    }
+    
+    res.status(200).json(resultado);
+
   } catch (error) {
-    next(error);
+    // Capturamos cualquier error inesperado
+    console.error('❌ ERROR EN EL CONTROLADOR al actualizar proveedor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno en el servidor al intentar actualizar el proveedor.',
+    });
   }
 };
 

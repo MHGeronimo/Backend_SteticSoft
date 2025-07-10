@@ -192,130 +192,49 @@ const obtenerProveedorPorId = async (idProveedor) => {
 };
 
 /**
- * Actualizar un proveedor existente.
+ * Actualiza un proveedor existente usando los datos validados previamente.
+ * @param {number} idProveedor - El ID del proveedor a actualizar.
+ * @param {object} datosActualizar - El objeto con los datos a actualizar, proveniente del req.body.
+ * @returns {Promise<object>} - Un objeto con el resultado de la operación.
  */
 const actualizarProveedor = async (idProveedor, datosActualizar) => {
   try {
-    // 1. Buscamos el proveedor que vamos a actualizar
+    // 1. Buscamos el proveedor por su ID para asegurarnos de que existe.
     const proveedor = await db.Proveedor.findByPk(idProveedor);
+
     if (!proveedor) {
-      throw new NotFoundError("Proveedor no encontrado para actualizar.");
+      // Si no se encuentra, devolvemos una respuesta de error clara.
+      return {
+        success: false,
+        message: 'Proveedor no encontrado.',
+        status: 404, // Not Found
+      };
     }
 
-    const { nombre, tipo, nitEmpresa, correo, numeroDocumento } = datosActualizar;
+    // 2. Actualizamos el proveedor.
+    // El método `update` de Sequelize es ideal porque solo modifica los campos
+    // que vienen en el objeto `datosActualizar`.
+    await proveedor.update(datosActualizar); // <-- ¡ERROR CORREGIDO! Se usa 'datosActualizar'.
 
-    if (nitEmpresa && nitEmpresa !== proveedor.nitEmpresa) {
-      const otroProveedorConNit = await db.Proveedor.findOne({
-        where: {
-          nitEmpresa: nitEmpresa,
-          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
-          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
-        },
-      });
-      if (otroProveedorConNit) {
-        throw new ConflictError(
-          `El NIT de empresa '${nitEmpresa}' ya está registrado para otro proveedor activo.`
-        );
-      }
-    }
-
-    // VALIDACIÓN 2: Correo electrónico
-    // Solo validamos si se envió un correo y si es DIFERENTE al que ya tenía.
-    if (correo && correo !== proveedor.correo) {
-      const otroProveedorConCorreo = await db.Proveedor.findOne({
-        where: {
-          correo: correo,
-          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
-          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
-        },
-      });
-      if (otroProveedorConCorreo) {
-        throw new ConflictError(
-          `El correo electrónico '${correo}' ya está registrado para otro proveedor activo.`
-        );
-      }
-    }
-    
-    // VALIDACIÓN 3: Número de Documento
-    // Solo validamos si se envió un documento y si es DIFERENTE al que ya tenía.
-    if (numeroDocumento && numeroDocumento !== proveedor.numeroDocumento) {
-      const otroProveedorConDocumento = await db.Proveedor.findOne({
-        where: {
-          numeroDocumento: numeroDocumento,
-          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
-          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
-        },
-      });
-      if (otroProveedorConDocumento) {
-        throw new ConflictError(
-          `El número de documento '${numeroDocumento}' ya está registrado para otro proveedor activo.`
-        );
-      }
-    }
-
-    // VALIDACIÓN 4: Combinación de Nombre y Tipo
-    // Esta es la validación más compleja y la que probablemente fallaba.
-    const nombreCambiado = nombre !== undefined && nombre !== proveedor.nombre;
-    const tipoCambiado = tipo !== undefined && tipo !== proveedor.tipo;
-
-    // Solo validamos si el nombre o el tipo han cambiado.
-    if (nombreCambiado || tipoCambiado) {
-      const nombreFinal = nombre !== undefined ? nombre : proveedor.nombre;
-      const tipoFinal = tipo !== undefined ? tipo : proveedor.tipo;
-
-    console.log(`[DEBUG - Actualizar Proveedor] Verificando conflicto para nombre: '${nombreFinal}', tipo: '${tipoFinal}'.`);
-    console.log(`[DEBUG - Actualizar Proveedor] Excluyendo ID: ${idProveedor}`);
-
-      const otroProveedorConNombreTipo = await db.Proveedor.findOne({
-        where: {
-          nombre: nombreFinal,
-          tipo: tipoFinal,
-          estado: true, // Condición 1: Solo buscar en proveedores ACTIVOS
-          idProveedor: { [Op.ne]: idProveedor }, // Condición 2: Excluirse a SÍ MISMO
-        },
-      });
-      if (otroProveedorConNombreTipo) {
-        throw new ConflictError(
-          `Ya existe un proveedor activo con el nombre '${nombreFinal}' y tipo '${tipoFinal}'.`
-        );
-      }
-    }
-
-    // --- FIN DE LA LÓGICA DE VALIDACIÓN ---
-
-    // 2. Si todas las validaciones pasan, actualizamos el proveedor.
-    await proveedor.update(proveedorData);
-    return proveedor;
+    // 3. Devolvemos una respuesta de éxito con los datos actualizados.
+    return {
+      success: true,
+      message: 'Proveedor actualizado correctamente.',
+      data: proveedor,
+    };
 
   } catch (error) {
-    if (error instanceof NotFoundError || error instanceof ConflictError) {
-      throw error;
-    }
-    // Manejo de errores de restricción única a nivel de base de datos (como respaldo)
-    if (error.name === "SequelizeUniqueConstraintError") {
-      let campoConflictivo = "un campo único";
-      if (error.fields) {
-        if (error.fields.nit_empresa) campoConflictivo = "NIT de empresa";
-        else if (error.fields.numero_documento) campoConflictivo = "Número de Documento";
-        else if (error.fields.proveedor_nombre_tipo_key || (error.fields.nombre && error.fields.tipo))
-          campoConflictivo = `la combinación de nombre y tipo`;
-        else if (error.fields.correo) campoConflictivo = "correo electrónico";
-      }
-      throw new ConflictError(
-        `Ya existe un proveedor con el mismo valor para ${campoConflictivo}.`
-      );
-    }
-    console.error(
-      `Error al actualizar el proveedor con ID ${idProveedor} en el servicio:`,
-      error.message,
-      error.stack
-    );
-    throw new CustomError(
-      `Error al actualizar el proveedor: ${error.message}`,
-      500
-    );
+    // Capturamos cualquier otro error inesperado durante la operación de base de datos.
+    console.error(`❌ Error en el servicio al actualizar el proveedor con ID ${idProveedor}:`, error);
+    return {
+      success: false,
+      message: 'Ocurrió un error en el servicio al actualizar el proveedor.',
+      error: error.message,
+      status: 500, // Internal Server Error
+    };
   }
 };
+
 
 
 /**
