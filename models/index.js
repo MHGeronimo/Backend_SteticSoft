@@ -9,6 +9,12 @@ const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 
+if (env === 'development') {
+  config.logging = console.log;
+} else {
+  config.logging = false; // Opcional: Deshabilita logging explícitamente en otros entornos
+}
+
 let sequelize;
 if (config.use_env_variable) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);
