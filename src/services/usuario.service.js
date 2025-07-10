@@ -199,7 +199,7 @@ const crearUsuario = async (usuarioData) => {
         tipoDocumento,
         numeroDocumento,
         fechaNacimiento,
-        usuarioId: nuevoUsuario.idUsuario,
+        idUsuario: nuevoUsuario.idUsuario, // CORRECCIÓN: Usar 'idUsuario' para coincidir con el modelo Sequelize
         estado: nuevoUsuario.estado,
       };
 
