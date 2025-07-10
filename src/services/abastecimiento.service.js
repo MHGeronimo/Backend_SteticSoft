@@ -33,7 +33,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
 
   // --- INICIO DE NUEVA VALIDACIÓN ---
-  if (producto.tipo_uso?.toLowerCase() !== 'Interno') {
+  if (producto.tipoUso?.toLowerCase() !== 'interno') {
     throw new BadRequestError(`El producto '${producto.nombre}' (ID: ${productoId}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`);
   }
   // --- FIN DE NUEVA VALIDACIÓN ---
