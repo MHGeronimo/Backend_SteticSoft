@@ -1,15 +1,16 @@
-require('dotenv').config();
+// src/config/env.config.js
+require("dotenv").config();
 
-const env = process.env.NODE_ENV || 'development';
-const isProduction = env === 'production';
-const isDevelopment = env === 'development';
+const env = process.env.NODE_ENV || "development";
+const isProduction = env === "production";
+const isDevelopment = env === "development";
 
 // ✅ Lista de orígenes permitidos desde el .env o valores por defecto
 const ALLOWED_ORIGINS = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
+  ? process.env.CORS_ORIGIN.split(",").map((url) => url.trim())
   : isProduction
-  ? []
-  : ["http://localhost:5173"]; // Permitir localhost en desarrollo por defecto
+    ? []
+    : ["http://localhost:5173"]; // Permitir localhost en desarrollo por defecto
 
 // ✅ Función para lógica dinámica de CORS
 const getCorsOriginLogic = (origin, callback) => {
