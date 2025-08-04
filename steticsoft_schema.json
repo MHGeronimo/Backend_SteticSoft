@@ -1,0 +1,1194 @@
+{
+  "tables": [
+    {
+      "name": "rol",
+      "columns": [
+        {
+          "name": "id_rol",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(50)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "tipo_perfil",
+          "type": "VARCHAR(10)",
+          "isNotNull": true,
+          "defaultValue": "'EMPLEADO'"
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "permisos",
+      "columns": [
+        {
+          "name": "id_permiso",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "permisos_x_rol",
+      "columns": [
+        {
+          "name": "id_rol",
+          "type": "INT",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "id_permiso",
+          "type": "INT",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_rol",
+          "referencesTable": "rol",
+          "referencesColumn": "id_rol",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "id_permiso",
+          "referencesTable": "permisos",
+          "referencesColumn": "id_permiso",
+          "onDelete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "usuario",
+      "columns": [
+        {
+          "name": "id_usuario",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "correo",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "contrasena",
+          "type": "TEXT",
+          "isNotNull": true
+        },
+        {
+          "name": "id_rol",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_rol",
+          "referencesTable": "rol",
+          "referencesColumn": "id_rol",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "dashboard",
+      "columns": [
+        {
+          "name": "id_dashboard",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "DATE",
+          "isNotNull": true,
+          "defaultValue": "CURRENT_DATE"
+        },
+        {
+          "name": "nombre_dashboard",
+          "type": "VARCHAR(100)",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "estado",
+      "columns": [
+        {
+          "name": "id_estado",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre_estado",
+          "type": "VARCHAR(45)",
+          "isNotNull": true,
+          "isUnique": true
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "cliente",
+      "columns": [
+        {
+          "name": "id_cliente",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true
+        },
+        {
+          "name": "apellido",
+          "type": "VARCHAR(100)",
+          "isNotNull": true
+        },
+        {
+          "name": "correo",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "telefono",
+          "type": "VARCHAR(20)",
+          "isNotNull": true
+        },
+        {
+          "name": "tipo_documento",
+          "type": "VARCHAR(50)",
+          "isNotNull": true
+        },
+        {
+          "name": "numero_documento",
+          "type": "VARCHAR(45)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "fecha_nacimiento",
+          "type": "DATE",
+          "isNotNull": true
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "id_usuario",
+          "type": "INT",
+          "isNotNull": true,
+          "isUnique": true
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_usuario",
+          "referencesTable": "usuario",
+          "referencesColumn": "id_usuario",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "empleado",
+      "columns": [
+        {
+          "name": "id_empleado",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true
+        },
+        {
+          "name": "apellido",
+          "type": "VARCHAR(100)",
+          "isNotNull": true
+        },
+        {
+          "name": "correo",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "telefono",
+          "type": "VARCHAR(20)",
+          "isNotNull": true
+        },
+        {
+          "name": "tipo_documento",
+          "type": "VARCHAR(50)",
+          "isNotNull": true
+        },
+        {
+          "name": "numero_documento",
+          "type": "VARCHAR(45)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "fecha_nacimiento",
+          "type": "DATE",
+          "isNotNull": true
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "id_usuario",
+          "type": "INT",
+          "isNotNull": true,
+          "isUnique": true
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_usuario",
+          "referencesTable": "usuario",
+          "referencesColumn": "id_usuario",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "especialidad",
+      "columns": [
+        {
+          "name": "id_especialidad",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "empleado_especialidad",
+      "columns": [
+        {
+          "name": "id_empleado",
+          "type": "INT",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "id_especialidad",
+          "type": "INT",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_empleado",
+          "referencesTable": "empleado",
+          "referencesColumn": "id_empleado",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "id_especialidad",
+          "referencesTable": "especialidad",
+          "referencesColumn": "id_especialidad",
+          "onDelete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "proveedor",
+      "columns": [
+        {
+          "name": "id_proveedor",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true
+        },
+        {
+          "name": "tipo",
+          "type": "VARCHAR(50)",
+          "isNotNull": true
+        },
+        {
+          "name": "tipo_documento",
+          "type": "VARCHAR(50)",
+          "isNotNull": false
+        },
+        {
+          "name": "numero_documento",
+          "type": "VARCHAR(45)",
+          "isNotNull": false
+        },
+        {
+          "name": "nit_empresa",
+          "type": "VARCHAR(45)",
+          "isNotNull": false,
+          "isUnique": true
+        },
+        {
+          "name": "telefono",
+          "type": "VARCHAR(20)",
+          "isNotNull": true
+        },
+        {
+          "name": "correo",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "direccion",
+          "type": "TEXT",
+          "isNotNull": true
+        },
+        {
+          "name": "nombre_persona_encargada",
+          "type": "VARCHAR(100)",
+          "isNotNull": false
+        },
+        {
+          "name": "telefono_persona_encargada",
+          "type": "VARCHAR(20)",
+          "isNotNull": false
+        },
+        {
+          "name": "email_persona_encargada",
+          "type": "VARCHAR(100)",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "categoria_producto",
+      "columns": [
+        {
+          "name": "id_categoria_producto",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "vida_util_dias",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "tipo_uso",
+          "type": "VARCHAR(10)",
+          "isNotNull": true
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "categoria_servicio",
+      "columns": [
+        {
+          "name": "id_categoria_servicio",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "producto",
+      "columns": [
+        {
+          "name": "id_producto",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "existencia",
+          "type": "INT",
+          "isNotNull": false,
+          "defaultValue": "0"
+        },
+        {
+          "name": "precio",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "stock_minimo",
+          "type": "INT",
+          "isNotNull": false,
+          "defaultValue": "0"
+        },
+        {
+          "name": "stock_maximo",
+          "type": "INT",
+          "isNotNull": false,
+          "defaultValue": "0"
+        },
+        {
+          "name": "imagen",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "vida_util_dias",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "tipo_uso",
+          "type": "VARCHAR(255)",
+          "isNotNull": true,
+          "defaultValue": "'Venta Directa'"
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "id_categoria_producto",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_categoria_producto",
+          "referencesTable": "categoria_producto",
+          "referencesColumn": "id_categoria_producto",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "compra",
+      "columns": [
+        {
+          "name": "id_compra",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "fecha",
+          "type": "DATE",
+          "isNotNull": false,
+          "defaultValue": "CURRENT_DATE"
+        },
+        {
+          "name": "total",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "iva",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "id_proveedor",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_dashboard",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_proveedor",
+          "referencesTable": "proveedor",
+          "referencesColumn": "id_proveedor",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "column": "id_dashboard",
+          "referencesTable": "dashboard",
+          "referencesColumn": "id_dashboard",
+          "onDelete": "SET NULL"
+        }
+      ]
+    },
+    {
+      "name": "venta",
+      "columns": [
+        {
+          "name": "id_venta",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "fecha",
+          "type": "DATE",
+          "isNotNull": false,
+          "defaultValue": "CURRENT_DATE"
+        },
+        {
+          "name": "total",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "iva",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "id_cliente",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_dashboard",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_estado",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_cliente",
+          "referencesTable": "cliente",
+          "referencesColumn": "id_cliente",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "column": "id_dashboard",
+          "referencesTable": "dashboard",
+          "referencesColumn": "id_dashboard",
+          "onDelete": "SET NULL"
+        },
+        {
+          "column": "id_estado",
+          "referencesTable": "estado",
+          "referencesColumn": "id_estado",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "cita",
+      "columns": [
+        {
+          "name": "id_cita",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "fecha_hora",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "isNotNull": true
+        },
+        {
+          "name": "id_cliente",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_empleado",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_estado",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_cliente",
+          "referencesTable": "cliente",
+          "referencesColumn": "id_cliente",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "id_empleado",
+          "referencesTable": "empleado",
+          "referencesColumn": "id_empleado",
+          "onDelete": "SET NULL"
+        },
+        {
+          "column": "id_estado",
+          "referencesTable": "estado",
+          "referencesColumn": "id_estado",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "servicio",
+      "columns": [
+        {
+          "name": "id_servicio",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "nombre",
+          "type": "VARCHAR(100)",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "descripcion",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "precio",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": true,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "duracion_estimada_min",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_categoria_servicio",
+          "type": "INT",
+          "isNotNull": true
+        },
+        {
+          "name": "id_especialidad",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "imagen",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_categoria_servicio",
+          "referencesTable": "categoria_servicio",
+          "referencesColumn": "id_categoria_servicio",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "column": "id_especialidad",
+          "referencesTable": "especialidad",
+          "referencesColumn": "id_especialidad",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "servicio_x_cita",
+      "columns": [
+        {
+          "name": "id_servicio_x_cita",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "id_servicio",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_cita",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_servicio",
+          "referencesTable": "servicio",
+          "referencesColumn": "id_servicio",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "id_cita",
+          "referencesTable": "cita",
+          "referencesColumn": "id_cita",
+          "onDelete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "compra_x_producto",
+      "columns": [
+        {
+          "name": "id_compra_x_producto",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "cantidad",
+          "type": "INT",
+          "isNotNull": false,
+          "defaultValue": "1"
+        },
+        {
+          "name": "valor_unitario",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "id_compra",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_producto",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_compra",
+          "referencesTable": "compra",
+          "referencesColumn": "id_compra",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "id_producto",
+          "referencesTable": "producto",
+          "referencesColumn": "id_producto",
+          "onDelete": "RESTRICT"
+        }
+      ]
+    },
+    {
+      "name": "producto_x_venta",
+      "columns": [
+        {
+          "name": "id_producto_x_venta",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "cantidad",
+          "type": "INT",
+          "isNotNull": false,
+          "defaultValue": "1"
+        },
+        {
+          "name": "valor_unitario",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "id_producto",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_venta",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_dashboard",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_producto",
+          "referencesTable": "producto",
+          "referencesColumn": "id_producto",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "column": "id_venta",
+          "referencesTable": "venta",
+          "referencesColumn": "id_venta",
+          "onDelete": "CASCADE"
+        },
+        {
+          "column": "id_dashboard",
+          "referencesTable": "dashboard",
+          "referencesColumn": "id_dashboard",
+          "onDelete": "SET NULL"
+        }
+      ]
+    },
+    {
+      "name": "venta_x_servicio",
+      "columns": [
+        {
+          "name": "id_venta_x_servicio",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "valor_servicio",
+          "type": "DECIMAL(12, 2)",
+          "isNotNull": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "name": "id_servicio",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_cita",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "id_venta",
+          "type": "INT",
+          "isNotNull": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_servicio",
+          "referencesTable": "servicio",
+          "referencesColumn": "id_servicio",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "column": "id_cita",
+          "referencesTable": "cita",
+          "referencesColumn": "id_cita",
+          "onDelete": "SET NULL"
+        },
+        {
+          "column": "id_venta",
+          "referencesTable": "venta",
+          "referencesColumn": "id_venta",
+          "onDelete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "abastecimiento",
+      "columns": [
+        {
+          "name": "id_abastecimiento",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "cantidad",
+          "type": "INT",
+          "isNotNull": true
+        },
+        {
+          "name": "id_producto",
+          "type": "INT",
+          "isNotNull": true
+        },
+        {
+          "name": "fecha_ingreso",
+          "type": "DATE",
+          "isNotNull": true,
+          "defaultValue": "CURRENT_DATE"
+        },
+        {
+          "name": "id_empleado_asignado",
+          "type": "INT",
+          "isNotNull": false
+        },
+        {
+          "name": "esta_agotado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "FALSE"
+        },
+        {
+          "name": "razon_agotamiento",
+          "type": "TEXT",
+          "isNotNull": false
+        },
+        {
+          "name": "fecha_agotamiento",
+          "type": "DATE",
+          "isNotNull": false
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_producto",
+          "referencesTable": "producto",
+          "referencesColumn": "id_producto",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "column": "id_empleado_asignado",
+          "referencesTable": "empleado",
+          "referencesColumn": "id_empleado",
+          "onDelete": "SET NULL"
+        }
+      ]
+    },
+    {
+      "name": "novedades",
+      "columns": [
+        {
+          "name": "id_novedad",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "dia_semana",
+          "type": "INT",
+          "isNotNull": true
+        },
+        {
+          "name": "hora_inicio",
+          "type": "TIME",
+          "isNotNull": true
+        },
+        {
+          "name": "hora_fin",
+          "type": "TIME",
+          "isNotNull": true
+        },
+        {
+          "name": "estado",
+          "type": "BOOLEAN",
+          "isNotNull": true,
+          "defaultValue": "TRUE"
+        },
+        {
+          "name": "id_empleado",
+          "type": "INT",
+          "isNotNull": true
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_empleado",
+          "referencesTable": "empleado",
+          "referencesColumn": "id_empleado",
+          "onDelete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "token_recuperacion",
+      "columns": [
+        {
+          "name": "id_token_recuperacion",
+          "type": "SERIAL",
+          "isPrimaryKey": true,
+          "isNotNull": true
+        },
+        {
+          "name": "id_usuario",
+          "type": "INTEGER",
+          "isNotNull": true
+        },
+        {
+          "name": "token",
+          "type": "TEXT",
+          "isNotNull": true,
+          "isUnique": true
+        },
+        {
+          "name": "fecha_expiracion",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "isNotNull": true
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "id_usuario",
+          "referencesTable": "usuario",
+          "referencesColumn": "id_usuario",
+          "onDelete": "CASCADE"
+        }
+      ]
+    }
+  ]
+}
