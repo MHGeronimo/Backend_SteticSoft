@@ -273,9 +273,7 @@ CREATE TABLE IF NOT EXISTS categoria_producto (
     id_categoria_producto SERIAL PRIMARY KEY,
     nombre VARCHAR(100) UNIQUE NOT NULL,
     descripcion TEXT,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    vida_util_dias INT,
-    tipo_uso VARCHAR(10) NOT NULL CHECK (tipo_uso IN ('Interno', 'Externo'))
+    estado BOOLEAN DEFAULT TRUE NOT NULL
 );
 
 
@@ -302,9 +300,9 @@ CREATE TABLE IF NOT EXISTS producto (
     stock_minimo INT DEFAULT 0,
     stock_maximo INT DEFAULT 0,
     imagen TEXT,
-    vida_util_dias INT,
-    tipo_uso VARCHAR(255) NOT NULL DEFAULT 'Venta Directa',
     estado BOOLEAN DEFAULT TRUE NOT NULL,
+    vida_util_dias INT,
+    tipo_uso VARCHAR(10) NOT NULL CHECK (tipo_uso IN ('Interno', 'Externo')),
     id_categoria_producto INT REFERENCES categoria_producto(id_categoria_producto) ON DELETE RESTRICT
 );
 
@@ -315,13 +313,14 @@ CREATE TABLE IF NOT EXISTS producto (
 CREATE TABLE IF NOT EXISTS compra (
     id_compra SERIAL PRIMARY KEY,
     fecha DATE DEFAULT CURRENT_DATE,
-    total DECIMAL(12, 2) DEFAULT 0.00,
-    iva DECIMAL(12, 2) DEFAULT 0.00,
+    -- Restricción CHECK agregada para garantizar que 'total' sea un valor positivo o cero.
+    total DECIMAL(12, 2) DEFAULT 0.00 CHECK (total >= 0.00),
+    -- Restricción CHECK agregada para garantizar que 'iva' sea un valor positivo o cero.
+    iva DECIMAL(12, 2) DEFAULT 0.00 CHECK (iva >= 0.00),
     id_proveedor INT REFERENCES proveedor(id_proveedor) ON DELETE RESTRICT,
     id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );
-
 
 -- Tabla: venta
 -- Propósito: Registra la cabecera de una operación de venta a un 'cliente'.
@@ -331,8 +330,6 @@ CREATE TABLE IF NOT EXISTS venta (
     fecha DATE DEFAULT CURRENT_DATE,
     total DECIMAL(12, 2) DEFAULT 0.00,
     iva DECIMAL(12, 2) DEFAULT 0.00,
-    id_producto INT REFERENCES producto(id_producto) ON DELETE RESTRICT,
-    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE RESTRICT,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
     id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
     id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
