@@ -1,20 +1,15 @@
 -- =================================================================================================
---        SCRIPT DE BASE DE DATOS PARA STETICSOFT - VERSIÓN CORREGIDA Y ESTABLE PARA MYSQL WORKBENCH
+-- SCRIPT DE BASE DE DATOS PARA STETICSOFT - ADAPTADO PARA MYSQL WORKBENCH
 -- =================================================================================================
--- Se han eliminado las restricciones CHECK y se ha simplificado la sintaxis DEFAULT
--- para garantizar la máxima compatibilidad con el importador de MySQL Workbench y evitar cierres inesperados.
--- Se ha corregido el uso de CURRENT_DATE/CURDATE() por CURRENT_TIMESTAMP para asegurar la compatibilidad.
--- Se ha corregido el error de sintaxis en la declaración de FOREIGN KEY en la tabla venta.
--- =================================================================================================
-
-CREATE DATABASE IF NOT EXISTS steticsoft_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Creación de la base de datos (opcional, si no existe)
+CREATE DATABASE IF NOT EXISTS steticsoft_db;
 USE steticsoft_db;
 
 -- Tabla: rol
 CREATE TABLE IF NOT EXISTS rol (
     id_rol INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
-    tipo_perfil VARCHAR(10) NOT NULL DEFAULT 'EMPLEADO',
+    tipo_perfil ENUM('CLIENTE', 'EMPLEADO', 'NINGUNO') NOT NULL DEFAULT 'EMPLEADO',
     descripcion TEXT,
     estado TINYINT(1) DEFAULT 1 NOT NULL
 );
@@ -49,7 +44,7 @@ CREATE TABLE IF NOT EXISTS usuario (
 -- Tabla: dashboard
 CREATE TABLE IF NOT EXISTS dashboard (
     id_dashboard INT AUTO_INCREMENT PRIMARY KEY,
-    fecha_creacion DATE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion DATE NOT NULL DEFAULT (CURRENT_DATE),
     nombre_dashboard VARCHAR(100)
 );
 
@@ -89,7 +84,7 @@ CREATE TABLE IF NOT EXISTS proveedor (
     telefono_persona_encargada VARCHAR(20),
     email_persona_encargada VARCHAR(100),
     estado TINYINT(1) DEFAULT 1 NOT NULL,
-    UNIQUE (nombre, tipo)
+    UNIQUE KEY idx_nombre_tipo (nombre, tipo)
 );
 
 -- Tabla: categoria_producto
@@ -97,9 +92,7 @@ CREATE TABLE IF NOT EXISTS categoria_producto (
     id_categoria_producto INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) UNIQUE NOT NULL,
     descripcion TEXT,
-    estado TINYINT(1) DEFAULT 1 NOT NULL,
-    vida_util_dias INT,
-    tipo_uso VARCHAR(10) NOT NULL
+    estado TINYINT(1) DEFAULT 1 NOT NULL
 );
 
 -- Tabla: categoria_servicio
@@ -120,52 +113,38 @@ CREATE TABLE IF NOT EXISTS producto (
     stock_minimo INT DEFAULT 0,
     stock_maximo INT DEFAULT 0,
     imagen TEXT,
-    vida_util_dias INT,
-    tipo_uso VARCHAR(255) NOT NULL DEFAULT 'Venta Directa',
     estado TINYINT(1) DEFAULT 1 NOT NULL,
+    vida_util_dias INT,
+    tipo_uso ENUM('Interno', 'Externo') NOT NULL,
     id_categoria_producto INT,
+    CONSTRAINT chk_existencia CHECK (existencia >= 0),
     FOREIGN KEY (id_categoria_producto) REFERENCES categoria_producto(id_categoria_producto) ON DELETE RESTRICT
 );
 
 -- Tabla: compra
 CREATE TABLE IF NOT EXISTS compra (
     id_compra INT AUTO_INCREMENT PRIMARY KEY,
-    fecha DATE DEFAULT CURRENT_TIMESTAMP,
+    fecha DATE DEFAULT (CURRENT_DATE),
     total DECIMAL(12, 2) DEFAULT 0.00,
     iva DECIMAL(12, 2) DEFAULT 0.00,
     id_proveedor INT,
     id_dashboard INT,
     estado TINYINT(1) DEFAULT 1 NOT NULL,
+    CONSTRAINT chk_total_compra CHECK (total >= 0.00),
+    CONSTRAINT chk_iva_compra CHECK (iva >= 0.00),
     FOREIGN KEY (id_proveedor) REFERENCES proveedor(id_proveedor) ON DELETE RESTRICT,
     FOREIGN KEY (id_dashboard) REFERENCES dashboard(id_dashboard) ON DELETE SET NULL
-);
-
--- Tabla: servicio
-CREATE TABLE IF NOT EXISTS servicio (
-    id_servicio INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    descripcion TEXT,
-    precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    duracion_estimada_min INT,
-    id_categoria_servicio INT NOT NULL,
-    imagen TEXT,
-    estado TINYINT(1) DEFAULT 1 NOT NULL,
-    FOREIGN KEY (id_categoria_servicio) REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
 );
 
 -- Tabla: venta
 CREATE TABLE IF NOT EXISTS venta (
     id_venta INT AUTO_INCREMENT PRIMARY KEY,
-    fecha DATE DEFAULT CURRENT_TIMESTAMP,
+    fecha DATE DEFAULT (CURRENT_DATE),
     total DECIMAL(12, 2) DEFAULT 0.00,
     iva DECIMAL(12, 2) DEFAULT 0.00,
-    id_producto INT,
-    id_servicio INT,
     id_cliente INT,
     id_dashboard INT,
     id_estado INT,
-    FOREIGN KEY (id_producto) REFERENCES producto(id_producto) ON DELETE RESTRICT,
-    FOREIGN KEY (id_servicio) REFERENCES servicio(id_servicio) ON DELETE RESTRICT,
     FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
     FOREIGN KEY (id_dashboard) REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
     FOREIGN KEY (id_estado) REFERENCES estado(id_estado) ON DELETE RESTRICT
@@ -174,11 +153,11 @@ CREATE TABLE IF NOT EXISTS venta (
 -- Tabla: novedades
 CREATE TABLE IF NOT EXISTS novedades (
     id_novedad INT AUTO_INCREMENT PRIMARY KEY,
-    dia_semana INT NOT NULL,
+    dia_semana INT NOT NULL UNIQUE,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
     estado TINYINT(1) DEFAULT 1 NOT NULL,
-    UNIQUE (dia_semana)
+    CONSTRAINT chk_dia_semana CHECK (dia_semana BETWEEN 0 AND 6)
 );
 
 -- Tabla: cita
@@ -194,12 +173,24 @@ CREATE TABLE IF NOT EXISTS cita (
     FOREIGN KEY (id_estado) REFERENCES estado(id_estado) ON DELETE RESTRICT
 );
 
+-- Tabla: servicio
+CREATE TABLE IF NOT EXISTS servicio (
+    id_servicio INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+    precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    id_categoria_servicio INT NOT NULL,
+    imagen TEXT,
+    estado TINYINT(1) DEFAULT 1 NOT NULL,
+    FOREIGN KEY (id_categoria_servicio) REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT
+);
+
 -- Tabla: servicio_x_cita
 CREATE TABLE IF NOT EXISTS servicio_x_cita (
     id_servicio_x_cita INT AUTO_INCREMENT PRIMARY KEY,
     id_servicio INT,
     id_cita INT,
-    UNIQUE (id_servicio, id_cita),
+    UNIQUE KEY idx_servicio_cita (id_servicio, id_cita),
     FOREIGN KEY (id_servicio) REFERENCES servicio(id_servicio) ON DELETE CASCADE,
     FOREIGN KEY (id_cita) REFERENCES cita(id_cita) ON DELETE CASCADE
 );
@@ -246,7 +237,7 @@ CREATE TABLE IF NOT EXISTS abastecimiento (
     cantidad INT NOT NULL,
     id_producto INT NOT NULL,
     id_usuario INT NOT NULL,
-    fecha_ingreso DATE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_ingreso DATE NOT NULL DEFAULT (CURRENT_DATE),
     esta_agotado TINYINT(1) DEFAULT 0 NOT NULL,
     razon_agotamiento TEXT,
     fecha_agotamiento DATE,
@@ -258,17 +249,20 @@ CREATE TABLE IF NOT EXISTS abastecimiento (
 -- Tabla: token_recuperacion
 CREATE TABLE IF NOT EXISTS token_recuperacion (
     id_token_recuperacion INT AUTO_INCREMENT PRIMARY KEY,
-    id_usuario INTEGER NOT NULL,
+    id_usuario INT NOT NULL,
     token TEXT NOT NULL,
-    fecha_expiracion TIMESTAMP NOT NULL,
-    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    UNIQUE (token(255))
+    fecha_expiracion DATETIME NOT NULL,
+    -- No se puede agregar UNIQUE(token) directamente si es de tipo TEXT en todas las versiones de MySQL
+    -- Se puede crear un índice para mejorar el rendimiento.
+    INDEX(token(255)),
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
 );
 
--- ======================================================
--- INSERCIÓN DE DATOS INICIALES
--- ======================================================
+-- =================================================================================================
+-- DATOS INICIALES
+-- =================================================================================================
 
+-- Datos para la tabla rol
 INSERT INTO rol (nombre, tipo_perfil, descripcion, estado) VALUES
 ('Administrador', 'NINGUNO', 'Acceso total a todos los módulos y funcionalidades del sistema.', 1),
 ('Empleado', 'EMPLEADO', 'Acceso a módulos operativos como ventas, citas, clientes, etc.', 1),
@@ -278,6 +272,7 @@ tipo_perfil = VALUES(tipo_perfil),
 descripcion = VALUES(descripcion),
 estado = VALUES(estado);
 
+-- Datos para la tabla permisos
 INSERT INTO permisos (nombre, descripcion, estado) VALUES
 ('MODULO_ROLES_GESTIONAR', 'Permite la gestión completa de roles del sistema.', 1),
 ('MODULO_ROLES_ASIGNAR_PERMISOS', 'Permite asignar y quitar permisos a los roles.', 1),
@@ -291,7 +286,7 @@ INSERT INTO permisos (nombre, descripcion, estado) VALUES
 ('MODULO_ESPECIALIDADES_GESTIONAR', 'Permite la gestión de las especialidades.', 1),
 ('MODULO_PROVEEDORES_GESTIONAR', 'Permite la gestión completa de la información de los proveedores.', 1),
 ('MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR', 'Permite la gestión de las categorías de productos.', 1),
-('MODULO_CATEGORias_PRODUCTOS_VER', 'Permite ver las categorías de productos (Cliente).', 1),
+('MODULO_CATEGORIAS_PRODUCTOS_VER', 'Permite ver las categorías de productos (Cliente).', 1),
 ('MODULO_CATEGORIAS_SERVICIOS_GESTIONAR', 'Permite la gestión de las categorías de servicios.', 1),
 ('MODULO_CATEGORIAS_SERVICIOS_VER', 'Permite ver las categorías de servicios (Cliente).', 1),
 ('MODULO_PRODUCTOS_GESTIONAR', 'Permite la gestión completa de los productos del inventario.', 1),
@@ -312,16 +307,20 @@ ON DUPLICATE KEY UPDATE
 descripcion = VALUES(descripcion),
 estado = VALUES(estado);
 
+-- Datos para la tabla usuario
 INSERT INTO usuario (correo, contrasena, id_rol, estado) VALUES
-('mrgerito@gmail.com', '$2b$10$oJOJM36rggzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO', (SELECT id_rol FROM rol WHERE nombre = 'Administrador'), 1)
+('mrgerito@gmail.com', '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO', (SELECT id_rol FROM rol WHERE nombre = 'Administrador'), 1)
 ON DUPLICATE KEY UPDATE
 contrasena = VALUES(contrasena),
 id_rol = VALUES(id_rol),
 estado = VALUES(estado);
 
-INSERT IGNORE INTO estado (id_estado, nombre_estado) VALUES
-(1, 'En proceso'), (2, 'Pendiente'), (3, 'Completado'), (4, 'Cancelado');
+-- Datos para la tabla estado
+INSERT INTO estado (id_estado, nombre_estado) VALUES
+(1, 'En proceso'), (2, 'Pendiente'), (3, 'Completado'), (4, 'Cancelado')
+ON DUPLICATE KEY UPDATE nombre_estado = VALUES(nombre_estado);
 
-INSERT IGNORE INTO permisos_x_rol (id_rol, id_permiso) SELECT (SELECT id_rol FROM rol WHERE nombre = 'Administrador'), p.id_permiso FROM permisos p WHERE p.estado = 1;
-INSERT IGNORE INTO permisos_x_rol (id_rol, id_permiso) SELECT r.id_rol, p.id_permiso FROM rol r, permisos p WHERE r.nombre = 'Empleado' AND p.estado = 1 AND p.nombre IN ('MODULO_ABASTECIMIENTOS_GESTIONAR', 'MODULO_VENTAS_GESTIONAR', 'MODULO_COMPRAS_GESTIONAR', 'MODULO_CLIENTES_GESTIONAR', 'MODULO_PROVEEDORES_GESTIONAR', 'MODULO_PRODUCTOS_GESTIONAR', 'MODULO_SERVICIOS_GESTIONAR', 'MODULO_CITAS_GESTIONAR', 'MODULO_ESTADOS_GESTIONAR', 'MODULO_DASHBOARD_VER', 'MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR', 'MODULO_CATEGORIAS_SERVICIOS_GESTIONAR', 'MODULO_ESPECIALIDADES_GESTIONAR');
-INSERT IGNORE INTO permisos_x_rol (id_rol, id_permiso) SELECT r.id_rol, p.id_permiso FROM rol r, permisos p WHERE r.nombre = 'Cliente' AND p.estado = 1 AND p.nombre IN ('MODULO_CITAS_CREAR_PROPIA', 'MODULO_CITAS_VER_PROPIAS', 'MODULO_CITAS_CANCELAR_PROPIA', 'MODULO_VENTAS_CREAR_PROPIA', 'MODULO_VENTAS_VER_PROPIAS', 'MODULO_PRODUCTOS_VER', 'MODULO_SERVICIOS_VER', 'MODULO_CATEGORIAS_PRODUCTOS_VER', 'MODULO_CATEGORIAS_SERVICIOS_VER', 'MODULO_CLIENTES_VER_PROPIO');
+-- Asignación inicial de permisos
+INSERT IGNORE INTO permisos_x_rol (id_rol, id_permiso) SELECT (SELECT id_rol FROM rol WHERE nombre = 'Administrador'), id_permiso FROM permisos WHERE estado = 1;
+INSERT IGNORE INTO permisos_x_rol (id_rol, id_permiso) SELECT (SELECT id_rol FROM rol WHERE nombre = 'Empleado'), id_permiso FROM permisos WHERE estado = 1 AND nombre IN ('MODULO_ABASTECIMIENTOS_GESTIONAR', 'MODULO_VENTAS_GESTIONAR', 'MODULO_COMPRAS_GESTIONAR', 'MODULO_CLIENTES_GESTIONAR', 'MODULO_PROVEEDORES_GESTIONAR', 'MODULO_PRODUCTOS_GESTIONAR', 'MODULO_SERVICIOS_GESTIONAR', 'MODULO_CITAS_GESTIONAR', 'MODULO_ESTADOS_GESTIONAR', 'MODULO_DASHBOARD_VER', 'MODULO_CATEGORIAS_PRODUCTOS_GESTIONAR', 'MODULO_CATEGORIAS_SERVICIOS_GESTIONAR', 'MODULO_ESPECIALIDADES_GESTIONAR');
+INSERT IGNORE INTO permisos_x_rol (id_rol, id_permiso) SELECT (SELECT id_rol FROM rol WHERE nombre = 'Cliente'), id_permiso FROM permisos WHERE estado = 1 AND nombre IN ('MODULO_CITAS_CREAR_PROPIA', 'MODULO_CITAS_VER_PROPIAS', 'MODULO_CITAS_CANCELAR_PROPIA', 'MODULO_VENTAS_CREAR_PROPIA', 'MODULO_VENTAS_VER_PROPIAS', 'MODULO_PRODUCTOS_VER', 'MODULO_SERVICIOS_VER', 'MODULO_CATEGORIAS_PRODUCTOS_VER', 'MODULO_CATEGORIAS_SERVICIOS_VER', 'MODULO_CLIENTES_VER_PROPIO');
