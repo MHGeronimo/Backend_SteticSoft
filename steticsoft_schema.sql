@@ -99,13 +99,7 @@
 CREATE TABLE IF NOT EXISTS rol (
     id_rol SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
-    -- ======================================================================
-    -- NUEVO CAMPO: Define el tipo de perfil de datos asociado a este rol.
-    -- 'NINGUNO': Para roles sin perfil de datos (ej. Administrador).
-    -- 'EMPLEADO': Para roles de personal (ej. Empleado, Gerente).
-    -- 'CLIENTE': Para roles de cliente.
     tipo_perfil VARCHAR(10) NOT NULL DEFAULT 'EMPLEADO' CHECK (tipo_perfil IN ('CLIENTE', 'EMPLEADO', 'NINGUNO')),
-    -- ======================================================================
     descripcion TEXT,
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );
@@ -249,44 +243,6 @@ CREATE TABLE IF NOT EXISTS cliente (
 );
 
 
--- Tabla: empleado
--- Propósito: Almacena la información de los empleados, similar a la de los clientes.
--- Proceso: Al igual que un cliente, cada empleado tiene un `id_usuario` para el acceso. Los empleados
--- pueden ser asignados a citas (`cita`) y abastecimientos (`abastecimiento`).
-CREATE TABLE IF NOT EXISTS empleado (
-    id_empleado SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL, -- Nuevo campo
-    correo VARCHAR(100) UNIQUE NOT NULL, -- Nuevo campo y único
-    telefono VARCHAR(20) NOT NULL, -- Nuevo campo (reemplaza a 'celular')
-    tipo_documento VARCHAR(50) NOT NULL,
-    numero_documento VARCHAR(45) NOT NULL UNIQUE,
-    fecha_nacimiento DATE NOT NULL,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    id_usuario INT UNIQUE NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT
-);
-
-
--- Tabla: especialidad
--- Propósito: Define las habilidades o áreas de especialización de los empleados (ej. "Manicurista", "Colorista").
-CREATE TABLE IF NOT EXISTS especialidad (
-    id_especialidad SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    descripcion TEXT,
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
-
-
--- Tabla: empleado_especialidad
--- Propósito: Tabla de unión que asigna una o más especialidades a cada empleado.
--- Proceso: Permite filtrar empleados por su especialidad, por ejemplo, al agendar una cita para un servicio específico.
-CREATE TABLE IF NOT EXISTS empleado_especialidad (
-    id_empleado INT REFERENCES empleado(id_empleado) ON DELETE CASCADE,
-    id_especialidad INT REFERENCES especialidad(id_especialidad) ON DELETE CASCADE,
-    PRIMARY KEY (id_empleado, id_especialidad)
-);
-
-
 -- Tabla: proveedor
 -- Propósito: Almacena la información de contacto y fiscal de las empresas o personas que suministran productos.
 -- Proceso: Cada 'compra' debe estar asociada a un 'proveedor'.
@@ -372,10 +328,11 @@ CREATE TABLE IF NOT EXISTS compra (
 -- Proceso: Al crear una 'venta', se DISMINUYE el stock de los productos detallados en `producto_x_venta`.
 CREATE TABLE IF NOT EXISTS venta (
     id_venta SERIAL PRIMARY KEY,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
     fecha DATE DEFAULT CURRENT_DATE,
     total DECIMAL(12, 2) DEFAULT 0.00,
     iva DECIMAL(12, 2) DEFAULT 0.00,
+    id_producto INT REFERENCES producto(id_producto) ON DELETE RESTRICT,
+    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE RESTRICT,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
     id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
     id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
@@ -387,10 +344,9 @@ CREATE TABLE IF NOT EXISTS venta (
 -- Proceso: Es el corazón del módulo de agendamiento.
 CREATE TABLE IF NOT EXISTS cita (
     id_cita SERIAL PRIMARY KEY,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    fecha_hora TIMESTAMP WITH TIME ZONE NOT NULL,
+    id_novedad INT REFERENCES novedades(id_novedad) ON DELETE SET NULL,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
-    id_empleado INT REFERENCES empleado(id_empleado) ON DELETE SET NULL,
+    id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
 );
 
@@ -466,8 +422,8 @@ CREATE TABLE IF NOT EXISTS abastecimiento (
     id_abastecimiento SERIAL PRIMARY KEY,
     cantidad INT NOT NULL,
     id_producto INT NOT NULL REFERENCES producto(id_producto) ON DELETE RESTRICT,
+    id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     fecha_ingreso DATE NOT NULL DEFAULT CURRENT_DATE,
-    id_empleado_asignado INT REFERENCES empleado(id_empleado) ON DELETE SET NULL,
     esta_agotado BOOLEAN DEFAULT FALSE NOT NULL,
     razon_agotamiento TEXT,
     fecha_agotamiento DATE,
@@ -483,8 +439,7 @@ CREATE TABLE IF NOT EXISTS novedades (
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
     estado BOOLEAN DEFAULT TRUE NOT NULL,
-    id_empleado INT NOT NULL REFERENCES empleado(id_empleado) ON DELETE CASCADE,
-    UNIQUE (id_empleado, dia_semana)
+    UNIQUE (dia_semana)
 );
 
 
