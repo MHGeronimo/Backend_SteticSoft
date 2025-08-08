@@ -358,9 +358,7 @@ CREATE TABLE IF NOT EXISTS servicio (
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
     precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    duracion_estimada_min INT,
     id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
-    id_especialidad INT REFERENCES especialidad(id_especialidad) ON DELETE RESTRICT,
     imagen TEXT, -- Nueva columna para la imagen del servicio
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );
