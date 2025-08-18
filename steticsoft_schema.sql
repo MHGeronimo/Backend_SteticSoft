@@ -493,7 +493,7 @@ CREATE TABLE IF NOT EXISTS cita (
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
     id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT,
-    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE set NULL,
+    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE set NULL
 );
 
 -- Tabla: servicio
