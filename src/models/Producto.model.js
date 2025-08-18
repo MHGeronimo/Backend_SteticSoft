@@ -51,9 +51,9 @@ module.exports = (sequelize, DataTypes) => {
         field: "estado",
       },
       tipoUso: {
-        type: DataTypes.ENUM("Interno", "Venta Directa", "Otro"),
+        type: DataTypes.ENUM("Interno", "Externo"), // <-- Debe coincidir con la base de datos
         allowNull: false,
-        defaultValue: "Venta Directa",
+        defaultValue: "Externo",
         field: "tipo_uso",
       },
       vidaUtilDias: {
