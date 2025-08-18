@@ -1,13 +1,9 @@
-// src/services/categoriaProducto.service.js
 const db = require("../models");
-const { Op } = db.Sequelize; // Asegúrate de que Op esté importado
+const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
 
 /**
  * Helper interno para cambiar el estado de una categoría de producto.
- * @param {number} idCategoria - ID de la categoría.
- * @param {boolean} nuevoEstado - El nuevo estado (true para habilitar, false para anular).
- * @returns {Promise<object>} La categoría con el estado cambiado.
  */
 const cambiarEstadoCategoriaProducto = async (idCategoria, nuevoEstado) => {
   const categoria = await db.CategoriaProducto.findByPk(idCategoria);
@@ -17,7 +13,7 @@ const cambiarEstadoCategoriaProducto = async (idCategoria, nuevoEstado) => {
     );
   }
   if (categoria.estado === nuevoEstado) {
-    return categoria; // Ya está en el estado deseado
+    return categoria;
   }
   await categoria.update({ estado: nuevoEstado });
   return categoria;
@@ -30,8 +26,6 @@ const crearCategoriaProducto = async (datosCategoria) => {
   const {
     nombre,
     descripcion,
-    vidaUtilDias,
-    tipoUso,
     estado,
   } = datosCategoria;
 
@@ -48,8 +42,6 @@ const crearCategoriaProducto = async (datosCategoria) => {
     const nuevaCategoria = await db.CategoriaProducto.create({
       nombre,
       descripcion: descripcion || null,
-      vidaUtilDias: vidaUtilDias !== undefined ? vidaUtilDias : null,
-      tipoUso,
       estado: typeof estado === "boolean" ? estado : true,
     });
     return nuevaCategoria;
@@ -83,26 +75,18 @@ const crearCategoriaProducto = async (datosCategoria) => {
 const obtenerTodasLasCategoriasProducto = async (opcionesDeFiltro = {}) => {
   const whereClause = {};
 
-  // Filtros explícitos (se mantienen por si los usas en otro lugar)
+  // Filtros explícitos
   if (opcionesDeFiltro.hasOwnProperty("estado")) {
     whereClause.estado = opcionesDeFiltro.estado;
-  }
-  if (opcionesDeFiltro.hasOwnProperty("tipoUso")) {
-    whereClause.tipoUso = opcionesDeFiltro.tipoUso;
   }
 
   // Lógica de búsqueda general
   if (opcionesDeFiltro.search) {
     const searchTerm = `%${opcionesDeFiltro.search.toLowerCase()}%`;
-
-    // Reemplazamos la lógica anterior por una más segura y correcta
     whereClause[Op.or] = [
       { nombre: { [Op.iLike]: searchTerm } },
       { descripcion: { [Op.iLike]: searchTerm } },
-      { tipoUso: { [Op.iLike]: searchTerm } },
-      // CORRECCIÓN: Búsqueda segura en campos numéricos y booleanos usando `literal`
-      // y especificando el nombre real de la columna en la base de datos.
-      db.sequelize.literal(`CAST("vida_util_dias" AS TEXT) ILIKE '${searchTerm}'`),
+      // Solo campos válidos
       db.sequelize.literal(`
         CASE 
           WHEN estado = true THEN 'activo' 
@@ -116,7 +100,6 @@ const obtenerTodasLasCategoriasProducto = async (opcionesDeFiltro = {}) => {
     const categorias = await db.CategoriaProducto.findAll({
       where: whereClause,
       order: [["nombre", "ASC"]],
-      // Puedes añadir `include` si necesitas datos de modelos asociados
     });
     return categorias;
   } catch (error) {
@@ -259,18 +242,15 @@ const eliminarCategoriaProductoFisica = async (idCategoria) => {
       );
     }
 
-    // --- VALIDACIÓN DE PRODUCTOS ASOCIADOS ---
-    // Asumo que tienes un modelo `Producto` y que tiene una FK a `CategoriaProducto`.
-    // Si una categoría tiene productos asociados, no debería poder eliminarse.
+    // Validación de productos asociados
     const productosCount = await db.Producto.count({
-        where: { categoriaProductoId: idCategoria } // Asegúrate de que 'categoriaProductoId' sea el nombre de la FK en tu modelo Producto
+        where: { categoriaProductoId: idCategoria }
     });
     if (productosCount > 0) {
         throw new ConflictError(
             `No se puede eliminar la categoría porque tiene ${productosCount} producto(s) asociado(s).`
         );
     }
-    // --- FIN VALIDACIÓN DE PRODUCTOS ASOCIADOS ---
 
     const filasEliminadas = await db.CategoriaProducto.destroy({
       where: { idCategoriaProducto: idCategoria },

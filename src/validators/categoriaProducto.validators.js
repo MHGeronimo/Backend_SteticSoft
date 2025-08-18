@@ -1,11 +1,8 @@
-// src/validators/categoriaProducto.validators.js
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
-const db = require("../models"); // Asegúrate de que esto esté bien importado
-
-const tiposDeUsoPermitidos = ["Interno", "Externo"];
+const db = require("../models");
 
 const crearCategoriaProductoValidators = [
   body("nombre")
@@ -35,21 +32,6 @@ const crearCategoriaProductoValidators = [
     .withMessage("La descripción debe ser texto.")
     .isLength({ max: 45 })
     .withMessage("La descripción no debe exceder los 45 caracteres."),
-  body("vidaUtilDias")
-    .optional({ nullable: true })
-    .isInt({ gt: -1 })
-    .withMessage(
-      "La vida útil en días debe ser un número entero no negativo (0 o más)."
-    )
-    .toInt(),
-  body("tipoUso")
-    .trim()
-    .notEmpty()
-    .withMessage("El tipo de uso es obligatorio.")
-    .isIn(tiposDeUsoPermitidos)
-    .withMessage(
-      `El tipo de uso debe ser uno de: ${tiposDeUsoPermitidos.join(", ")}.`
-    ),
   body("estado")
     .optional()
     .isBoolean()
@@ -82,7 +64,6 @@ const actualizarCategoriaProductoValidators = [
         const categoriaExistente = await db.CategoriaProducto.findOne({
           where: {
             nombre: value,
-            // CAMBIO CLAVE: Se usaba 'idCategoria' aquí, ahora es 'idCategoriaProducto'
             idCategoriaProducto: { [db.Sequelize.Op.ne]: idCategoria },
           },
         });
@@ -100,22 +81,6 @@ const actualizarCategoriaProductoValidators = [
     .withMessage("La descripción debe ser texto.")
     .isLength({ max: 45 })
     .withMessage("La descripción no debe exceder los 45 caracteres."),
-  body("vidaUtilDias")
-    .optional({ nullable: true })
-    .isInt({ gt: -1 })
-    .withMessage(
-      "La vida útil en días debe ser un número entero no negativo (0 o más) si se proporciona."
-    )
-    .toInt(),
-  body("tipoUso")
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage("El tipo de uso no puede estar vacío si se proporciona.")
-    .isIn(tiposDeUsoPermitidos)
-    .withMessage(
-      `El tipo de uso debe ser uno de: ${tiposDeUsoPermitidos.join(", ")}.`
-    ),
   body("estado")
     .optional()
     .isBoolean()
