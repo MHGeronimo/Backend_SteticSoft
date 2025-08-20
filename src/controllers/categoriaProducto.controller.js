@@ -1,4 +1,3 @@
-// src/controllers/categoriaProducto.controller.js  
 const categoriaProductoService = require("../services/categoriaProducto.service.js");
 
 /**
@@ -25,17 +24,14 @@ const listarCategoriasProducto = async (req, res, next) => {
   try {
     const opcionesDeFiltro = {};
     
-    // Filtros existentes
+    // Filtro por estado
     if (req.query.estado === "true") {
       opcionesDeFiltro.estado = true;
     } else if (req.query.estado === "false") {
       opcionesDeFiltro.estado = false;
     }
-    if (req.query.tipoUso) {
-      opcionesDeFiltro.tipoUso = req.query.tipoUso;
-    }
 
-    // AÑADIDO: Si hay un término de búsqueda, agregarlo a las opcionesDeFiltro
+    // Filtro de búsqueda general
     if (req.query.search) {
       opcionesDeFiltro.search = req.query.search;
     }

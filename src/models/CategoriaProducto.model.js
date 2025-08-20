@@ -1,4 +1,3 @@
-// RUTA: src/shared/src_api/models/CategoriaProducto.model.js 
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -27,18 +26,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "estado",
       },
-      vidaUtilDias: {
-        type: DataTypes.INTEGER,
-        field: "vida_util_dias",
-      },
-      tipoUso: {
-        type: DataTypes.STRING(10),
-        allowNull: false,
-        field: "tipo_uso",
-        validate: {
-          isIn: [["Interno", "Externo"]],
-        },
-      },
     },
     {
       tableName: "categoria_producto",
@@ -46,18 +33,12 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  // ==================== INICIO DE LA CORRECCIÓN ====================
   CategoriaProducto.associate = (models) => {
-    // Una CategoriaProducto puede tener muchos Productos.
     CategoriaProducto.hasMany(models.Producto, {
-      foreignKey: "categoriaProductoId", 
-      // ✅ CORRECCIÓN: Se añade el alias 'productos' que faltaba.
+      foreignKey: "categoriaProductoId",
       as: "productos",
     });
   };
-  // ===================== FIN DE LA CORRECCIÓN ======================
-
-// ...
 
   return CategoriaProducto;
 };
