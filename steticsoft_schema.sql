@@ -200,6 +200,8 @@ CREATE TABLE IF NOT EXISTS venta (
     total DECIMAL(12, 2) DEFAULT 0.00,
     iva DECIMAL(12, 2) DEFAULT 0.00,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
+    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE CASCADE,
+    id_producto INT REFERENCES producto(id_producto) ON DELETE RESTRICT,
     id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
     id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
 );
