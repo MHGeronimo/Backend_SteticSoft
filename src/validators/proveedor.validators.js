@@ -15,8 +15,12 @@ const emptyStringToNull = (value) => {
 
 // --- Validador para CREAR ---
 const crearProveedorValidators = [
-  body("nombre").trim().notEmpty().withMessage("El nombre es obligatorio."),
-  body("tipo").trim().notEmpty().withMessage("El tipo es obligatorio."),
+  body("nombre")
+    .trim()
+    .notEmpty().withMessage("El nombre es obligatorio.")
+    .isLength({ min: 3 }).withMessage("El nombre debe tener al menos 3 caracteres.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre solo puede contener letras y espacios."),
+  body("tipo").trim().notEmpty().withMessage("El tipo es obligatorio."), // (ignorar validación de tipo)
   body("telefono").trim().notEmpty().withMessage("El teléfono es obligatorio."),
   body("correo")
     .trim()
@@ -70,8 +74,13 @@ const actualizarProveedorValidators = [
   param("idProveedor")
     .isInt({ gt: 0 })
     .withMessage("ID de proveedor inválido."),
-  body("nombre").optional().trim().notEmpty(),
-  body("tipo").optional().trim().notEmpty(),
+  body("nombre")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("El nombre es obligatorio.")
+    .isLength({ min: 3 }).withMessage("El nombre debe tener al menos 3 caracteres.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre solo puede contener letras y espacios."),
+  body("tipo").optional().trim().notEmpty(), // (ignorar validación de tipo)
   body("telefono").optional().trim().notEmpty(),
   body("direccion").optional().trim().notEmpty(),
 
@@ -127,6 +136,8 @@ const actualizarProveedorValidators = [
   body("estado").optional().isBoolean(),
   handleValidationErrors,
 ];
+
+// ...código existente...
 
 const idProveedorValidator = [
   param("idProveedor")
