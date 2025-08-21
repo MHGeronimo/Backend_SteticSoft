@@ -1,7 +1,7 @@
 const db = require("../models");
 const { Op } = db.Sequelize;
 const { NotFoundError, ConflictError, CustomError } = require("../errors");
-
+ 
 /**
  * Helper interno para cambiar el estado de una categoría de producto.
  */
