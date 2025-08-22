@@ -31,12 +31,6 @@ const crearServicioValidators = [
     .isFloat({ gt: 0 }).withMessage("El precio debe ser un número mayor a cero.")
     .toFloat(), // Convierte el string a número
 
-  // 4. Validador para 'duracionEstimada' (opcional)
-  body("duracionEstimada")
-    .optional({ nullable: true, checkFalsy: true })
-    .isInt({ min: 1 }).withMessage("La duración debe ser un número entero positivo.")
-    .toInt(), // Convierte el string a número entero
-
   // 5. Validador para 'categoriaServicioId'
   body("categoriaServicioId") // Valida el nombre de campo que envía el frontend
     .notEmpty().withMessage("La categoría es obligatoria.")

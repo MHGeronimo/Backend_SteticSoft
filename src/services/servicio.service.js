@@ -16,7 +16,6 @@ const crearServicio = async (datosServicio) => {
     precio,
     categoriaServicioId,
     descripcion,
-    duracionEstimada,
     imagen, // La ruta de la imagen ya viene como string desde el controller
   } = datosServicio;
 
@@ -40,8 +39,6 @@ const crearServicio = async (datosServicio) => {
       nombre: nombre,
       descripcion: descripcion || null,
       precio: parseFloat(precio),
-      // Mapeo directo del nombre del frontend al nombre del modelo/BD
-      duracionEstimadaMin: duracionEstimada ? Number(duracionEstimada) : null,
       // Se usa el nombre de campo correcto que espera el modelo de Sequelize
       idCategoriaServicio: categoriaServicioId,
       // El campo 'imagen' se añade solo si existe
@@ -118,14 +115,6 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
   const servicio = await db.Servicio.findByPk(idServicio);
   if (!servicio) {
     throw new NotFoundError("Servicio no encontrado para actualizar.");
-  }
-
-  // CORRECCIÓN: Se mapea correctamente 'duracionEstimada' a 'duracionEstimadaMin'
-  if (datosActualizar.hasOwnProperty("duracionEstimada")) {
-    datosActualizar.duracionEstimadaMin = datosActualizar.duracionEstimada
-      ? Number(datosActualizar.duracionEstimada)
-      : null;
-    delete datosActualizar.duracionEstimada; // Se elimina el campo original para no confundir a Sequelize
   }
 
   try {
