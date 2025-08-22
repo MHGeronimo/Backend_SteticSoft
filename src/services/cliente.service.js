@@ -48,7 +48,7 @@ const crearCliente = async (datosCompletos) => {
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
-    // direccion, // Si decides usarlo
+    direccion,
     estadoCliente, // Estado para el perfil de Cliente (opcional, por defecto true)
   } = datosCompletos;
 
@@ -98,7 +98,7 @@ const crearCliente = async (datosCompletos) => {
       tipoDocumento,
       numeroDocumento,
       fechaNacimiento,
-      // direccion: datosCompletos.direccion, // Si se incluye
+      direccion: datosCompletos.direccion,
       estado: datosCompletos.estadoCliente !== undefined ? datosCompletos.estadoCliente : true,
     }, { transaction });
 
@@ -216,7 +216,7 @@ const actualizarCliente = async (idCliente, datosActualizar) => {
     if (datosActualizar.hasOwnProperty('tipoDocumento')) datosParaCliente.tipoDocumento = datosActualizar.tipoDocumento;
     if (datosActualizar.hasOwnProperty('numeroDocumento')) datosParaCliente.numeroDocumento = datosActualizar.numeroDocumento;
     if (datosActualizar.hasOwnProperty('fechaNacimiento')) datosParaCliente.fechaNacimiento = datosActualizar.fechaNacimiento;
-    // if (datosActualizar.hasOwnProperty('direccion')) datosParaCliente.direccion = datosActualizar.direccion; // Si se usa
+    if (datosActualizar.hasOwnProperty('direccion')) datosParaCliente.direccion = datosActualizar.direccion;
     if (datosActualizar.hasOwnProperty('estadoCliente')) datosParaCliente.estado = datosActualizar.estadoCliente; // Estado del perfil Cliente
 
     // Campos que podrían afectar a la tabla Usuario
