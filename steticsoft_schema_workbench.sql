@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS cliente (
     tipo_documento VARCHAR(50) NOT NULL,
     numero_documento VARCHAR(45) NOT NULL UNIQUE,
     fecha_nacimiento DATE NOT NULL,
+    direccion TEXT NOT NULL,
     estado TINYINT(1) DEFAULT 1 NOT NULL,
     id_usuario INT UNIQUE NOT NULL,
     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE RESTRICT
