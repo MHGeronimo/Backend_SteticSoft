@@ -388,6 +388,7 @@ CREATE TABLE IF NOT EXISTS cliente (
     tipo_documento VARCHAR(50) NOT NULL,
     numero_documento VARCHAR(45) NOT NULL UNIQUE,
     fecha_nacimiento DATE NOT NULL,
+    direccion TEXT NOT NULL,
     estado BOOLEAN DEFAULT TRUE NOT NULL,
     id_usuario INT UNIQUE NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT
 );
