@@ -42,12 +42,6 @@ module.exports = (sequelize, DataTypes) => {
       otherKey: 'id_empleado',     
       as: 'empleados'
     });
-
-    // Una Especialidad puede estar asociada a muchos Servicios.
-    Especialidad.hasMany(models.Servicio, {
-      foreignKey: 'idEspecialidad', // Se refiere al atributo 'idEspecialidad' en el modelo Servicio.
-      as: 'servicios'
-    });
   };
 
   return Especialidad;
