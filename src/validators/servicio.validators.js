@@ -31,7 +31,7 @@ const crearServicioValidators = [
     .isFloat({ gt: 0 }).withMessage("El precio debe ser un número mayor a cero.")
     .toFloat(), // Convierte el string a número
 
-  // 5. Validador para 'categoriaServicioId'
+  // 4. Validador para 'categoriaServicioId'
   body("categoriaServicioId") // Valida el nombre de campo que envía el frontend
     .notEmpty().withMessage("La categoría es obligatoria.")
     .isInt({ gt: 0 }).withMessage("El ID de la categoría es un número inválido.")
@@ -67,6 +67,27 @@ const actualizarServicioValidators = [
       }
     }),
 
+  // Añadir validaciones opcionales para otros campos
+  body("descripcion")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isString().withMessage("La descripción debe ser texto."),
+
+  body("precio")
+    .optional()
+    .isFloat({ gt: 0 }).withMessage("El precio debe ser un número mayor a cero.")
+    .toFloat(),
+
+  body("categoriaServicioId")
+    .optional()
+    .isInt({ gt: 0 }).withMessage("El ID de la categoría es un número inválido.")
+    .custom(async (value) => {
+      const categoria = await db.CategoriaServicio.findByPk(value);
+      if (!categoria || !categoria.estado) {
+        return Promise.reject("La categoría seleccionada no existe o no está activa.");
+      }
+    }),
+
   handleValidationErrors,
 ];
 
@@ -85,26 +106,18 @@ const cambiarEstadoServicioValidators = [
   handleValidationErrors,
 ];
 
-// ... otros validadores como nombreValidator, descripcionValidator, etc.
-
-// ==================== INICIO DE LA CORRECCIÓN ====================
-
 // Validador para el ID del servicio en los parámetros de la URL
 const idServicioValidator = [
-  param("id")
-    .isInt()
-    .withMessage("El ID del servicio debe ser un número entero.")
+  param("idServicio")
+    .isInt({ gt: 0 })
+    .withMessage("El ID del servicio debe ser un entero positivo.")
     .notEmpty()
     .withMessage("El ID del servicio no puede estar vacío."),
 ];
-
-// ===================== FIN DE LA CORRECCIÓN ======================
-
-
 
 module.exports = {
   crearServicioValidators,
   actualizarServicioValidators,
   idServicioValidator,
-  cambiarEstadoServicioValidators, // <-- Exportar nuevo validador
+  cambiarEstadoServicioValidators,
 };
