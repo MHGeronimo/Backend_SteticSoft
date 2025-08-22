@@ -46,7 +46,7 @@ const crearProveedorValidators = [
     .notEmpty()
     .withMessage("La dirección del proveedor es un campo obligatorio."),
 
-  // --- Validación de campos opcionales con unicidad ---
+  // --- Validación de campos opcionales con unicidad (LÓGICA CORREGIDA) ---
   body("numeroDocumento")
     .trim()
     .customSanitizer(emptyStringToNull)
@@ -81,19 +81,22 @@ const crearProveedorValidators = [
     .isLength({ min: 3 }).withMessage("El nombre del encargado debe tener al menos 3 caracteres.")
     .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
   
+  // CORRECCIÓN CLAVE: El .isEmail() se debe ejecutar SÓLO si hay un valor, lo cual ya se hace con optional. La parte importante es el mensaje.
   body("emailPersonaEncargada")
     .trim()
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .isEmail().withMessage("El formato del correo del encargado es inválido.")
-    .custom(async (value, { req }) => {
-      if (value) {
-        const proveedor = await db.Proveedor.findOne({
-          where: { emailPersonaEncargada: value, estado: true },
-        });
-        if (proveedor) {
-          return Promise.reject("El correo del encargado ya está registrado.");
-        }
+    .custom(async (value) => {
+      // Si el valor es null (es decir, el campo estaba vacío), no hay nada que validar
+      if (value === null) {
+        return true;
+      }
+      const proveedor = await db.Proveedor.findOne({
+        where: { emailPersonaEncargada: value, estado: true },
+      });
+      if (proveedor) {
+        return Promise.reject("El correo del encargado ya está registrado.");
       }
     }),
 
