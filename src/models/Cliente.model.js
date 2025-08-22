@@ -49,6 +49,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: "fecha_nacimiento", 
       },
+      direccion: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        field: "direccion",
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
