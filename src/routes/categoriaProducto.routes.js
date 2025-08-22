@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const categoriaProductoController = require("../controllers/categoriaProducto.controller.js");
 const categoriaProductoValidators = require("../validators/categoriaProducto.validators.js");
-
+ 
 const authMiddleware = require("../middlewares/auth.middleware.js");
 const {
   checkPermission,

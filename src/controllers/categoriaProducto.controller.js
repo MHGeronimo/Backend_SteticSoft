@@ -1,5 +1,5 @@
 const categoriaProductoService = require("../services/categoriaProducto.service.js");
-
+ 
 /**
  * Crea una nueva categoría de producto.
  */

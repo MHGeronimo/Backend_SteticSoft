@@ -3,7 +3,7 @@ const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
-
+ 
 const crearCategoriaProductoValidators = [
   body("nombre")
     .trim()
