@@ -31,10 +31,6 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0.0,
         field: 'precio'
       },
-      duracionEstimadaMin: { 
-        type: DataTypes.INTEGER,
-        field: 'duracion_estimada_min'
-      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
@@ -50,16 +46,6 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id_categoria_servicio'
         },
         onDelete: 'RESTRICT'
-      },
-      idEspecialidad: { 
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'id_especialidad',
-        references: {
-          model: 'especialidad',
-          key: 'id_especialidad'
-        },
-        onDelete: 'RESTRICT'
       }
     },
     {
@@ -73,12 +59,6 @@ module.exports = (sequelize, DataTypes) => {
     Servicio.belongsTo(models.CategoriaServicio, {
       foreignKey: 'idCategoriaServicio',
       as: 'categoria'
-    });
-
-    // Un Servicio puede requerir una Especialidad.
-    Servicio.belongsTo(models.Especialidad, {
-      foreignKey: 'idEspecialidad',
-      as: 'especialidad'
     });
 
     // Un Servicio puede estar incluido en muchas Citas.
