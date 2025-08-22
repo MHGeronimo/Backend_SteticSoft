@@ -1,3 +1,4 @@
+const path = require("path");
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -16,7 +17,7 @@ const crearServicio = async (req, res, next) => {
   try {
     const servicioData = { ...req.body };
     if (req.file) {
-      datosServicio.imagen = path.join('uploads', 'servicios', req.file.filename).replace(/\\/g, '/');
+      servicioData.imagen = path.join('uploads', 'servicios', req.file.filename).replace(/\\/g, '/');
     }
     const nuevoServicio = await servicioService.crearServicio(servicioData);
     res.status(201).json({
