@@ -17,28 +17,36 @@ const emptyStringToNull = (value) => {
 const crearProveedorValidators = [
   body("nombre")
     .trim()
-    .notEmpty().withMessage("El nombre es obligatorio.")
-    .isLength({ min: 3 }).withMessage("El nombre debe tener al menos 3 caracteres.")
-    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre solo puede contener letras y espacios."),
-  body("tipo").trim().notEmpty().withMessage("El tipo es obligatorio."), // (ignorar validación de tipo)
-  body("telefono").trim().notEmpty().withMessage("El teléfono es obligatorio."),
+    .notEmpty().withMessage("El nombre del proveedor es un campo obligatorio.")
+    .isLength({ min: 3 }).withMessage("El nombre del proveedor debe tener al menos 3 caracteres.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del proveedor solo puede contener letras y espacios."),
+  
+  body("tipo")
+    .trim()
+    .notEmpty().withMessage("El tipo de proveedor es un campo obligatorio."),
+  
+  body("telefono")
+    .trim()
+    .notEmpty().withMessage("El teléfono del proveedor es un campo obligatorio."),
+
   body("correo")
     .trim()
-    .notEmpty()
-    .isEmail()
+    .notEmpty().withMessage("El correo electrónico del proveedor es un campo obligatorio.")
+    .isEmail().withMessage("El formato del correo electrónico es inválido.")
     .normalizeEmail()
     .custom(async (value) => {
       const proveedor = await db.Proveedor.findOne({
         where: { correo: value, estado: true },
       });
-      if (proveedor) return Promise.reject("El correo ya está registrado.");
+      if (proveedor) return Promise.reject("El correo electrónico ya está registrado. Por favor, ingrese uno diferente.");
     }),
+
   body("direccion")
     .trim()
     .notEmpty()
-    .withMessage("La dirección es obligatoria."),
+    .withMessage("La dirección del proveedor es un campo obligatorio."),
 
-  // INICIO DE CORRECCIÓN: Aplicar sanitizador
+  // --- Validación de campos opcionales con unicidad (LÓGICA CORREGIDA) ---
   body("numeroDocumento")
     .trim()
     .customSanitizer(emptyStringToNull)
@@ -49,9 +57,10 @@ const crearProveedorValidators = [
           where: { numeroDocumento: value, estado: true },
         });
         if (proveedor)
-          return Promise.reject("El número de documento ya está registrado.");
+          return Promise.reject("El número de documento ya está registrado. Por favor, ingrese uno diferente.");
       }
     }),
+  
   body("nitEmpresa")
     .trim()
     .customSanitizer(emptyStringToNull)
@@ -61,10 +70,35 @@ const crearProveedorValidators = [
         const proveedor = await db.Proveedor.findOne({
           where: { nitEmpresa: value, estado: true },
         });
-        if (proveedor) return Promise.reject("El NIT ya está registrado.");
+        if (proveedor) return Promise.reject("El NIT de la empresa ya está registrado. Por favor, ingrese uno diferente.");
       }
     }),
-  // FIN DE CORRECCIÓN
+  
+  body("nombrePersonaEncargada")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("El nombre del encargado no puede estar vacío.")
+    .isLength({ min: 3 }).withMessage("El nombre del encargado debe tener al menos 3 caracteres.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
+  
+  // CORRECCIÓN CLAVE: El .isEmail() se debe ejecutar SÓLO si hay un valor, lo cual ya se hace con optional. La parte importante es el mensaje.
+  body("emailPersonaEncargada")
+    .trim()
+    .customSanitizer(emptyStringToNull)
+    .optional({ nullable: true })
+    .isEmail().withMessage("El formato del correo del encargado es inválido.")
+    .custom(async (value) => {
+      // Si el valor es null (es decir, el campo estaba vacío), no hay nada que validar
+      if (value === null) {
+        return true;
+      }
+      const proveedor = await db.Proveedor.findOne({
+        where: { emailPersonaEncargada: value, estado: true },
+      });
+      if (proveedor) {
+        return Promise.reject("El correo del encargado ya está registrado.");
+      }
+    }),
 
   handleValidationErrors,
 ];
@@ -73,20 +107,40 @@ const crearProveedorValidators = [
 const actualizarProveedorValidators = [
   param("idProveedor")
     .isInt({ gt: 0 })
-    .withMessage("ID de proveedor inválido."),
+    .withMessage("El ID del proveedor es inválido. Debe ser un número entero positivo."),
+  
   body("nombre")
     .optional()
     .trim()
-    .notEmpty().withMessage("El nombre es obligatorio.")
-    .isLength({ min: 3 }).withMessage("El nombre debe tener al menos 3 caracteres.")
-    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre solo puede contener letras y espacios."),
-  body("tipo").optional().trim().notEmpty(), // (ignorar validación de tipo)
-  body("telefono").optional().trim().notEmpty(),
-  body("direccion").optional().trim().notEmpty(),
+    .notEmpty().withMessage("El nombre del proveedor es un campo obligatorio.")
+    .isLength({ min: 3 }).withMessage("El nombre del proveedor debe tener al menos 3 caracteres.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del proveedor solo puede contener letras y espacios."),
+  
+  body("tipo")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("El tipo de proveedor es un campo obligatorio."),
+  
+  body("telefono")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("El teléfono del proveedor es un campo obligatorio."),
+  
+  body("direccion")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio."),
+  
+  body("nombrePersonaEncargada")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("El nombre del encargado no puede estar vacío.")
+    .isLength({ min: 3 }).withMessage("El nombre del encargado debe tener al menos 3 caracteres.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
 
   body("correo")
     .optional()
-    .isEmail()
+    .isEmail().withMessage("El formato del correo electrónico es inválido.")
     .normalizeEmail()
     .custom(async (value, { req }) => {
       const proveedor = await db.Proveedor.findOne({
@@ -96,10 +150,9 @@ const actualizarProveedorValidators = [
         },
       });
       if (proveedor)
-        return Promise.reject("El correo ya está en uso por otro proveedor.");
+        return Promise.reject("El correo electrónico ya está en uso por otro proveedor.");
     }),
 
-  // INICIO DE CORRECCIÓN: Aplicar sanitizador también al actualizar
   body("numeroDocumento")
     .trim()
     .customSanitizer(emptyStringToNull)
@@ -113,9 +166,10 @@ const actualizarProveedorValidators = [
           },
         });
         if (proveedor)
-          return Promise.reject("El número de documento ya está en uso.");
+          return Promise.reject("El número de documento ya está en uso. Por favor, ingrese uno diferente.");
       }
     }),
+  
   body("nitEmpresa")
     .trim()
     .customSanitizer(emptyStringToNull)
@@ -128,32 +182,34 @@ const actualizarProveedorValidators = [
             idProveedor: { [Op.ne]: req.params.idProveedor },
           },
         });
-        if (proveedor) return Promise.reject("El NIT ya está en uso.");
+        if (proveedor) return Promise.reject("El NIT de la empresa ya está en uso. Por favor, ingrese uno diferente.");
       }
     }),
-  // FIN DE CORRECCIÓN
 
-  body("estado").optional().isBoolean(),
+  body("estado")
+    .optional()
+    .isBoolean()
+    .withMessage("El estado debe ser un valor booleano (true/false)."),
+  
   handleValidationErrors,
 ];
-
-// ...código existente...
 
 const idProveedorValidator = [
   param("idProveedor")
     .isInt({ gt: 0 })
-    .withMessage("El ID debe ser un entero positivo."),
+    .withMessage("El ID de proveedor debe ser un entero positivo válido."),
   handleValidationErrors,
 ];
 
 const cambiarEstadoProveedorValidators = [
   param("idProveedor")
     .isInt({ gt: 0 })
-    .withMessage("ID de proveedor inválido."),
+    .withMessage("El ID de proveedor es inválido."),
   body("estado")
     .exists({ checkFalsy: false })
-    .withMessage("El campo 'estado' es obligatorio.")
-    .isBoolean(),
+    .withMessage("El campo 'estado' es obligatorio para esta operación.")
+    .isBoolean()
+    .withMessage("El estado debe ser un valor booleano (true/false)."),
   handleValidationErrors,
 ];
 
