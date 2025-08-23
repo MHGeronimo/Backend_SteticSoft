@@ -47,13 +47,11 @@ const crearProveedorValidators = [
     .withMessage("La dirección del proveedor es un campo obligatorio."),
 
   // --- Validación de campos opcionales con unicidad (LÓGICA CORREGIDA) ---
-  // Se usa un solo custom para manejar la lógica de campo opcional y validación
   body("numeroDocumento")
     .trim()
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .custom(async (value) => {
-      // Si el valor es null (cadena vacía o no enviado), se pasa la validación.
       if (value === null) return true;
       
       const proveedor = await db.Proveedor.findOne({
@@ -68,7 +66,6 @@ const crearProveedorValidators = [
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .custom(async (value) => {
-      // Si el valor es null, se pasa la validación.
       if (value === null) return true;
 
       const proveedor = await db.Proveedor.findOne({
@@ -148,6 +145,7 @@ const actualizarProveedorValidators = [
     .isEmail().withMessage("El formato del correo electrónico es inválido.")
     .normalizeEmail()
     .custom(async (value, { req }) => {
+      if (value === null) return true;
       const proveedor = await db.Proveedor.findOne({
         where: {
           correo: value,
