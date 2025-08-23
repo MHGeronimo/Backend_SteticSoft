@@ -47,18 +47,20 @@ const crearProveedorValidators = [
     .withMessage("La dirección del proveedor es un campo obligatorio."),
 
   // --- Validación de campos opcionales con unicidad (LÓGICA CORREGIDA) ---
+  // Se usa un solo custom para manejar la lógica de campo opcional y validación
   body("numeroDocumento")
     .trim()
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .custom(async (value) => {
-      if (value) {
-        const proveedor = await db.Proveedor.findOne({
-          where: { numeroDocumento: value, estado: true },
-        });
-        if (proveedor)
-          return Promise.reject("El número de documento ya está registrado. Por favor, ingrese uno diferente.");
-      }
+      // Si el valor es null (cadena vacía o no enviado), se pasa la validación.
+      if (value === null) return true;
+      
+      const proveedor = await db.Proveedor.findOne({
+        where: { numeroDocumento: value, estado: true },
+      });
+      if (proveedor)
+        return Promise.reject("El número de documento ya está registrado. Por favor, ingrese uno diferente.");
     }),
   
   body("nitEmpresa")
@@ -66,12 +68,13 @@ const crearProveedorValidators = [
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .custom(async (value) => {
-      if (value) {
-        const proveedor = await db.Proveedor.findOne({
-          where: { nitEmpresa: value, estado: true },
-        });
-        if (proveedor) return Promise.reject("El NIT de la empresa ya está registrado. Por favor, ingrese uno diferente.");
-      }
+      // Si el valor es null, se pasa la validación.
+      if (value === null) return true;
+
+      const proveedor = await db.Proveedor.findOne({
+        where: { nitEmpresa: value, estado: true },
+      });
+      if (proveedor) return Promise.reject("El NIT de la empresa ya está registrado. Por favor, ingrese uno diferente.");
     }),
   
   body("nombrePersonaEncargada")
@@ -81,17 +84,19 @@ const crearProveedorValidators = [
     .isLength({ min: 3 }).withMessage("El nombre del encargado debe tener al menos 3 caracteres.")
     .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
   
-  // CORRECCIÓN CLAVE: El .isEmail() se debe ejecutar SÓLO si hay un valor, lo cual ya se hace con optional. La parte importante es el mensaje.
   body("emailPersonaEncargada")
     .trim()
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
-    .isEmail().withMessage("El formato del correo del encargado es inválido.")
     .custom(async (value) => {
-      // Si el valor es null (es decir, el campo estaba vacío), no hay nada que validar
-      if (value === null) {
-        return true;
+      // Si el valor es null, se pasa la validación.
+      if (value === null) return true;
+      
+      // Si hay un valor, se valida el formato y la unicidad
+      if (!value.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
+        return Promise.reject("El formato del correo del encargado es inválido.");
       }
+      
       const proveedor = await db.Proveedor.findOne({
         where: { emailPersonaEncargada: value, estado: true },
       });
@@ -158,16 +163,16 @@ const actualizarProveedorValidators = [
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .custom(async (value, { req }) => {
-      if (value) {
-        const proveedor = await db.Proveedor.findOne({
-          where: {
-            numeroDocumento: value,
-            idProveedor: { [Op.ne]: req.params.idProveedor },
-          },
-        });
-        if (proveedor)
-          return Promise.reject("El número de documento ya está en uso. Por favor, ingrese uno diferente.");
-      }
+      if (value === null) return true;
+      
+      const proveedor = await db.Proveedor.findOne({
+        where: {
+          numeroDocumento: value,
+          idProveedor: { [Op.ne]: req.params.idProveedor },
+        },
+      });
+      if (proveedor)
+        return Promise.reject("El número de documento ya está en uso. Por favor, ingrese uno diferente.");
     }),
   
   body("nitEmpresa")
@@ -175,15 +180,15 @@ const actualizarProveedorValidators = [
     .customSanitizer(emptyStringToNull)
     .optional({ nullable: true })
     .custom(async (value, { req }) => {
-      if (value) {
-        const proveedor = await db.Proveedor.findOne({
-          where: {
-            nitEmpresa: value,
-            idProveedor: { [Op.ne]: req.params.idProveedor },
-          },
-        });
-        if (proveedor) return Promise.reject("El NIT de la empresa ya está en uso. Por favor, ingrese uno diferente.");
-      }
+      if (value === null) return true;
+
+      const proveedor = await db.Proveedor.findOne({
+        where: {
+          nitEmpresa: value,
+          idProveedor: { [Op.ne]: req.params.idProveedor },
+        },
+      });
+      if (proveedor) return Promise.reject("El NIT de la empresa ya está en uso. Por favor, ingrese uno diferente.");
     }),
 
   body("estado")
