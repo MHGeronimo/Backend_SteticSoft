@@ -51,7 +51,7 @@ const crearProductoValidators = [
   // FIN DE LA CORRECCIÓN
 
   body("tipoUso")
-    .isIn(["Venta", "Interno"])
+    .isIn(["Interno", "Externo"])
     .withMessage("El tipo de uso no es válido."),
 
   // La imagen no se valida aquí porque multer ya la procesó.
@@ -70,7 +70,7 @@ const actualizarProductoValidators = [
   body("existencia").optional().toInt().isInt({ min: 0 }),
   body("stockMinimo").optional().toInt().isInt({ min: 0 }),
   body("idCategoriaProducto").optional().toInt().isInt({ gt: 0 }),
-  body("tipoUso").optional().isIn(["Venta", "Interno"]),
+  body("tipoUso").optional().isIn(["Interno", "Externo"]),
   handleValidationErrors,
 ];
 
