@@ -14,34 +14,44 @@ const {
 
 const PERMISO_MODULO_SERVICIOS = "MODULO_SERVICIOS_GESTIONAR";
 
-// Multer configuration for file uploads
+// --- CONFIGURACIÓN DE MULTER (YA ESTÁ CORRECTA) ---
+
+// 1. Define la ruta de destino de forma robusta
 const uploadDir = path.join(__dirname, "..", "..", "uploads", "servicios");
 
-// Ensure the upload directory exists
+// 2. Se asegura de que el directorio exista en el servidor
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// 3. Define el almacenamiento: destino y nombre de archivo único
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
+    // Genera un nombre de archivo único para evitar colisiones
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   },
 });
 
 const upload = multer({ storage: storage });
 
+
+// --- RUTAS DE LA API ---
+
+// Crear un nuevo servicio (acepta un archivo 'imagen' opcional)
 router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  upload.single("imagen"), // Multer middleware for single image upload
+  upload.single("imagen"), // Procesa el archivo si se envía
   servicioValidators.crearServicioValidators,
   servicioController.crearServicio
 );
 
+// Listar todos los servicios
 router.get(
   "/",
   authMiddleware,
@@ -49,6 +59,7 @@ router.get(
   servicioController.listarServicios
 );
 
+// Obtener un servicio por ID
 router.get(
   "/:idServicio",
   authMiddleware,
@@ -57,16 +68,18 @@ router.get(
   servicioController.obtenerServicioPorId
 );
 
-router.put(
+// Actualizar un servicio (acepta un archivo 'imagen' opcional)
+// MODIFICADO: Se usa PATCH para actualizaciones parciales, es una mejor práctica.
+router.patch(
   "/:idServicio",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  upload.single("imagen"), // Multer middleware for single image upload
+  upload.single("imagen"), // Procesa el archivo si se envía
   servicioValidators.actualizarServicioValidators,
   servicioController.actualizarServicio
 );
 
-// NUEVA RUTA: Cambiar el estado de un servicio
+// Cambiar el estado de un servicio
 router.patch(
   "/:idServicio/estado",
   authMiddleware,
@@ -75,6 +88,7 @@ router.patch(
   servicioController.cambiarEstadoServicio
 );
 
+// Eliminar un servicio
 router.delete(
   "/:idServicio",
   authMiddleware,
