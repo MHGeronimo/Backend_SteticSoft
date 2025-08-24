@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
         field: "estado",
       },
       tipoUso: {
-        type: DataTypes.ENUM("Interno", "Externo"), // <-- Debe coincidir con la base de datos
+        type: DataTypes.STRING("Interno", "Externo"), // <-- Debe coincidir con la base de datos
         allowNull: false,
         defaultValue: "Externo",
         field: "tipo_uso",
