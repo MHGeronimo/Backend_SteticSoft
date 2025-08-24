@@ -1,171 +1,156 @@
 // src/services/novedades.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
-const {
-  NotFoundError,
-  ConflictError,
-  CustomError,
-  BadRequestError,
-} = require("../errors");
+const { NotFoundError, BadRequestError, CustomError } = require("../errors");
 
-const cambiarEstadoNovedad = async (idNovedad, nuevoEstado) => {
-  const novedad = await db.Novedades.findByPk(idNovedad);
-  if (!novedad) {
-    throw new NotFoundError("Novedad no encontrada para cambiar estado.");
-  }
-  if (novedad.estado === nuevoEstado) {
-    return novedad;
-  }
-  await novedad.update({ estado: nuevoEstado });
-  return novedad;
-};
-
-const crearNovedad = async (datosNovedad) => {
-  const { idEmpleado, diaSemana, horaInicio, horaFin, estado } = datosNovedad;
-
-  const empleado = await db.Empleado.findOne({
-    where: { idEmpleado: idEmpleado, estado: true },
-  });
-  if (!empleado) {
-    throw new BadRequestError(
-      `Empleado con ID ${idEmpleado} no encontrado o inactivo.`
-    );
-  }
-
-  const novedadExistente = await db.Novedades.findOne({
-    where: {
-      idEmpleado: idEmpleado,
-      diaSemana: diaSemana,
-    },
-  });
-  if (novedadExistente) {
-    throw new ConflictError(
-      `El empleado ID ${idEmpleado} ya tiene una novedad registrada para el día de la semana ${diaSemana}.`
-    );
-  }
-
-  if (horaFin <= horaInicio) {
-    throw new BadRequestError(
-      "La hora de fin debe ser posterior a la hora de inicio."
-    );
-  }
+/**
+ * Crea una nueva novedad y la asigna a los empleados especificados.
+ * Utiliza una transacción para asegurar la integridad de los datos.
+ * @param {object} datosNovedad - Datos de la novedad (fechas, horas, etc.).
+ * @param {number[]} empleadosIds - Array de IDs de los empleados a asignar.
+ * @returns {Promise<object>} La nueva novedad creada con sus empleados asociados.
+ */
+const crearNovedad = async (datosNovedad, empleadosIds) => {
+  // Iniciamos una transacción para asegurar que ambas operaciones (crear novedad y asignar empleados)
+  // se completen exitosamente o ninguna lo haga.
+  const t = await db.sequelize.transaction();
 
   try {
-    const nuevaNovedad = await db.Novedades.create({
-      idEmpleado,
-      diaSemana,
-      horaInicio,
-      horaFin,
-      estado: typeof estado === "boolean" ? estado : true,
+    // 1. Validar que los empleados existan y estén activos
+    if (empleadosIds && empleadosIds.length > 0) {
+      const usuarios = await db.Usuario.findAll({
+        where: { idUsuario: empleadosIds, estado: true },
+        transaction: t,
+      });
+      if (usuarios.length !== empleadosIds.length) {
+        throw new BadRequestError("Uno o más de los empleados seleccionados no existen o no están activos.");
+      }
+    }
+
+    // 2. Crear la novedad principal dentro de la transacción
+    const nuevaNovedad = await db.Novedad.create(datosNovedad, { transaction: t });
+
+    // 3. Asignar la novedad a los empleados usando el método de asociación de Sequelize
+    if (empleadosIds && empleadosIds.length > 0) {
+      await nuevaNovedad.setEmpleados(empleadosIds, { transaction: t });
+    }
+
+    // 4. Si todo salió bien, confirmamos la transacción
+    await t.commit();
+
+    // 5. Devolvemos la novedad creada, incluyendo los empleados asociados
+    return await db.Novedad.findByPk(nuevaNovedad.idNovedad, {
+      include: [{ model: db.Usuario, as: 'empleados', attributes: ['idUsuario', 'correo'] }],
     });
-    return nuevaNovedad;
+
   } catch (error) {
-    if (error.name === "SequelizeUniqueConstraintError") {
-      throw new ConflictError(
-        `El empleado ID ${idEmpleado} ya tiene una novedad registrada para el día de la semana ${diaSemana}.`
-      );
-    }
-    if (error.name === "SequelizeForeignKeyConstraintError") {
-      throw new BadRequestError(
-        `El empleado con ID ${idEmpleado} no es válido.`
-      );
-    }
-    console.error(
-      "Error al crear la novedad en el servicio:",
-      error.message,
-      error.stack
-    );
-    throw new CustomError(`Error al crear la novedad: ${error.message}`, 500);
+    // 6. Si algo falla, revertimos todos los cambios
+    await t.rollback();
+    console.error("Error al crear la novedad en el servicio:", error);
+    // Re-lanzamos el error para que el controlador lo maneje
+    throw error;
   }
 };
 
+/**
+ * Obtiene todas las novedades con filtros opcionales.
+ */
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
+  const { estado, empleadoId } = opcionesDeFiltro;
+  const whereClause = {};
+  const includeOptions = {
+    model: db.Usuario,
+    as: 'empleados',
+    attributes: ['idUsuario', 'correo'],
+    through: { attributes: [] } // No incluir datos de la tabla de unión
+  };
+
+  if (estado === 'true' || estado === 'false') {
+    whereClause.estado = estado === 'true';
+  }
+
+  // Si se filtra por empleado, añadimos una condición al 'include'
+  if (empleadoId) {
+    includeOptions.where = { idUsuario: empleadoId };
+  }
+
   try {
-    return await db.Novedades.findAll({
-      where: opcionesDeFiltro,
-      include: [
-        {
-          model: db.Empleado,
-          as: "empleado",
-          required: true,
-          // CORRECTO: Usamos los nombres de propiedad del MODELO de Empleado
-          attributes: ["idEmpleado", "nombre"],
-        },
-      ],
-      order: [
-        ["id_empleado", "ASC"],
-        ["dia_semana", "ASC"], // Corregido por si acaso, usando el nombre de la columna real
-      ],
+    const novedades = await db.Novedad.findAll({
+      where: whereClause,
+      include: [includeOptions],
+      order: [["fechaInicio", "DESC"]],
     });
+    return novedades;
   } catch (error) {
-    console.error(
-      "Error al obtener todas las novedades en el servicio:",
-      error.message,
-      error.stack
-    );
+    console.error("Error al obtener todas las novedades:", error);
     throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
 };
 
+/**
+ * Obtiene una novedad por su ID, incluyendo los empleados asignados.
+ */
 const obtenerNovedadPorId = async (idNovedad) => {
-    try {
-        const novedad = await db.Novedades.findByPk(idNovedad, {
-            include: [{
-                model: db.Empleado,
-                as: 'empleado',
-                attributes: ['idEmpleado', 'nombre'],
-            }],
-        });
-        if (!novedad) {
-            throw new NotFoundError('Novedad no encontrada.');
-        }
-        return novedad;
-    } catch (error) {
-        if (error instanceof NotFoundError) throw error;
-        console.error(`Error al obtener la novedad con ID ${idNovedad} en el servicio:`, error.message);
-        throw new CustomError(`Error al obtener la novedad: ${error.message}`, 500);
-    }
+  const novedad = await db.Novedad.findByPk(idNovedad, {
+    include: [{ model: db.Usuario, as: 'empleados', attributes: ['idUsuario', 'correo'] }],
+  });
+  if (!novedad) {
+    throw new NotFoundError("Novedad no encontrada.");
+  }
+  return novedad;
 };
 
-const actualizarNovedad = async (idNovedad, datosActualizar) => {
-    const { horaInicio, horaFin, estado } = datosActualizar;
-    try {
-        const novedad = await db.Novedades.findByPk(idNovedad);
-        if (!novedad) {
-            throw new NotFoundError('Novedad no encontrada para actualizar.');
-        }
-
-        const nuevaHoraInicio = horaInicio !== undefined ? horaInicio : novedad.horaInicio;
-        const nuevaHoraFin = horaFin !== undefined ? horaFin : novedad.horaFin;
-
-        if (nuevaHoraFin <= nuevaHoraInicio) {
-            throw new BadRequestError('La hora de fin debe ser posterior a la hora de inicio.');
-        }
-
-        await novedad.update(datosActualizar);
-        return novedad;
-    } catch (error) {
-        if (error instanceof NotFoundError || error instanceof BadRequestError) throw error;
-        console.error(`Error al actualizar la novedad con ID ${idNovedad} en el servicio:`, error.message);
-        throw new CustomError(`Error al actualizar la novedad: ${error.message}`, 500);
-    }
-};
-
-const anularNovedad = async (idNovedad) => {
-    return cambiarEstadoNovedad(idNovedad, false);
-};
-
-const habilitarNovedad = async (idNovedad) => {
-    return cambiarEstadoNovedad(idNovedad, true);
-};
-
-const eliminarNovedadFisica = async (idNovedad) => {
-    const novedad = await db.Novedades.findByPk(idNovedad);
+/**
+ * Actualiza una novedad y sus empleados asignados.
+ */
+const actualizarNovedad = async (idNovedad, datosActualizar, empleadosIds) => {
+  const t = await db.sequelize.transaction();
+  try {
+    const novedad = await db.Novedad.findByPk(idNovedad, { transaction: t });
     if (!novedad) {
-        throw new NotFoundError('Novedad no encontrada para eliminar físicamente.');
+      throw new NotFoundError("Novedad no encontrada para actualizar.");
     }
-    await novedad.destroy();
-    return { message: 'Novedad eliminada exitosamente.' };
+
+    // Actualiza los datos de la novedad (fechas, horas, etc.)
+    await novedad.update(datosActualizar, { transaction: t });
+
+    // Si se proporciona un array de empleados, sincroniza las asignaciones.
+    // .setEmpleados() elimina las asignaciones viejas y crea las nuevas.
+    if (empleadosIds) {
+      await novedad.setEmpleados(empleadosIds, { transaction: t });
+    }
+
+    await t.commit();
+    return await obtenerNovedadPorId(idNovedad); // Devuelve la novedad actualizada
+
+  } catch (error) {
+    await t.rollback();
+    console.error("Error al actualizar la novedad en el servicio:", error);
+    throw error;
+  }
+};
+
+/**
+ * Cambia el estado de una novedad.
+ */
+const cambiarEstadoNovedad = async (idNovedad, estado) => {
+  const novedad = await db.Novedad.findByPk(idNovedad);
+  if (!novedad) {
+    throw new NotFoundError("Novedad no encontrada.");
+  }
+  await novedad.update({ estado });
+  return novedad;
+};
+
+/**
+ * Elimina una novedad. La tabla de unión se limpia gracias a ON DELETE CASCADE.
+ */
+const eliminarNovedadFisica = async (idNovedad) => {
+  const novedad = await db.Novedad.findByPk(idNovedad);
+  if (!novedad) {
+    throw new NotFoundError("Novedad no encontrada para eliminar.");
+  }
+  await novedad.destroy();
 };
 
 module.exports = {
@@ -173,8 +158,6 @@ module.exports = {
   obtenerTodasLasNovedades,
   obtenerNovedadPorId,
   actualizarNovedad,
-  anularNovedad,
-  habilitarNovedad,
+  cambiarEstadoNovedad,
   eliminarNovedadFisica,
-  cambiarEstadoNovedad
 };

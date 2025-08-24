@@ -1,67 +1,67 @@
-// src/models/Novedades.model.js
+// src/models/Novedad.model.js  <-- Se recomienda renombrar el archivo
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
-  const Novedades = sequelize.define(
-    'Novedades',
+  // El nombre del modelo debe ser singular: Novedad
+  const Novedad = sequelize.define(
+    'Novedad',
     {
       // Propiedad en JS: idNovedad -> Columna en BD: id_novedad
-      idNovedad: { 
+      idNovedad: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: 'id_novedad' 
+        field: 'id_novedad'
       },
-      // Propiedad en JS: diaSemana -> Columna en BD: dia_semana
-      diaSemana: {
-        type: DataTypes.INTEGER,
+      // Propiedad en JS: fechaInicio -> Columna en BD: fecha_inicio
+      fechaInicio: {
+        type: DataTypes.DATEONLY, // Usar DATEONLY para fechas sin hora
         allowNull: false,
-        field: 'dia_semana', 
+        field: 'fecha_inicio'
+      },
+      // Propiedad en JS: fechaFin -> Columna en BD: fecha_fin
+      fechaFin: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+        field: 'fecha_fin'
       },
       // Propiedad en JS: horaInicio -> Columna en BD: hora_inicio
       horaInicio: {
         type: DataTypes.TIME,
         allowNull: false,
-        field: 'hora_inicio' 
+        field: 'hora_inicio'
       },
       // Propiedad en JS: horaFin -> Columna en BD: hora_fin
       horaFin: {
         type: DataTypes.TIME,
         allowNull: false,
-        field: 'hora_fin' 
+        field: 'hora_fin'
       },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
         field: 'estado'
-      },
-      // Propiedad en JS: idEmpleado -> Columna en BD: id_empleado
-      idEmpleado: { 
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'id_empleado', 
       }
     },
     {
       // Nombre exacto de la tabla en la base de datos
       tableName: 'novedades',
-      timestamps: false,
-      indexes: [
-        {
-          unique: true,
-          fields: ['id_empleado', 'dia_semana']
-        }
-      ]
+      timestamps: false
     }
   );
 
-  Novedades.associate = (models) => {
-    Novedades.belongsTo(models.Empleado, {
-      foreignKey: 'idEmpleado', // Usa la propiedad del modelo, NO la columna de la BD
-      as: 'empleado'
+  // --- Definición de la Relación Muchos a Muchos ---
+  Novedad.associate = (models) => {
+    // Una Novedad puede estar asignada a muchos Usuarios (Empleados)
+    // a través de la tabla de unión 'novedad_empleado'.
+    Novedad.belongsToMany(models.Usuario, {
+      through: 'NovedadEmpleado', // Nombre del modelo de la tabla de unión
+      foreignKey: 'id_novedad',   // Clave foránea en la tabla de unión que apunta a Novedad
+      otherKey: 'id_usuario',     // Clave foránea en la tabla de unión que apunta a Usuario
+      as: 'empleados'             // Alias para acceder a los empleados desde una novedad
     });
   };
 
-  return Novedades;
+  return Novedad;
 };

@@ -3,84 +3,62 @@ const express = require("express");
 const router = express.Router();
 const novedadesController = require("../controllers/novedades.controller.js");
 const novedadesValidators = require("../validators/novedades.validators.js");
-
 const authMiddleware = require("../middlewares/auth.middleware.js");
-const {
-  checkPermission,
-} = require("../middlewares/authorization.middleware.js");
+const { checkPermission } = require("../middlewares/authorization.middleware.js");
 
-const PERMISO_MODULO_NOVEDADES_EMPLEADOS =
-  "MODULO_NOVEDADES_EMPLEADOS_GESTIONAR";
+const PERMISO_MODULO_NOVEDADES = "MODULO_NOVEDADES_EMPLEADOS_GESTIONAR";
 
+// --- RUTAS CRUD PARA NOVEDADES ---
+
+// Crear una nueva novedad y asignarla a empleados
 router.post(
   "/",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
+  checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesValidators.crearNovedadValidators,
   novedadesController.crearNovedad
 );
 
-
+// Listar todas las novedades (permite filtrar por query params, ej: /?empleadoId=1&estado=true)
 router.get(
   "/",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
+  checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesController.listarNovedades
 );
 
+// Obtener una novedad específica por su ID
 router.get(
-  "/empleado/:idEmpleado",
+  "/:idNovedad", // CORREGIDO: Parámetro en singular
   authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
-  novedadesValidators.empleadoIdValidator,
-  novedadesController.listarNovedades
-);
-
-router.get(
-  "/:idNovedades",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
+  checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesValidators.idNovedadValidator,
   novedadesController.obtenerNovedadPorId
 );
 
-router.put(
-  "/:idNovedades",
+// Actualizar una novedad por su ID (datos y/o empleados asignados)
+router.patch( // MODIFICADO: Se usa PATCH para actualizaciones parciales
+  "/:idNovedad", // CORREGIDO: Parámetro en singular
   authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
+  checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesValidators.actualizarNovedadValidators,
   novedadesController.actualizarNovedad
 );
 
-// NUEVA RUTA: Cambiar el estado de una novedad
+// Cambiar el estado (activo/inactivo) de una novedad
 router.patch(
-  "/:idNovedades/estado",
+  "/:idNovedad/estado", // CORREGIDO: Parámetro en singular
   authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
+  checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesValidators.cambiarEstadoNovedadValidators,
   novedadesController.cambiarEstadoNovedad
 );
 
-router.patch(
-  "/:idNovedades/anular",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
-  novedadesValidators.idNovedadValidator,
-  novedadesController.anularNovedad
-);
-
-router.patch(
-  "/:idNovedades/habilitar",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
-  novedadesValidators.idNovedadValidator,
-  novedadesController.habilitarNovedad
-);
-
+// Eliminar una novedad por su ID
 router.delete(
-  "/:idNovedades",
+  "/:idNovedad", // CORREGIDO: Parámetro en singular
   authMiddleware,
-  checkPermission(PERMISO_MODULO_NOVEDADES_EMPLEADOS),
+  checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesValidators.idNovedadValidator,
   novedadesController.eliminarNovedadFisica
 );
