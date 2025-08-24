@@ -4,7 +4,7 @@ const CustomError = require("../errors/CustomError"); // Importa tu clase base d
 
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
-  console.error("❌ ERROR CAPTURADO POR EL MANEJADOR GLOBAL:");
+  console.error("❌ ERROR CAPTURADO POR EL MANEJADOR GLOBAL. --- DETALLES COMPLETOS DEL ERROR CAPTURADO ---:", err);
   // Loguear solo el mensaje en producción si no es un error operacional conocido
   if (IS_DEVELOPMENT || err.isOperational) {
     // err.isOperational es una propiedad que puedes añadir a tus CustomError
