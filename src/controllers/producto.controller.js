@@ -4,6 +4,7 @@ const productoService = require("../services/producto.service.js");
  * Crea un nuevo producto.
  */
 const crearProducto = async (req, res, next) => {
+  console.log("📦 Payload recibido en crearProducto:", req.body);
   try {
     const datosProducto = { ...req.body };
 
