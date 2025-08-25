@@ -82,7 +82,7 @@ const crearProducto = async (datosProducto) => {
       estado: typeof estado === "boolean" ? estado : true,
       categoriaProductoId: categoriaProductoId || null,
       // ✅ CORRECCIÓN: Pasamos los nuevos campos al método de creación
-      tipoUso: tipoUso || 'Venta Directa', // Valor por defecto si no se provee
+      tipoUso: ["Interno", "Externo"].includes(tipoUso) ? tipoUso : "Externo",
       vidaUtilDias: vidaUtilDias || null,
     });
     return nuevoProducto;

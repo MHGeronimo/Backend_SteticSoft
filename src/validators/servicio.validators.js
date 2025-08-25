@@ -43,6 +43,10 @@ const crearServicioValidators = [
       }
     }),
 
+  body("imagen")
+    .optional({ nullable: true, checkFalsy: true }),
+
+
   handleValidationErrors,
 ];
 
@@ -87,6 +91,9 @@ const actualizarServicioValidators = [
         return Promise.reject("La categoría seleccionada no existe o no está activa.");
       }
     }),
+
+  body("imagen")
+    .optional({ nullable: true, checkFalsy: true }),
 
   handleValidationErrors,
 ];

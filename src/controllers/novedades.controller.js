@@ -2,14 +2,17 @@
 const novedadesService = require("../services/novedades.service.js");
 
 /**
- * Crea una nueva novedad para un empleado.
+ * Crea una nueva novedad y la asigna a uno o varios empleados.
  */
 const crearNovedad = async (req, res, next) => {
   try {
-    const nuevaNovedad = await novedadesService.crearNovedad(req.body);
+    // Separamos los IDs de los empleados del resto de los datos de la novedad
+    const { empleadosIds, ...datosNovedad } = req.body;
+
+    const nuevaNovedad = await novedadesService.crearNovedad(datosNovedad, empleadosIds);
     res.status(201).json({
       success: true,
-      message: "Novedad creada exitosamente.",
+      message: "Novedad creada y asignada exitosamente.",
       data: nuevaNovedad,
     });
   } catch (error) {
@@ -18,31 +21,16 @@ const crearNovedad = async (req, res, next) => {
 };
 
 /**
- * Obtiene una lista de todas las novedades.
+ * Obtiene una lista de todas las novedades, con opción de filtrar por estado o empleado.
  */
 const listarNovedades = async (req, res, next) => {
   try {
-    const opcionesDeFiltro = {};
-    if (req.query.estado === "true") {
-      opcionesDeFiltro.estado = true;
-    } else if (req.query.estado === "false") {
-      opcionesDeFiltro.estado = false;
-    }
-    if (req.query.empleadoId) {
-      const idEmpleado = Number(req.query.empleadoId);
-      if (!isNaN(idEmpleado) && idEmpleado > 0) {
-        opcionesDeFiltro.empleadoId = idEmpleado;
-      }
-    }
-    if (req.query.diaSemana !== undefined) {
-      const dia = Number(req.query.diaSemana);
-      if (!isNaN(dia) && dia >= 0 && dia <= 6) {
-        opcionesDeFiltro.diaSemana = dia;
-      }
-    }
-    const novedades = await novedadesService.obtenerTodasLasNovedades(
-      opcionesDeFiltro
-    );
+    const opcionesDeFiltro = {
+      estado: req.query.estado,
+      empleadoId: req.query.empleadoId,
+    };
+
+    const novedades = await novedadesService.obtenerTodasLasNovedades(opcionesDeFiltro);
     res.status(200).json({
       success: true,
       data: novedades,
@@ -57,10 +45,9 @@ const listarNovedades = async (req, res, next) => {
  */
 const obtenerNovedadPorId = async (req, res, next) => {
   try {
-    const { idNovedades } = req.params;
-    const novedad = await novedadesService.obtenerNovedadPorId(
-      Number(idNovedades)
-    );
+    // CORREGIDO: Parámetro en singular
+    const { idNovedad } = req.params;
+    const novedad = await novedadesService.obtenerNovedadPorId(Number(idNovedad));
     res.status(200).json({
       success: true,
       data: novedad,
@@ -71,21 +58,19 @@ const obtenerNovedadPorId = async (req, res, next) => {
 };
 
 /**
- * Actualiza una novedad existente por su ID.
+ * Actualiza una novedad existente y/o sus empleados asignados.
  */
 const actualizarNovedad = async (req, res, next) => {
   try {
-    const { idNovedades } = req.params;
-    const { horaInicio, horaFin, estado } = req.body;
-    const datosActualizar = { horaInicio, horaFin, estado };
-
-    Object.keys(datosActualizar).forEach(
-      (key) => datosActualizar[key] === undefined && delete datosActualizar[key]
-    );
+    // CORREGIDO: Parámetro en singular
+    const { idNovedad } = req.params;
+    // Separamos los IDs de los empleados de los datos a actualizar
+    const { empleadosIds, ...datosActualizar } = req.body;
 
     const novedadActualizada = await novedadesService.actualizarNovedad(
-      Number(idNovedades),
-      datosActualizar
+      Number(idNovedad),
+      datosActualizar,
+      empleadosIds // Se pasan los empleados para actualizar la tabla de unión
     );
     res.status(200).json({
       success: true,
@@ -102,58 +87,18 @@ const actualizarNovedad = async (req, res, next) => {
  */
 const cambiarEstadoNovedad = async (req, res, next) => {
   try {
-    const { idNovedades } = req.params;
-    const { estado } = req.body; // Se espera un booleano
+    // CORREGIDO: Parámetro en singular
+    const { idNovedad } = req.params;
+    const { estado } = req.body;
 
-    // La función actualizarNovedad del servicio puede manejar el cambio de estado booleano
-    // si se le pasa solo el campo estado.
-    // O podemos usar la función cambiarEstadoNovedad que creamos en el servicio.
     const novedadActualizada = await novedadesService.cambiarEstadoNovedad(
-      Number(idNovedades),
+      Number(idNovedad),
       estado
     );
     res.status(200).json({
       success: true,
-      message: `Estado de la novedad ID ${idNovedades} cambiado a ${estado} exitosamente.`,
+      message: `Estado de la novedad cambiado exitosamente.`,
       data: novedadActualizada,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Anula una novedad (estado booleano = false).
- */
-const anularNovedad = async (req, res, next) => {
-  try {
-    const { idNovedades } = req.params;
-    const novedadAnulada = await novedadesService.anularNovedad(
-      Number(idNovedades)
-    );
-    res.status(200).json({
-      success: true,
-      message: "Novedad anulada (deshabilitada) exitosamente.",
-      data: novedadAnulada,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Habilita una novedad (estado booleano = true).
- */
-const habilitarNovedad = async (req, res, next) => {
-  try {
-    const { idNovedades } = req.params;
-    const novedadHabilitada = await novedadesService.habilitarNovedad(
-      Number(idNovedades)
-    );
-    res.status(200).json({
-      success: true,
-      message: "Novedad habilitada exitosamente.",
-      data: novedadHabilitada,
     });
   } catch (error) {
     next(error);
@@ -165,8 +110,10 @@ const habilitarNovedad = async (req, res, next) => {
  */
 const eliminarNovedadFisica = async (req, res, next) => {
   try {
-    const { idNovedades } = req.params;
-    await novedadesService.eliminarNovedadFisica(Number(idNovedades));
+    // CORREGIDO: Parámetro en singular
+    const { idNovedad } = req.params;
+    await novedadesService.eliminarNovedadFisica(Number(idNovedad));
+    // Se envía 204 No Content, que es el estándar para eliminaciones exitosas.
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -178,8 +125,6 @@ module.exports = {
   listarNovedades,
   obtenerNovedadPorId,
   actualizarNovedad,
-  anularNovedad,
-  habilitarNovedad,
+  cambiarEstadoNovedad,
   eliminarNovedadFisica,
-  cambiarEstadoNovedad, // <-- Nueva función exportada
 };

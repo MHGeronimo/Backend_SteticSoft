@@ -51,11 +51,10 @@ module.exports = (sequelize, DataTypes) => {
         field: "estado",
       },
       tipoUso: {
-        type: DataTypes.ENUM("Interno", "Externo"), // <-- Debe coincidir con la base de datos
-        allowNull: false,
-        defaultValue: "Externo",
-        field: "tipo_uso",
-      },
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      field: "tipo_uso",
+},
       vidaUtilDias: {
         type: DataTypes.INTEGER,
         allowNull: true,

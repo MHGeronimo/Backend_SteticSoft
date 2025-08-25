@@ -51,8 +51,19 @@ const crearProductoValidators = [
   // FIN DE LA CORRECCIÓN
 
   body("tipoUso")
-    .isIn(["Venta", "Interno"])
-    .withMessage("El tipo de uso no es válido."),
+  .exists({ checkFalsy: true })
+  .withMessage("El tipo de uso es obligatorio.")
+  .bail()
+  .isString()
+  .bail()
+  .trim()
+  .toLowerCase() // 👈 sanitiza a minúsculas
+  .isIn(["interno", "externo"])
+  .withMessage("El tipo de uso no es válido.")
+  .bail()
+  .customSanitizer(v => v.charAt(0).toUpperCase() + v.slice(1)), // guarda como Interno / Externo
+
+
 
   // La imagen no se valida aquí porque multer ya la procesó.
   // Podemos validar opcionalmente otros campos si es necesario.
@@ -70,7 +81,15 @@ const actualizarProductoValidators = [
   body("existencia").optional().toInt().isInt({ min: 0 }),
   body("stockMinimo").optional().toInt().isInt({ min: 0 }),
   body("idCategoriaProducto").optional().toInt().isInt({ gt: 0 }),
-  body("tipoUso").optional().isIn(["Venta", "Interno"]),
+  body("tipoUso")
+  .optional()
+  .isString()
+  .trim()
+  .toLowerCase()
+  .isIn(["interno", "externo"])
+  .withMessage("El tipo de uso no es válido.")
+  .bail()
+  .customSanitizer(v => v.charAt(0).toUpperCase() + v.slice(1)),
   handleValidationErrors,
 ];
 

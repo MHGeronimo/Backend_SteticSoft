@@ -1,3 +1,4 @@
+const path = require("path");
 const db = require("../models");
 const { Op } = db.Sequelize;
 const {
@@ -16,10 +17,9 @@ const crearServicio = async (req, res, next) => {
   try {
     const servicioData = { ...req.body };
     if (req.file) {
-      // Esta lógica para extraer la ruta de la imagen es correcta.
-      const imagePath = req.file.path.replace(/\\/g, "/");
-      servicioData.imagen = imagePath.substring(imagePath.indexOf("uploads"));
+      servicioData.imagen = path.join('uploads', 'servicios', req.file.filename).replace(/\\/g, '/');
     }
+
     const nuevoServicio = await servicioService.crearServicio(servicioData);
     res.status(201).json({
       success: true,
@@ -82,10 +82,7 @@ const actualizarServicio = async (req, res, next) => {
     const { idServicio } = req.params;
     const datosActualizar = { ...req.body };
     if (req.file) {
-      const imagePath = req.file.path.replace(/\\/g, "/");
-      datosActualizar.imagen = imagePath.substring(
-        imagePath.indexOf("uploads")
-      );
+      datosActualizar.imagen = path.join('uploads', 'servicios', req.file.filename).replace(/\\/g, '/');
     }
     const servicioActualizado = await servicioService.actualizarServicio(
       Number(idServicio),
