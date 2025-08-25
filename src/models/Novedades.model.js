@@ -68,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
     // Una Novedad puede estar asignada a muchos Usuarios (Empleados)
     // a través de la tabla de unión 'novedad_empleado'.
     Novedad.belongsToMany(models.Usuario, {
-      through: models.NovedadEmpleado, // Nombre del modelo de la tabla de unión
+      through: 'NovedadEmpleado', // Nombre del modelo de la tabla de unión
       foreignKey: 'id_novedad',   // Clave foránea en la tabla de unión que apunta a Novedad
       otherKey: 'id_usuario',     // Clave foránea en la tabla de unión que apunta a Usuario
       as: 'empleados'             // Alias para acceder a los empleados desde una novedad
