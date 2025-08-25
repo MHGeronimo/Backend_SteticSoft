@@ -72,7 +72,15 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'idUsuario', // Se refiere al atributo 'idUsuario' en el modelo TokenRecuperacion.
       as: 'tokensRecuperacion'
     });
-  };
+
+
+        Usuario.belongsToMany(models.Novedad, {
+      through: models.NovedadEmpleado, // Usa el MODELO de la tabla de unión
+      foreignKey: 'id_usuario',        // Clave en la tabla de unión que apunta a este modelo (Usuario)
+      otherKey: 'id_novedad',          // La otra clave en la tabla de unión
+      as: 'novedadesAsignadas'         // Alias para hacer consultas
+    });
+  };  
 
   return Usuario;
 };
