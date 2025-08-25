@@ -1,4 +1,5 @@
 // src/models/Usuario.model.js
+console.log("--- [PRUEBA] CARGANDO Usuario.model.js - VERSIÓN MÁS RECIENTE ---");
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
