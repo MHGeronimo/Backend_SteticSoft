@@ -51,6 +51,7 @@ const crearProductoValidators = [
   // FIN DE LA CORRECCIÓN
 
   body("tipoUso")
+    .trim()
     .isIn(["Interno", "Externo"])
     .withMessage("El tipo de uso no es válido."),
 
