@@ -57,11 +57,12 @@ const crearProductoValidators = [
   .isString()
   .bail()
   .trim()
-  .customSanitizer(v => String(v).trim().toLowerCase())
+  .toLowerCase() // 👈 sanitiza a minúsculas
   .isIn(["interno", "externo"])
   .withMessage("El tipo de uso no es válido.")
   .bail()
-  .customSanitizer(v => v.charAt(0).toUpperCase() + v.slice(1)), // => Interno / Externo
+  .customSanitizer(v => v.charAt(0).toUpperCase() + v.slice(1)), // guarda como Interno / Externo
+
 
 
   // La imagen no se valida aquí porque multer ya la procesó.
@@ -84,7 +85,7 @@ const actualizarProductoValidators = [
   .optional()
   .isString()
   .trim()
-  .customSanitizer(v => String(v).trim().toLowerCase())
+  .toLowerCase()
   .isIn(["interno", "externo"])
   .withMessage("El tipo de uso no es válido.")
   .bail()
