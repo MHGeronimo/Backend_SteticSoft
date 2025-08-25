@@ -95,7 +95,3 @@ console.log(
   "📦 Exportando el objeto 'db' que contiene todos los modelos y la instancia de Sequelize."
 );
 module.exports = db;
-
-console.log(
-  "--- [PRUEBA] CARGANDO Usuario.model.js - VERSIÓN MÁS RECIENTE ---"
-);
