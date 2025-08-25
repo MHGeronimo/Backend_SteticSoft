@@ -1,4 +1,5 @@
 // src/models/Usuario.model.js
+console.log("--- [PRUEBA] CARGANDO Usuario.model.js - VERSIÓN MÁS RECIENTE ---");
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -27,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       idRol: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         field: 'id_rol', 
         references: {
           model: 'rol',
@@ -72,7 +73,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'idUsuario', // Se refiere al atributo 'idUsuario' en el modelo TokenRecuperacion.
       as: 'tokensRecuperacion'
     });
-  };
+  };  
 
   return Usuario;
 };

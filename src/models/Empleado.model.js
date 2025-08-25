@@ -16,19 +16,19 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: 'nombre'
       },
-      apellido: { 
+      apellido: {
         type: DataTypes.STRING(100),
         allowNull: false,
         field: 'apellido',
       },
-      correo: { 
+      correo: {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
         validate: { isEmail: true },
         field: 'correo',
       },
-      telefono: { 
+      telefono: {
         type: DataTypes.STRING(20),
         allowNull: false,
         field: 'telefono',
@@ -81,31 +81,34 @@ module.exports = (sequelize, DataTypes) => {
       as: "cuentaUsuario",
     });
 
-    // Un Empleado puede tener muchas Especialidades.
-    Empleado.belongsToMany(models.Especialidad, {
-      through: 'empleado_especialidad',
-      foreignKey: 'id_empleado',
-      otherKey: 'id_especialidad',
-      as: 'especialidades'
-    });
+    // // Un Empleado puede tener muchas Especialidades.
+    // Empleado.belongsToMany(models.Especialidad, {
+    //   through: 'empleado_especialidad',
+    //   foreignKey: 'id_empleado',
+    //   otherKey: 'id_especialidad',
+    //   as: 'especialidades'
+    // });
 
-    // Un Empleado puede tener muchas Citas asignadas.
-    Empleado.hasMany(models.Cita, {
-      foreignKey: 'idEmpleado', // Se refiere al atributo 'idEmpleado' en el modelo Cita.
-      as: 'citasAtendidas'
-    });
+    // DEPRECADO: La relación con Cita ahora es a través de Usuario. Ver modelo Cita.
+    // // Un Empleado puede tener muchas Citas asignadas.
+    // Empleado.hasMany(models.Cita, {
+    //   foreignKey: 'idEmpleado', // Se refiere al atributo 'idEmpleado' en el modelo Cita.
+    //   as: 'citasAtendidas'
+    // });
 
-    // Un Empleado puede tener muchos Abastecimientos asignados.
-    Empleado.hasMany(models.Abastecimiento, {
-      foreignKey: 'idEmpleadoAsignado', // Se refiere al atributo en el modelo Abastecimiento.
-      as: 'abastecimientosAsignados'
-    });
+    // DEPRECADO: La relación con Abastecimiento ahora es a través de Usuario. Ver modelo Abastecimiento.
+    // // Un Empleado puede tener muchos Abastecimientos asignados.
+    // Empleado.hasMany(models.Abastecimiento, {
+    //   foreignKey: 'idEmpleadoAsignado', // Se refiere al atributo en el modelo Abastecimiento.
+    //   as: 'abastecimientosAsignados'
+    // });
     
-    // Un Empleado puede tener muchas Novedades de horario.
-    Empleado.hasMany(models.Novedades, {
-      foreignKey: 'idEmpleado', // Se refiere al atributo 'idEmpleado' en el modelo Novedades.
-      as: 'novedadesHorario'
-    });
+    // DEPRECADO: La relación con Novedades es M-M a través de la tabla novedad_empleado, que usa id_usuario.
+    // // Un Empleado puede tener muchas Novedades de horario.
+    // Empleado.hasMany(models.Novedades, {
+    //   foreignKey: 'idEmpleado', // Se refiere al atributo 'idEmpleado' en el modelo Novedades.
+    //   as: 'novedadesHorario'
+    // });
   };
 
   return Empleado;

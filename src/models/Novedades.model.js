@@ -47,7 +47,19 @@ module.exports = (sequelize, DataTypes) => {
     {
       // Nombre exacto de la tabla en la base de datos
       tableName: 'novedades',
-      timestamps: false
+      timestamps: false,
+      validate: {
+        fechaFinMayorOIgualQueFechaInicio() {
+          if (this.fechaFin < this.fechaInicio) {
+            throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+          }
+        },
+        horaFinMayorQueHoraInicio() {
+          if (this.horaFin <= this.horaInicio) {
+            throw new Error('La hora de fin debe ser posterior a la hora de inicio.');
+          }
+        }
+      }
     }
   );
 
