@@ -5,21 +5,25 @@ module.exports = (sequelize, DataTypes) => {
   const NovedadEmpleado = sequelize.define(
     'NovedadEmpleado',
     {
-      id_novedad: {
+      idNovedad: {
         type: DataTypes.INTEGER,
         primaryKey: true,
+        field: 'id_novedad',
         references: {
-          model: 'Novedad',
-          key: 'idNovedad'
-        }
+          model: 'novedades',
+          key: 'id_novedad'
+        },
+        onDelete: 'CASCADE'
       },
-      id_usuario: {
+      idUsuario: {
         type: DataTypes.INTEGER,
         primaryKey: true,
+        field: 'id_usuario',
         references: {
-          model: 'Usuario',
-          key: 'idUsuario'
-        }
+          model: 'usuario',
+          key: 'id_usuario'
+        },
+        onDelete: 'CASCADE'
       }
     },
     {
