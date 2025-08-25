@@ -8,10 +8,14 @@ const crearProducto = async (req, res, next) => {
   try {
     const datosProducto = { ...req.body };
 
+    // ✅ Mapear idCategoriaProducto → categoriaProductoId
+    if (datosProducto.idCategoriaProducto && !datosProducto.categoriaProductoId) {
+      datosProducto.categoriaProductoId = Number(datosProducto.idCategoriaProducto);
+    }
+
     // Si se subió un archivo, multer nos deja la info en req.file
     if (req.file) {
-      // CORRECCIÓN: Guardamos solo la ruta relativa en la base de datos.
-      // Es más portable y flexible para diferentes entornos (desarrollo, producción).
+      // Guardamos solo la ruta relativa
       datosProducto.imagen = `/uploads/productos/${req.file.filename}`;
     }
 
@@ -31,7 +35,6 @@ const crearProducto = async (req, res, next) => {
  */
 const listarProductos = async (req, res, next) => {
   try {
-    // Se pasan directamente los filtros de la query al servicio.
     const productos = await productoService.obtenerTodosLosProductos(req.query);
     res.status(200).json({
       success: true,
@@ -68,10 +71,14 @@ const actualizarProducto = async (req, res, next) => {
     const { idProducto } = req.params;
     const datosActualizar = { ...req.body };
 
-    // CORRECCIÓN: Lógica similar para la actualización de la imagen.
+    // ✅ Mapear idCategoriaProducto → categoriaProductoId
+    if (datosActualizar.idCategoriaProducto && !datosActualizar.categoriaProductoId) {
+      datosActualizar.categoriaProductoId = Number(datosActualizar.idCategoriaProducto);
+    }
+
     if (req.file) {
       datosActualizar.imagen = `/uploads/productos/${req.file.filename}`;
-      // Opcional: Aquí se podría añadir lógica para borrar la imagen anterior.
+      // Opcional: Aquí podrías borrar la imagen anterior si lo deseas.
     }
 
     const productoActualizado = await productoService.actualizarProducto(
