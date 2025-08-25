@@ -1,4 +1,5 @@
-// src/models/Especialidad.model.js
+// DEPRECADO: El modelo Especialidad y la tabla 'especialidad' fueron eliminados según el schema steticsoft_schema.sql.
+/*
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -46,3 +47,4 @@ module.exports = (sequelize, DataTypes) => {
 
   return Especialidad;
 };
+*/

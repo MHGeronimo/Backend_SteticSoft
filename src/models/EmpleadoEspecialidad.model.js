@@ -1,4 +1,5 @@
-// src/models/EmpleadoEspecialidad.model.js
+// DEPRECADO: El modelo EmpleadoEspecialidad y la tabla 'empleado_especialidad' fueron eliminados según el schema steticsoft_schema.sql.
+/*
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -39,3 +40,4 @@ module.exports = (sequelize, DataTypes) => {
 
   return EmpleadoEspecialidad;
 };
+*/

@@ -50,8 +50,8 @@ module.exports = (sequelize, DataTypes) => {
         field: "fecha_nacimiento", 
       },
       direccion: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
+        type: DataTypes.TEXT,
+        allowNull: false,
         field: "direccion",
       },
       estado: {

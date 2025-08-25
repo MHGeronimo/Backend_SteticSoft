@@ -32,15 +32,15 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.NOW,
         field: 'fecha_ingreso'
       },
-      idEmpleadoAsignado: { 
+      idUsuario: {
         type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'id_empleado_asignado', 
+        allowNull: false,
+        field: 'id_usuario',
         references: {
-          model: 'empleado',
-          key: 'id_empleado' 
+          model: 'usuario',
+          key: 'id_usuario'
         },
-        onDelete: 'SET NULL'
+        onDelete: 'RESTRICT'
       },
       estaAgotado: {
         type: DataTypes.BOOLEAN,
@@ -78,10 +78,10 @@ module.exports = (sequelize, DataTypes) => {
       as: 'producto'
     });
 
-    // Un Abastecimiento es responsabilidad de un Empleado.
-    Abastecimiento.belongsTo(models.Empleado, {
-      foreignKey: 'idEmpleadoAsignado',
-      as: 'empleado'
+    // Un Abastecimiento es responsabilidad de un Usuario (Empleado).
+    Abastecimiento.belongsTo(models.Usuario, {
+      foreignKey: 'idUsuario',
+      as: 'usuario'
     });
   };
 

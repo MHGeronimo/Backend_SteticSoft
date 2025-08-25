@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       idRol: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         field: 'id_rol', 
         references: {
           model: 'rol',
