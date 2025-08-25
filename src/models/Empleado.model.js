@@ -81,13 +81,13 @@ module.exports = (sequelize, DataTypes) => {
       as: "cuentaUsuario",
     });
 
-    // Un Empleado puede tener muchas Especialidades.
-    Empleado.belongsToMany(models.Especialidad, {
-      through: 'empleado_especialidad',
-      foreignKey: 'id_empleado',
-      otherKey: 'id_especialidad',
-      as: 'especialidades'
-    });
+    // // Un Empleado puede tener muchas Especialidades.
+    // Empleado.belongsToMany(models.Especialidad, {
+    //   through: 'empleado_especialidad',
+    //   foreignKey: 'id_empleado',
+    //   otherKey: 'id_especialidad',
+    //   as: 'especialidades'
+    // });
 
     // Un Empleado puede tener muchas Citas asignadas.
     Empleado.hasMany(models.Cita, {
