@@ -113,7 +113,3 @@ module.exports = db;
 console.log("============================================================");
 console.log("🎉 MÓDULO DE MODELOS LISTO Y EXPORTADO.");
 console.log("============================================================\n");
-
-
-// Este log se mantiene al final como lo pediste originalmente
-console.log("--- [PRUEBA] CARGANDO Usuario.model.js - VERSIÓN MÁS RECIENTE ---");
