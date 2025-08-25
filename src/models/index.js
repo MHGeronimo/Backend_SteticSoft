@@ -37,8 +37,8 @@ const nombresDeModelos = [
   "Estado",
   "Cliente",
   "Empleado",
-  "Especialidad",
-  "EmpleadoEspecialidad",
+  // "Especialidad", // DEPRECADO
+  // "EmpleadoEspecialidad", // DEPRECADO
   "Proveedor",
   "CategoriaProducto",
   "CategoriaServicio",
