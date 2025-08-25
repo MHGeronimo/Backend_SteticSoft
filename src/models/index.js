@@ -80,3 +80,6 @@ db.Sequelize = Sequelize; // La clase Sequelize (para Op, literal, DataTypes si 
 
 // 5. Exportar el objeto db
 module.exports = db;
+
+
+console.log("--- [PRUEBA] CARGANDO Usuario.model.js - VERSIÓN MÁS RECIENTE ---");
