@@ -20,7 +20,9 @@ const crearUsuarioValidators = [
   body("contrasena")
     .notEmpty().withMessage("The password is required.")
     .isString().withMessage("The password must be a text string.")
-    .isLength({ min: 8 }).withMessage("The password must be at least 8 characters long."),
+    .isLength({ min: 8 }).withMessage("The password must be at least 8 characters long.")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
+    .withMessage("The password must contain at least one uppercase letter, one lowercase letter, one number, and one special character."),
   body("idRol")
     .notEmpty().withMessage("The role ID is required.")
     .isInt({ gt: 0 }).withMessage("The role ID must be a positive integer.")
@@ -129,7 +131,9 @@ const actualizarUsuarioValidators = [
   body("contrasena") // Password is optional on update
     .optional({ checkFalsy: true }) // Allows empty string to be ignored, or not send the field
     .isString().withMessage("The password must be a text string.")
-    .isLength({ min: 8 }).withMessage("The password must be at least 8 characters long if updating."),
+    .isLength({ min: 8 }).withMessage("The password must be at least 8 characters long if updating.")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
+    .withMessage("If provided, the new password must contain at least one uppercase letter, one lowercase letter, one number, and one special character."),
   body("idRol")
     .optional()
     .isInt({ gt: 0 }).withMessage("The role ID must be a positive integer if updating.")
