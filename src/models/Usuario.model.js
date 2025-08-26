@@ -75,7 +75,7 @@ module.exports = (sequelize, DataTypes) => {
 
     // ✅ NUEVA ASOCIACIÓN: Un Usuario (Empleado) puede tener muchas Novedades.
     Usuario.belongsToMany(models.Novedad, {
-      through: models.NovedadEmpleado,
+      through: 'NovedadEmpleado',
       foreignKey: 'id_usuario',
       otherKey: 'id_novedad',
       as: 'novedades'

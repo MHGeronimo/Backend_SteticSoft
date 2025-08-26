@@ -16,14 +16,25 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
   const t = await db.sequelize.transaction();
 
   try {
-    // 1. Validar que los empleados existan y estén activos
+    // 1. Validar que los IDs de empleados proporcionados son válidos
     if (empleadosIds && empleadosIds.length > 0) {
-      const usuarios = await db.Usuario.findAll({
-        where: { idUsuario: empleadosIds, estado: true },
+      const count = await db.Usuario.count({
+        where: {
+          idUsuario: { [Op.in]: empleadosIds },
+          estado: true,
+        },
+        include: [{
+          model: db.Rol,
+          as: 'rol',
+          where: { nombre: 'Empleado' }, // Solo usuarios con rol 'Empleado'
+        }],
         transaction: t,
       });
-      if (usuarios.length !== empleadosIds.length) {
-        throw new BadRequestError("Uno o más de los empleados seleccionados no existen o no están activos.");
+
+      if (count !== empleadosIds.length) {
+        throw new BadRequestError(
+          "Uno o más de los IDs proporcionados no corresponden a empleados válidos y activos."
+        );
       }
     }
 
@@ -114,9 +125,32 @@ const actualizarNovedad = async (idNovedad, datosActualizar, empleadosIds) => {
     // Actualiza los datos de la novedad (fechas, horas, etc.)
     await novedad.update(datosActualizar, { transaction: t });
 
-    // Si se proporciona un array de empleados, sincroniza las asignaciones.
-    // .setEmpleados() elimina las asignaciones viejas y crea las nuevas.
-    if (empleadosIds) {
+    // Si se proporciona un array de empleados, valida y sincroniza las asignaciones.
+    if (typeof empleadosIds !== 'undefined') {
+      // Validar que los IDs de empleados proporcionados son válidos
+      if (empleadosIds.length > 0) {
+        const count = await db.Usuario.count({
+          where: {
+            idUsuario: { [Op.in]: empleadosIds },
+            estado: true,
+          },
+          include: [{
+            model: db.Rol,
+            as: 'rol',
+            where: { nombre: 'Empleado' },
+          }],
+          transaction: t,
+        });
+
+        if (count !== empleadosIds.length) {
+          throw new BadRequestError(
+            "Uno o más de los IDs proporcionados no corresponden a empleados válidos y activos."
+          );
+        }
+      }
+
+      // .setEmpleados() elimina las asignaciones viejas y crea las nuevas.
+      // Si se pasa un array vacío, se desasignan todos los empleados.
       await novedad.setEmpleados(empleadosIds, { transaction: t });
     }
 

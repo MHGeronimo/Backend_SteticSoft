@@ -59,8 +59,8 @@ module.exports = (sequelize, DataTypes) => {
   Novedad.associate = (models) => {
     // Una Novedad puede estar asignada a muchos Usuarios (Empleados)
     Novedad.belongsToMany(models.Usuario, {
-      // ✅ CORRECCIÓN CLAVE: Se pasa el modelo directamente, no el nombre como string.
-      through: models.NovedadEmpleado,
+      // ✅ CORRECCIÓN CLAVE: Se pasa el nombre del modelo como string para más robustez.
+      through: 'NovedadEmpleado',
       foreignKey: 'id_novedad',
       otherKey: 'id_usuario',
       as: 'empleados'

@@ -60,6 +60,7 @@ const nombresDeModelos = [
   "ProductoXVenta",
   "VentaXServicio",
   "Abastecimiento",
+  "NovedadEmpleado", // Modelo de unión para Novedades y Empleados (Usuarios)
   "Novedades",
   "TokenRecuperacion",
 ];
