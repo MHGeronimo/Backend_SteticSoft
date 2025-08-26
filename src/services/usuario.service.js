@@ -299,7 +299,7 @@ const verificarCorreoExistente = async (correo) => {
 };
 
 /**
- * Get all users with their role and associated Client/Employee profile.
+ * Obtiene todos los usuarios con su rol y perfil asociado (Cliente/Empleado).
  */
 const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
   try {
@@ -310,36 +310,16 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
         {
           model: db.Rol,
           as: "rol",
-          attributes: ["idRol", "nombre"],
+          attributes: ["idRol", "nombre", "tipoPerfil"],
         },
         {
           model: db.Cliente,
           as: "clienteInfo",
-          attributes: [
-            "idCliente",
-            "nombre",
-            "apellido",
-            "correo",
-            "telefono",
-            "tipoDocumento",
-            "numeroDocumento",
-            "fechaNacimiento",
-          ],
           required: false,
         },
         {
           model: db.Empleado,
           as: "empleadoInfo",
-          attributes: [
-            "idEmpleado",
-            "nombre",
-            "apellido",
-            "correo",
-            "telefono",
-            "tipoDocumento",
-            "numeroDocumento",
-            "fechaNacimiento",
-          ],
           required: false,
         },
       ],
@@ -347,184 +327,198 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
     });
     return usuarios;
   } catch (error) {
-    throw new CustomError(`Error al get users: ${error.message}`, 500);
+    throw new CustomError(
+      `Error al obtener los usuarios: ${error.message}`,
+      500
+    );
   }
 };
 
 /**
- * Get a user by their ID, including their role and Client/Employee profile.
+ * Obtiene un usuario por su ID, incluyendo su rol y perfil (Cliente/Empleado).
  */
 const obtenerUsuarioPorId = async (idUsuario) => {
   try {
     const usuario = await db.Usuario.findByPk(idUsuario, {
-      attributes: ["idUsuario", "correo", "estado", "idRol"],
+      attributes: { exclude: ["contrasena"] },
       include: [
-        { model: db.Rol, as: "rol", attributes: ["idRol", "nombre"] },
+        {
+          model: db.Rol,
+          as: "rol",
+          attributes: ["idRol", "nombre", "tipoPerfil"],
+        },
         { model: db.Cliente, as: "clienteInfo", required: false },
         { model: db.Empleado, as: "empleadoInfo", required: false },
       ],
     });
     if (!usuario) {
-      throw new NotFoundError("User not found.");
+      throw new NotFoundError("Usuario no encontrado.");
     }
     return usuario;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    throw new CustomError(`Error al get user: ${error.message}`, 500);
+    throw new CustomError(`Error al obtener el usuario: ${error.message}`, 500);
   }
 };
 
 /**
- * Update an existing user and their associated profile.
+ * Actualiza un usuario existente y su perfil asociado.
  */
 const actualizarUsuario = async (idUsuario, datosActualizar) => {
-  const transaction = await db.sequelize.transaction();
+  const t = await db.sequelize.transaction();
   try {
-    const usuario = await db.Usuario.findByPk(idUsuario, { transaction });
+    const usuario = await db.Usuario.findByPk(idUsuario, {
+      include: [{ model: db.Rol, as: "rol" }],
+      transaction: t,
+    });
     if (!usuario) {
-      await transaction.rollback();
-      throw new NotFoundError("User not found to update.");
+      await t.rollback();
+      throw new NotFoundError("Usuario no encontrado para actualizar.");
     }
 
-    const datosParaUsuario = {};
-    const datosParaPerfil = {};
+    const {
+      contrasena,
+      correo,
+      idRol,
+      estado,
+      ...datosPerfil
+    } = datosActualizar;
 
-    // Separar datos para Usuario y Perfil
-    for (const key in datosActualizar) {
-      if (["correo", "idRol", "estado", "contrasena"].includes(key)) {
-        datosParaUsuario[key] = datosActualizar[key];
-      } else {
-        datosParaPerfil[key] = datosActualizar[key];
-      }
-    }
-
-    if (datosParaUsuario.correo && datosParaUsuario.correo !== usuario.correo) {
+    // Actualizar datos del usuario
+    if (correo && correo !== usuario.correo) {
       const existe = await db.Usuario.findOne({
-        where: {
-          correo: datosParaUsuario.correo,
-          idUsuario: { [Op.ne]: idUsuario },
-        },
-        transaction,
+        where: { correo, idUsuario: { [Op.ne]: idUsuario } },
+        transaction: t,
       });
       if (existe) {
-        await transaction.rollback();
+        await t.rollback();
         throw new ConflictError(
-          `The email address '${datosParaUsuario.correo}' is already registered.`
+          `El correo electrónico '${correo}' ya está registrado.`
         );
       }
+      usuario.correo = correo;
+      if (datosPerfil.correo === undefined) datosPerfil.correo = correo; // Sincronizar correo en perfil
     }
 
-    if (datosParaUsuario.contrasena) {
-      datosParaUsuario.contrasena = await bcrypt.hash(
-        datosParaUsuario.contrasena,
-        saltRounds
-      );
+    if (contrasena) {
+      usuario.contrasena = await bcrypt.hash(contrasena, saltRounds);
     }
+    if (idRol !== undefined) usuario.idRol = idRol;
+    if (estado !== undefined) usuario.estado = estado;
 
-    if (Object.keys(datosParaUsuario).length > 0) {
-      await usuario.update(datosParaUsuario, { transaction });
-    }
+    await usuario.save({ transaction: t });
 
-    const rolActual = await db.Rol.findByPk(usuario.idRol, { transaction });
+    // Actualizar datos del perfil si existen
+    if (Object.keys(datosPerfil).length > 0) {
+      const tipoPerfil = usuario.rol.tipoPerfil;
+      let profileModel;
+      if (tipoPerfil === "CLIENTE") profileModel = db.Cliente;
+      else if (tipoPerfil === "EMPLEADO") profileModel = db.Empleado;
 
-    // Solo dependemos de tipoPerfil
-    if (Object.keys(datosParaPerfil).length > 0) {
-      if (rolActual.tipoPerfil === "CLIENTE") {
-        const cliente = await db.Cliente.findOne({
-          where: { idUsuario: idUsuario }, // ✅ CORRECTO
-          transaction,
+      if (profileModel) {
+        const perfil = await profileModel.findOne({
+          where: { idUsuario },
+          transaction: t,
         });
-        if (cliente) await cliente.update(datosParaPerfil, { transaction });
-      } else if (rolActual.tipoPerfil === "EMPLEADO") {
-        const empleado = await db.Empleado.findOne({
-          where: { idUsuario: idUsuario }, // ✅ CORRECTO
-          transaction,
-        });
-        if (empleado) await empleado.update(datosParaPerfil, { transaction });
+        if (perfil) {
+          await perfil.update(datosPerfil, { transaction: t });
+        }
       }
     }
 
-    await transaction.commit();
+    await t.commit();
     return obtenerUsuarioPorId(idUsuario);
   } catch (error) {
-    await transaction.rollback();
+    await t.rollback();
     if (
       error instanceof NotFoundError ||
       error instanceof ConflictError ||
       error instanceof BadRequestError
-    )
+    ) {
       throw error;
-    throw new CustomError(`Error al update user: ${error.message}`, 500);
+    }
+    throw new CustomError(
+      `Error al actualizar el usuario: ${error.message}`,
+      500
+    );
   }
 };
 
 /**
- * Disable a user (logical deletion, sets status = false).
+ * Desactiva un usuario (borrado lógico, estado = false).
  */
 const anularUsuario = async (idUsuario) => {
   try {
     return await cambiarEstadoUsuario(idUsuario, false);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    throw new CustomError(`Error al disable user: ${error.message}`, 500);
+    throw new CustomError(
+      `Error al anular (desactivar) el usuario: ${error.message}`,
+      500
+    );
   }
 };
 
 /**
- * Enable a user (changes status = true).
+ * Activa un usuario (cambia su estado a true).
  */
 const habilitarUsuario = async (idUsuario) => {
   try {
     return await cambiarEstadoUsuario(idUsuario, true);
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
-    throw new CustomError(`Error al enable user: ${error.message}`, 500);
+    throw new CustomError(
+      `Error al habilitar el usuario: ${error.message}`,
+      500
+    );
   }
 };
 
 /**
- * Physically delete a user from the database.
+ * Elimina físicamente un usuario de la base de datos.
  */
 const eliminarUsuarioFisico = async (idUsuario) => {
-  const transaction = await db.sequelize.transaction();
+  const t = await db.sequelize.transaction();
   try {
-    const usuario = await db.Usuario.findByPk(idUsuario, { transaction });
+    const usuario = await db.Usuario.findByPk(idUsuario, { transaction: t });
     if (!usuario) {
-      await transaction.rollback();
-      throw new NotFoundError("User not found to physically delete.");
+      await t.rollback();
+      throw new NotFoundError("Usuario no encontrado para eliminar físicamente.");
     }
 
-    // Solo dependemos de tipoPerfil
-    const rol = await db.Rol.findByPk(usuario.idRol, { transaction });
+    // La eliminación en cascada de la base de datos se encargará de los perfiles
+    // si las restricciones ON DELETE CASCADE están definidas en la migración.
+    // Si no, se debe eliminar manualmente como se hacía antes.
+    // Por seguridad, mantenemos la eliminación manual explícita.
 
-    if (rol) { // Verificar que el rol exista
+    const rol = await db.Rol.findByPk(usuario.idRol, { transaction: t });
+    if (rol) {
       if (rol.tipoPerfil === "CLIENTE") {
-        await db.Cliente.destroy({
-          where: { idUsuario: idUsuario }, // Corregido: debe ser idUsuario
-          transaction,
-        });
+        await db.Cliente.destroy({ where: { idUsuario }, transaction: t });
       } else if (rol.tipoPerfil === "EMPLEADO") {
-        await db.Empleado.destroy({
-          where: { idUsuario: idUsuario }, // Corregido: debe ser idUsuario
-          transaction,
-        });
+        await db.Empleado.destroy({ where: { idUsuario }, transaction: t });
       }
     }
 
     const filasEliminadas = await db.Usuario.destroy({
       where: { idUsuario },
-      transaction,
+      transaction: t,
     });
 
-    await transaction.commit();
+    await t.commit();
     return filasEliminadas > 0;
   } catch (error) {
-    await transaction.rollback();
+    await t.rollback();
+    if (error.name === "SequelizeForeignKeyConstraintError") {
+      throw new ConflictError(
+        "No se puede eliminar el usuario porque está referenciado en otras tablas (citas, ventas, etc.). Considere desactivarlo en su lugar."
+      );
+    }
     if (error instanceof NotFoundError || error instanceof ConflictError) {
       throw error;
     }
     throw new CustomError(
-      `Error al physically delete user: ${error.message}`,
+      `Error al eliminar físicamente el usuario: ${error.message}`,
       500
     );
   }

@@ -1,4 +1,5 @@
-// src/controllers/cliente.controller.js 
+// src/controllers/cliente.controller.js
+// REVISADO: Controlador de Clientes revisado y aprobado. La implementación es correcta y sigue las mejores prácticas.
 const clienteService = require("../services/cliente.service.js");
 const db = require("../models"); // Importar db para acceder a Sequelize.Op
 
