@@ -101,10 +101,15 @@ module.exports = (sequelize, DataTypes) => {
       as: 'abastecimientosAsignados'
     });
     
-    // Un Empleado puede tener muchas Novedades de horario.
-    Empleado.hasMany(models.Novedades, {
-      foreignKey: 'idEmpleado', // Se refiere al atributo 'idEmpleado' en el modelo Novedades.
-      as: 'novedadesHorario'
+    // Un Empleado puede tener muchas Novedades (ausencias, vacaciones, etc.)
+    // La relación es Muchos a Muchos a través de la tabla NovedadEmpleado,
+    // y se vincula mediante el id_usuario del empleado.
+    Empleado.belongsToMany(models.Novedad, {
+      through: models.NovedadEmpleado,
+      foreignKey: 'id_usuario', // Columna en NovedadEmpleado que se refiere al Usuario
+      sourceKey: 'idUsuario',   // Atributo en el modelo Empleado que contiene el id_usuario
+      otherKey: 'id_novedad',   // Columna en NovedadEmpleado que se refiere a la Novedad
+      as: 'novedadesHorario'   // Alias para la relación
     });
   };
 
