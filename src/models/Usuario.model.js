@@ -1,5 +1,4 @@
 // src/models/Usuario.model.js
-console.log("--- [PRUEBA] CARGANDO Usuario.model.js - VERSIÓN MÁS RECIENTE ---");
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -52,26 +51,34 @@ module.exports = (sequelize, DataTypes) => {
   Usuario.associate = (models) => {
     // Un Usuario pertenece a un Rol.
     Usuario.belongsTo(models.Rol, {
-      foreignKey: 'idRol', // Se refiere al atributo 'idRol' en este mismo modelo.
+      foreignKey: 'idRol',
       as: 'rol'
     });
 
     // Un Usuario tiene un perfil de Cliente (relación 1 a 1).
     Usuario.hasOne(models.Cliente, {
-      foreignKey: 'idUsuario', // Se refiere al atributo 'idUsuario' en el modelo Cliente.
+      foreignKey: 'idUsuario',
       as: 'clienteInfo'
     });
 
     // Un Usuario tiene un perfil de Empleado (relación 1 a 1).
     Usuario.hasOne(models.Empleado, {
-      foreignKey: 'idUsuario', // Se refiere al atributo 'idUsuario' en el modelo Empleado.
+      foreignKey: 'idUsuario',
       as: 'empleadoInfo'
     });
 
     // Un Usuario puede tener muchos Tokens de Recuperación.
     Usuario.hasMany(models.TokenRecuperacion, {
-      foreignKey: 'idUsuario', // Se refiere al atributo 'idUsuario' en el modelo TokenRecuperacion.
+      foreignKey: 'idUsuario',
       as: 'tokensRecuperacion'
+    });
+
+    // ✅ NUEVA ASOCIACIÓN: Un Usuario (Empleado) puede tener muchas Novedades.
+    Usuario.belongsToMany(models.Novedad, {
+      through: models.NovedadEmpleado,
+      foreignKey: 'id_usuario',
+      otherKey: 'id_novedad',
+      as: 'novedades'
     });
   };  
 
