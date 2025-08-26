@@ -13,6 +13,11 @@ const emptyStringToNull = (value) => {
   return value === "" ? null : value;
 };
 
+// --- Expresión regular para direcciones en Colombia ---
+// Ejemplos válidos: "Calle 45 # 23-10", "Carrera 7 # 12B-45 Apto 201", "Av. 68 # 80-20 Local 5"
+const direccionRegex =
+  /^(Calle|Cl\.?|Carrera|Cra\.?|Avenida|Av\.?|Transversal|Tv\.?|Diagonal|Dg\.?|Circular|Cir\.?|Kil[oó]metro|Km\.?)\s+[0-9]+[A-Z]?(?:\s*#\s*[0-9]+[A-Z]?\s*-\s*[0-9]+)?(?:\s+(Apto|Oficina|Local|Interior|Torre|Piso)\s*\w+)?$/i;
+
 // --- Validador para CREAR ---
 const crearProveedorValidators = [
   body("nombre")
@@ -43,10 +48,10 @@ const crearProveedorValidators = [
 
   body("direccion")
     .trim()
-    .notEmpty()
-    .withMessage("La dirección del proveedor es un campo obligatorio."),
+    .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio.")
+    .matches(direccionRegex).withMessage("La dirección ingresada no cumple con el formato válido en Colombia. Ejemplo: 'Calle 45 # 23-10'."),
 
-  // --- Validación de campos opcionales con unicidad (LÓGICA CORREGIDA) ---
+  // --- Validación de campos opcionales con unicidad ---
   body("numeroDocumento")
     .trim()
     .customSanitizer(emptyStringToNull)
@@ -82,18 +87,18 @@ const crearProveedorValidators = [
     .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
   
   body("emailPersonaEncargada")
-  .trim()
-  .notEmpty().withMessage("El correo del encargado es obligatorio.")
-  .isEmail().withMessage("El formato del correo del encargado es inválido.")
-  .normalizeEmail()
-  .custom(async (value) => {
-    const proveedor = await db.Proveedor.findOne({
-      where: { emailPersonaEncargada: value, estado: true },
-    });
-    if (proveedor) {
-      return Promise.reject("El correo del encargado ya está registrado.");
-    }
-  }),
+    .trim()
+    .notEmpty().withMessage("El correo del encargado es obligatorio.")
+    .isEmail().withMessage("El formato del correo del encargado es inválido.")
+    .normalizeEmail()
+    .custom(async (value) => {
+      const proveedor = await db.Proveedor.findOne({
+        where: { emailPersonaEncargada: value, estado: true },
+      });
+      if (proveedor) {
+        return Promise.reject("El correo del encargado ya está registrado.");
+      }
+    }),
 
   handleValidationErrors,
 ];
@@ -124,8 +129,9 @@ const actualizarProveedorValidators = [
   body("direccion")
     .optional()
     .trim()
-    .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio."),
-  
+    .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio.")
+    .matches(direccionRegex).withMessage("La dirección ingresada no cumple con el formato válido en Colombia. Ejemplo: 'Carrera 7 # 12B-45 Apto 201'."),
+
   body("nombrePersonaEncargada")
     .optional()
     .trim()
@@ -149,22 +155,22 @@ const actualizarProveedorValidators = [
         return Promise.reject("El correo electrónico ya está en uso por otro proveedor.");
     }),
 
-    body("emailPersonaEncargada")
-  .trim()
-  .notEmpty().withMessage("El correo del encargado es obligatorio.")
-  .isEmail().withMessage("El formato del correo del encargado es inválido.")
-  .normalizeEmail()
-  .custom(async (value, { req }) => {
-    const proveedor = await db.Proveedor.findOne({
-      where: {
-        emailPersonaEncargada: value,
-        idProveedor: { [Op.ne]: req.params.idProveedor },
-      },
-    });
-    if (proveedor) {
-      return Promise.reject("El correo del encargado ya está registrado.");
-    }
-  }),
+  body("emailPersonaEncargada")
+    .trim()
+    .notEmpty().withMessage("El correo del encargado es obligatorio.")
+    .isEmail().withMessage("El formato del correo del encargado es inválido.")
+    .normalizeEmail()
+    .custom(async (value, { req }) => {
+      const proveedor = await db.Proveedor.findOne({
+        where: {
+          emailPersonaEncargada: value,
+          idProveedor: { [Op.ne]: req.params.idProveedor },
+        },
+      });
+      if (proveedor) {
+        return Promise.reject("El correo del encargado ya está registrado.");
+      }
+    }),
 
   body("numeroDocumento")
     .trim()

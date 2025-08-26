@@ -28,7 +28,8 @@ const crearClienteValidators = [
   body("fechaNacimiento").notEmpty().withMessage("La fecha de nacimiento es obligatoria.")
     .isISO8601().withMessage("La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD).")
     .toDate(),
-  body("direccion").optional().trim().isString().withMessage("La dirección debe ser una cadena de texto.")
+  body("direccion").trim().notEmpty().withMessage("La dirección es obligatoria.")
+    .isString().withMessage("La dirección debe ser una cadena de texto.")
     .isLength({ max: 255 }).withMessage("La dirección no puede tener más de 255 caracteres."),
   body("estadoCliente") // Estado para el perfil del Cliente
     .optional().isBoolean().withMessage("El estado del cliente debe ser un valor booleano."),

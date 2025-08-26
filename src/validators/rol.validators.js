@@ -1,8 +1,9 @@
 // src/validators/rol.validators.js
 const { body, param } = require("express-validator");
+const db = require("../models"); // Importar la base de datos para validaciones asíncronas
 const {
   handleValidationErrors,
-} = require("../middlewares/validation.middleware.js"); // Asegúrate que la ruta sea correcta
+} = require("../middlewares/validation.middleware.js"); 
 
 const tipoPerfilValues = ["CLIENTE", "EMPLEADO", "NINGUNO"];
 
@@ -14,8 +15,8 @@ const crearRolValidators = [
     .withMessage("El nombre del rol es obligatorio.")
     .isString()
     .withMessage("El nombre del rol debe ser una cadena de texto.")
-    .isLength({ min: 3, max: 100 })
-    .withMessage("El nombre del rol debe tener entre 3 y 100 caracteres."),
+    .isLength({ min: 3, max: 50 })
+    .withMessage("El nombre del rol debe tener entre 3 y 50 caracteres."),
   body("descripcion")
     .optional()
     .trim()
@@ -49,8 +50,8 @@ const actualizarRolValidators = [
     .withMessage("El nombre del rol no puede estar vacío si se proporciona.")
     .isString()
     .withMessage("El nombre del rol debe ser una cadena de texto.")
-    .isLength({ min: 3, max: 100 })
-    .withMessage("El nombre del rol debe tener entre 3 y 100 caracteres."),
+    .isLength({ min: 3, max: 50 })
+    .withMessage("El nombre del rol debe tener entre 3 y 50 caracteres."),
   body("descripcion")
     .optional({ nullable: true }) // Permite que sea null (para borrarla) o no se envíe
     .trim()
@@ -84,12 +85,23 @@ const idRolValidator = [
 const gestionarPermisosRolValidators = [
   param('idRol')
     .isInt({ gt: 0 }).withMessage('El ID del rol debe ser un entero positivo.'),
-  body('idPermisos') // Asumimos que el cuerpo enviará un array de IDs de permisos
+  body('idPermisos')
     .isArray({ min: 1 }).withMessage('Se requiere un array de idPermisos con al menos un elemento.')
-    .custom((idPermisos) => {
+    .custom(async (idPermisos) => {
       if (!idPermisos.every(id => Number.isInteger(id) && id > 0)) {
         throw new Error('Cada idPermiso en el array debe ser un entero positivo.');
       }
+      
+      const count = await db.Permisos.count({
+        where: {
+          idPermiso: idPermisos,
+        },
+      });
+
+      if (count !== idPermisos.length) {
+        throw new Error('Uno o más de los IDs de permisos proporcionados no existen.');
+      }
+      
       return true;
     }),
   handleValidationErrors
