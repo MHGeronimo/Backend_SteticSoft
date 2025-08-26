@@ -111,6 +111,7 @@ const crearUsuario = async (usuarioData) => {
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
+    direccion, // Añadido para capturar la dirección
     estado,
   } = usuarioData;
 
@@ -211,19 +212,23 @@ const crearUsuario = async (usuarioData) => {
       };
 
       if (rol.tipoPerfil === "CLIENTE") {
+        // Validación para Cliente, incluyendo la dirección
         if (
           !nombre ||
           !apellido ||
           !telefono ||
           !tipoDocumento ||
           !numeroDocumento ||
-          !fechaNacimiento
+          !fechaNacimiento ||
+          !direccion // La dirección es obligatoria para clientes
         ) {
           await t.rollback();
           throw new BadRequestError(
-            "Para el perfil CLIENTE, los campos de perfil (nombre, apellido, teléfono, tipo/número de documento, fecha de nacimiento) son requeridos."
+            "Para el perfil CLIENTE, todos los campos de perfil, incluida la dirección, son requeridos."
           );
         }
+        // Añadir dirección a los datos del perfil
+        perfilData.direccion = direccion;
         await db.Cliente.create(perfilData, { transaction: t });
       } else if (rol.tipoPerfil === "EMPLEADO") {
         if (
@@ -376,13 +381,8 @@ const actualizarUsuario = async (idUsuario, datosActualizar) => {
       throw new NotFoundError("Usuario no encontrado para actualizar.");
     }
 
-    const {
-      contrasena,
-      correo,
-      idRol,
-      estado,
-      ...datosPerfil
-    } = datosActualizar;
+    const { contrasena, correo, idRol, estado, ...datosPerfil } =
+      datosActualizar;
 
     // Actualizar datos del usuario
     if (correo && correo !== usuario.correo) {
@@ -483,7 +483,9 @@ const eliminarUsuarioFisico = async (idUsuario) => {
     const usuario = await db.Usuario.findByPk(idUsuario, { transaction: t });
     if (!usuario) {
       await t.rollback();
-      throw new NotFoundError("Usuario no encontrado para eliminar físicamente.");
+      throw new NotFoundError(
+        "Usuario no encontrado para eliminar físicamente."
+      );
     }
 
     // La eliminación en cascada de la base de datos se encargará de los perfiles
