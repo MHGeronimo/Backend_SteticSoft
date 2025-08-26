@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS cliente (
     tipo_documento VARCHAR(50) NOT NULL,
     numero_documento VARCHAR(45) NOT NULL UNIQUE,
     fecha_nacimiento DATE NOT NULL,
+    direccion TEXT NOT NULL,
     estado BOOLEAN DEFAULT TRUE NOT NULL,
     id_usuario INT UNIQUE NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT
 );
@@ -206,21 +207,48 @@ CREATE TABLE IF NOT EXISTS venta (
     id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
 );
 
+-- Tabla: novedades
+-- Propósito: Permite definir horarios de trabajo excepcionales o diferentes al estándar para un empleado.
 CREATE TABLE IF NOT EXISTS novedades (
     id_novedad SERIAL PRIMARY KEY,
-    dia_semana INT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
     estado BOOLEAN DEFAULT TRUE NOT NULL,
-    UNIQUE (dia_semana)
+    CONSTRAINT chk_rango_fechas CHECK (fecha_fin >= fecha_inicio),
+    CONSTRAINT chk_rango_horas CHECK (hora_fin > hora_inicio)
 );
+
+-- TABLA DE UNIÓN: Asigna novedades a empleados (Relación Muchos a Muchos)
+CREATE TABLE IF NOT EXISTS novedad_empleado (
+    id_novedad INT NOT NULL,
+    id_usuario INT NOT NULL,
+
+    -- Llave primaria compuesta para que no se pueda asignar la misma novedad al mismo empleado dos veces
+    CONSTRAINT pk_novedad_empleado PRIMARY KEY (id_novedad, id_usuario),
+
+    -- Llave foránea que apunta a la tabla de novedades
+    CONSTRAINT fk_novedad
+        FOREIGN KEY (id_novedad)
+        REFERENCES novedades(id_novedad)
+        ON DELETE CASCADE, -- Si se borra la novedad, se borra la asignación
+
+    -- Llave foránea que apunta a la tabla de usuarios (empleados)
+    CONSTRAINT fk_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES usuario(id_usuario)
+        ON DELETE CASCADE -- Si se borra el usuario, se borra la asignación
+);
+
 
 CREATE TABLE IF NOT EXISTS cita (
     id_cita SERIAL PRIMARY KEY,
     id_novedad INT REFERENCES novedades(id_novedad) ON DELETE SET NULL,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
     id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
+    id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT,
+    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE set NULL
 );
 
 CREATE TABLE IF NOT EXISTS servicio (
@@ -368,260 +396,6 @@ contrasena = EXCLUDED.contrasena,
 id_rol = EXCLUDED.id_rol,
 estado = EXCLUDED.estado;
 
--- =================================================================================================
--- INSERTS MAESTRAS
--- =================================================================================================
 INSERT INTO estado (id_estado, nombre_estado) VALUES
 (1, 'En proceso'), (2, 'Pendiente'), (3, 'Completado'), (4, 'Cancelado')
 ON CONFLICT (id_estado) DO UPDATE SET nombre_estado = EXCLUDED.nombre_estado;
-
--- Tabla: cliente
--- Propósito: Almacena toda la información demográfica y de contacto de los clientes.
--- Proceso: Cada cliente tiene un registro único aquí y está enlazado a un registro en la tabla 'usuario'
--- (`id_usuario`) para poder iniciar sesión. Los registros de 'venta' y 'cita' se asocian a un cliente.
-CREATE TABLE IF NOT EXISTS cliente (
-    id_cliente SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
-    correo VARCHAR(100) UNIQUE NOT NULL,
-    telefono VARCHAR(20) NOT NULL,
-    tipo_documento VARCHAR(50) NOT NULL,
-    numero_documento VARCHAR(45) NOT NULL UNIQUE,
-    fecha_nacimiento DATE NOT NULL,
-    direccion TEXT NOT NULL,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    id_usuario INT UNIQUE NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT
-);
-
-
--- Tabla: proveedor
--- Propósito: Almacena la información de contacto y fiscal de las empresas o personas que suministran productos.
--- Proceso: Cada 'compra' debe estar asociada a un 'proveedor'.
-CREATE TABLE IF NOT EXISTS proveedor (
-    id_proveedor SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    tipo VARCHAR(50) NOT NULL,
-    tipo_documento VARCHAR(50),
-    numero_documento VARCHAR(45),
-    nit_empresa VARCHAR(45) UNIQUE,
-    telefono VARCHAR(20) NOT NULL,
-    correo VARCHAR(100) NOT NULL UNIQUE,
-    direccion TEXT NOT NULL,
-    nombre_persona_encargada VARCHAR(100),
-    telefono_persona_encargada VARCHAR(20),
-    email_persona_encargada VARCHAR(100),
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    UNIQUE (nombre, tipo)
-);
-
-
--- Tabla: categoria_producto
--- Propósito: Clasifica los productos en grupos (ej. "Tintes", "Cuidado Capilar"). Es una tabla crucial para la lógica de negocio.
--- Proceso: Cada 'producto' pertenece a una categoría. Esta tabla define dos reglas de negocio importantes:
--- `tipo_uso`: Determina si un producto es para 'Venta' (Externo) o para 'Abastecimiento' (Interno).
--- `vida_util_dias`: Indica el tiempo aproximado en días que un producto abastecido debería durar en manos de un empleado.
-CREATE TABLE IF NOT EXISTS categoria_producto (
-    id_categoria_producto SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) UNIQUE NOT NULL,
-    descripcion TEXT,
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
-
-
--- Tabla: categoria_servicio
--- Propósito: Clasifica los servicios en grupos (ej. "Cortes", "Manicura").
-CREATE TABLE IF NOT EXISTS categoria_servicio (
-    id_categoria_servicio SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) UNIQUE NOT NULL,
-    descripcion TEXT,
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
-
-
--- Tabla: producto
--- Propósito: Es el catálogo central de todos los productos. Gestiona el inventario.
--- Proceso: Su columna más importante es `existencia` (stock). El stock AUMENTA con el módulo de 'Compra' y
--- DISMINUYE con los módulos de 'Venta' y 'Abastecimiento'. `stock_minimo` y `stock_maximo` sirven para generar alertas.
-CREATE TABLE IF NOT EXISTS producto (
-    id_producto SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    descripcion TEXT,
-    existencia INT DEFAULT 0 CHECK (existencia >= 0),
-    precio DECIMAL(12, 2) DEFAULT 0.00,
-    stock_minimo INT DEFAULT 0,
-    stock_maximo INT DEFAULT 0,
-    imagen TEXT,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    vida_util_dias INT,
-    tipo_uso VARCHAR(10) NOT NULL CHECK (tipo_uso IN ('Interno', 'Externo')),
-    id_categoria_producto INT REFERENCES categoria_producto(id_categoria_producto) ON DELETE RESTRICT
-);
-
-
--- Tabla: compra
--- Propósito: Registra la cabecera de una operación de compra de productos a un 'proveedor'.
--- Proceso: Al crear una 'compra', se AUMENTA el stock de los productos detallados en `compra_x_producto`.
-CREATE TABLE IF NOT EXISTS compra (
-    id_compra SERIAL PRIMARY KEY,
-    fecha DATE DEFAULT CURRENT_DATE,
-    -- Restricción CHECK agregada para garantizar que 'total' sea un valor positivo o cero.
-    total DECIMAL(12, 2) DEFAULT 0.00 CHECK (total >= 0.00),
-    -- Restricción CHECK agregada para garantizar que 'iva' sea un valor positivo o cero.
-    iva DECIMAL(12, 2) DEFAULT 0.00 CHECK (iva >= 0.00),
-    id_proveedor INT REFERENCES proveedor(id_proveedor) ON DELETE RESTRICT,
-    id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
-
--- Tabla: venta
--- Propósito: Registra la cabecera de una operación de venta a un 'cliente'.
--- Proceso: Al crear una 'venta', se DISMINUYE el stock de los productos detallados en `producto_x_venta`.
-CREATE TABLE IF NOT EXISTS venta (
-    id_venta SERIAL PRIMARY KEY,
-    fecha DATE DEFAULT CURRENT_DATE,
-    total DECIMAL(12, 2) DEFAULT 0.00,
-    iva DECIMAL(12, 2) DEFAULT 0.00,
-    id_cliente INT REFERENCES cliente(id_cliente) ON DELETE RESTRICT,
-    id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL,
-    id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT
-);
-
-
--- Tabla: cita
--- Propósito: Registra el agendamiento de un servicio entre un 'cliente' y un 'empleado' en una fecha y hora específicas.
--- Proceso: Es el corazón del módulo de agendamiento.
-CREATE TABLE IF NOT EXISTS cita (
-    id_cita SERIAL PRIMARY KEY,
-    id_novedad INT REFERENCES novedades(id_novedad) ON DELETE SET NULL,
-    id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
-    id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT,
-    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE set NULL
-);
-
--- Tabla: servicio
--- Propósito: Es el catálogo de todos los servicios que ofrece el negocio.
-CREATE TABLE IF NOT EXISTS servicio (
-    id_servicio SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    descripcion TEXT,
-    precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
-    imagen TEXT, -- Nueva columna para la imagen del servicio
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
-
-
--- Tabla: servicio_x_cita
--- Propósito: Detalla qué servicios específicos se realizarán en una 'cita'.
-CREATE TABLE IF NOT EXISTS servicio_x_cita (
-    id_servicio_x_cita SERIAL PRIMARY KEY,
-    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE CASCADE,
-    id_cita INT REFERENCES cita(id_cita) ON DELETE CASCADE,
-    UNIQUE (id_servicio, id_cita)
-);
-
-
--- Tabla: compra_x_producto
--- Propósito: Detalla qué productos y en qué cantidad se incluyeron en una 'compra'.
-CREATE TABLE IF NOT EXISTS compra_x_producto (
-    id_compra_x_producto SERIAL PRIMARY KEY,
-    cantidad INT DEFAULT 1,
-    valor_unitario DECIMAL(12, 2) DEFAULT 0.00,
-    id_compra INT REFERENCES compra(id_compra) ON DELETE CASCADE,
-    id_producto INT REFERENCES producto(id_producto) ON DELETE RESTRICT
-);
-
-
--- Tabla: producto_x_venta
--- Propósito: Detalla qué productos y en qué cantidad se incluyeron en una 'venta'.
-CREATE TABLE IF NOT EXISTS producto_x_venta (
-    id_producto_x_venta SERIAL PRIMARY KEY,
-    cantidad INT DEFAULT 1,
-    valor_unitario DECIMAL(12, 2) DEFAULT 0.00,
-    id_producto INT REFERENCES producto(id_producto) ON DELETE RESTRICT,
-    id_venta INT REFERENCES venta(id_venta) ON DELETE CASCADE,
-    id_dashboard INT REFERENCES dashboard(id_dashboard) ON DELETE SET NULL
-);
-
-
--- Tabla: venta_x_servicio
--- Propósito: Detalla qué servicios se incluyeron en una 'venta' (ej. para facturación).
-CREATE TABLE IF NOT EXISTS venta_x_servicio (
-    id_venta_x_servicio SERIAL PRIMARY KEY,
-    valor_servicio DECIMAL(12, 2) DEFAULT 0.00,
-    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE RESTRICT,
-    id_cita INT REFERENCES cita(id_cita) ON DELETE SET NULL,
-    id_venta INT REFERENCES venta(id_venta) ON DELETE CASCADE
-);
-
-
--- Tabla: abastecimiento
--- Propósito: Registra la salida de productos de 'Uso Interno' que se entregan a un 'empleado' para que realice sus servicios.
--- Proceso:
--- 1. Un administrador crea un registro aquí, seleccionando un producto de `tipo_uso = 'Interno'` y un empleado.
--- 2. Al crearse, la lógica de negocio DISMINUYE el stock (`existencia`) en la tabla `producto`.
--- 3. La `vida_util_dias` de la categoría del producto sirve como indicador de cuánto debería durar este abastecimiento.
--- 4. Si el producto se agota antes, el empleado puede marcar este registro como 'agotado' (`esta_agotado` = true)
---    y registrar una razón, lo que sirve como una solicitud para un nuevo abastecimiento.
-CREATE TABLE IF NOT EXISTS abastecimiento (
-    id_abastecimiento SERIAL PRIMARY KEY,
-    cantidad INT NOT NULL,
-    id_producto INT NOT NULL REFERENCES producto(id_producto) ON DELETE RESTRICT,
-    id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
-    fecha_ingreso DATE NOT NULL DEFAULT CURRENT_DATE,
-    esta_agotado BOOLEAN DEFAULT FALSE NOT NULL,
-    razon_agotamiento TEXT,
-    fecha_agotamiento DATE,
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
-
-
--- Tabla: novedades
--- Propósito: Permite definir horarios de trabajo excepcionales o diferentes al estándar para un empleado.
-CREATE TABLE IF NOT EXISTS novedades (
-    id_novedad SERIAL PRIMARY KEY,
-    fecha_inicio DATE NOT NULL,
-    fecha_fin DATE NOT NULL,
-    hora_inicio TIME NOT NULL,
-    hora_fin TIME NOT NULL,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    -- Restricción para asegurar que el rango de fechas es válido
-    CONSTRAINT chk_rango_fechas CHECK (fecha_fin >= fecha_inicio),
-    -- Restricción para asegurar que el rango de horas es válido
-    CONSTRAINT chk_rango_horas CHECK (hora_fin > hora_inicio)
-);
-
--- TABLA DE UNIÓN: Asigna novedades a empleados (Relación Muchos a Muchos)
--- Esta es la tabla clave para tu requerimiento.
-CREATE TABLE IF NOT EXISTS novedad_empleado (
-    id_novedad INT NOT NULL,
-    id_usuario INT NOT NULL,
-
-    -- Llave primaria compuesta para que no se pueda asignar la misma novedad al mismo empleado dos veces
-    CONSTRAINT pk_novedad_empleado PRIMARY KEY (id_novedad, id_usuario),
-
-    -- Llave foránea que apunta a la tabla de novedades
-    CONSTRAINT fk_novedad
-        FOREIGN KEY (id_novedad)
-        REFERENCES novedades(id_novedad)
-        ON DELETE CASCADE, -- Si se borra la novedad, se borra la asignación
-
-    -- Llave foránea que apunta a la tabla de usuarios (empleados)
-    CONSTRAINT fk_usuario
-        FOREIGN KEY (id_usuario)
-        REFERENCES usuario(id_usuario)
-        ON DELETE CASCADE -- Si se borra el usuario, se borra la asignación
-);
-
-
--- Tabla: token_recuperacion
--- Propósito: Almacena de forma temporal los tokens únicos generados para el proceso de "olvidé mi contraseña".
--- Proceso: Cuando un usuario solicita restablecer su contraseña, se genera un token, se guarda aquí con una fecha
--- de expiración y se envía al correo del usuario. El sistema valida este token antes de permitir el cambio.
-CREATE TABLE IF NOT EXISTS token_recuperacion (
-    id_token_recuperacion SERIAL PRIMARY KEY,
-    id_usuario INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    token TEXT NOT NULL UNIQUE,
-    fecha_expiracion TIMESTAMP WITH TIME ZONE NOT NULL
-);
