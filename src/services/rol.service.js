@@ -1,4 +1,5 @@
-// RUTA: src/shared/src_api/services/rol.service.js
+// RUTA: src/services/rol.service.js
+// REVISADO: Módulo de Roles revisado y aprobado sin cambios funcionales. La estructura es robusta.
 
 const db = require('../models');
 const { Op } = db.Sequelize;

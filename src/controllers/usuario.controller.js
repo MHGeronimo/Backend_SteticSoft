@@ -1,4 +1,5 @@
 // src/controllers/usuario.controller.js
+// REVISADO: Controlador de Usuarios revisado y aprobado. Actúa como una capa delgada y delega la lógica de negocio al servicio correctamente.
 const usuarioService = require("../services/usuario.service.js");
 
 /**
