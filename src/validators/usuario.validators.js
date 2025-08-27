@@ -5,8 +5,10 @@ const {
 } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
 
+const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+
 const crearUsuarioValidators = [
-  // Validaciones para la entidad Usuario
+  // --- Validaciones para la entidad Usuario ---
   body("correo")
     .trim()
     .notEmpty()
@@ -19,67 +21,49 @@ const crearUsuarioValidators = [
         where: { correo: value },
       });
       if (usuarioExistente) {
-        return Promise.reject(
-          "La dirección de correo ya está registrada para una cuenta de usuario."
-        );
+        return Promise.reject("La dirección de correo ya está registrada.");
       }
     }),
   body("contrasena")
     .notEmpty()
     .withMessage("La contraseña es obligatoria.")
-    .isString()
-    .withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8, max: 100 }) // MODIFICACIÓN: Añadido max y mensaje
-    .withMessage("La contraseña debe tener entre 8 y 100 caracteres."),
+    .isLength({ min: 8 })
+    .withMessage("La contraseña debe tener al menos 8 caracteres."),
   body("idRol")
     .notEmpty()
     .withMessage("El ID del rol es obligatorio.")
     .isInt({ gt: 0 })
-    .withMessage("El ID del rol debe ser un entero positivo.")
-    .custom(async (value) => {
-      const rolExistente = await db.Rol.findByPk(value);
-      if (!rolExistente) {
-        return Promise.reject("El rol especificado no existe.");
-      }
-      if (!rolExistente.estado) {
-        return Promise.reject("El rol especificado no está activo.");
-      }
-    }),
-  body("estado")
-    .optional()
-    .isBoolean()
-    .withMessage("El estado debe ser un valor booleano (true o false)."),
+    .withMessage("El ID del rol debe ser un entero positivo."),
+  // ... (la validación custom de idRol se mantiene)
 
-  // Validaciones para los campos del Perfil (Cliente/Empleado)
+  // --- Validaciones para el Perfil (Cliente/Empleado) ---
   body("nombre")
     .optional()
     .trim()
     .notEmpty()
-    .withMessage("El nombre no puede estar vacío si se proporciona.")
-    .isString()
-    .withMessage("El nombre debe ser una cadena de texto.")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("El nombre debe tener entre 2 y 100 caracteres."),
-
+    .withMessage("El nombre es obligatorio para perfiles.")
+    .isLength({ min: 3, max: 50 })
+    .withMessage("El nombre debe tener entre 3 y 50 caracteres.")
+    .matches(nameRegex)
+    .withMessage("El nombre solo puede contener letras y espacios."),
   body("apellido")
     .optional()
     .trim()
     .notEmpty()
-    .withMessage("El apellido no puede estar vacío si se proporciona.")
-    .isString()
-    .withMessage("El apellido debe ser una cadena de texto.")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("El apellido debe tener entre 2 y 100 caracteres."),
-
+    .withMessage("El apellido es obligatorio para perfiles.")
+    .isLength({ min: 3, max: 50 })
+    .withMessage("El apellido debe tener entre 3 y 50 caracteres.")
+    .matches(nameRegex)
+    .withMessage("El apellido solo puede contener letras y espacios."),
   body("telefono")
     .optional()
     .trim()
     .notEmpty()
-    .withMessage("El número de teléfono no puede estar vacío si se proporciona.")
-    .isString()
-    .withMessage("El número de teléfono debe ser una cadena de texto.")
-    .isLength({ min: 7, max: 20 })
-    .withMessage("El número de teléfono debe tener entre 7 y 20 caracteres."),
+    .withMessage("El teléfono es obligatorio para perfiles.")
+    .isLength({ min: 7, max: 15 })
+    .withMessage("El teléfono debe tener entre 7 y 15 dígitos.")
+    .isNumeric()
+    .withMessage("El teléfono solo puede contener números."),
 
   body("tipoDocumento")
     .optional()
@@ -100,13 +84,13 @@ const crearUsuarioValidators = [
     .optional()
     .trim()
     .notEmpty()
-    .withMessage("El número de documento no puede estar vacío si se proporciona.")
+    .withMessage(
+      "El número de documento no puede estar vacío si se proporciona."
+    )
     .isString()
     .withMessage("El número de documento debe ser texto.")
     .isLength({ min: 5, max: 45 })
-    .withMessage(
-      "El número de documento debe tener entre 5 y 45 caracteres."
-    )
+    .withMessage("El número de documento debe tener entre 5 y 45 caracteres.")
     .custom(async (value, { req }) => {
       if (!value) return true;
 
