@@ -29,8 +29,8 @@ const crearUsuarioValidators = [
     .withMessage("La contraseña es obligatoria.")
     .isString()
     .withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8 })
-    .withMessage("La contraseña debe tener al menos 8 caracteres."),
+    .isLength({ min: 8, max: 100 }) // MODIFICACIÓN: Añadido max y mensaje
+    .withMessage("La contraseña debe tener entre 8 y 100 caracteres."),
   body("idRol")
     .notEmpty()
     .withMessage("El ID del rol es obligatorio.")
@@ -172,9 +172,9 @@ const actualizarUsuarioValidators = [
     .optional({ checkFalsy: true })
     .isString()
     .withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8 })
+    .isLength({ min: 8, max: 100 }) // MODIFICACIÓN: Añadido max y mensaje
     .withMessage(
-      "La contraseña debe tener al menos 8 caracteres si se actualiza."
+      "La contraseña debe tener entre 8 y 100 caracteres si se actualiza."
     ),
   body("idRol")
     .optional()
