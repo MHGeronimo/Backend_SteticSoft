@@ -1,4 +1,4 @@
-// src/shared/src_api/validators/cliente.validators.js  
+// src/shared/src_api/validators/cliente.validators.js
 const { body, param } = require("express-validator");
 const {
   handleValidationErrors,
@@ -9,13 +9,13 @@ const db = require("../models");
 const crearClienteValidators = [
   // --- Campos para el Perfil del Cliente ---
   body("nombre").trim().notEmpty().withMessage("El nombre es obligatorio.")
-    .isLength({ min: 2, max: 100 }).withMessage("El nombre debe tener entre 2 y 100 caracteres."),
+    .isLength({ min: 2, max: 50 }).withMessage("El nombre debe tener entre 2 y 50 caracteres."), // MODIFICACIÓN: Rango más ajustado
   body("apellido").trim().notEmpty().withMessage("El apellido es obligatorio.")
-    .isLength({ min: 2, max: 100 }).withMessage("El apellido debe tener entre 2 y 100 caracteres."),
+    .isLength({ min: 2, max: 50 }).withMessage("El apellido debe tener entre 2 y 50 caracteres."), // MODIFICACIÓN: Rango más ajustado
   body("telefono").trim().notEmpty().withMessage("El teléfono es obligatorio.")
-    .isLength({ min: 7, max: 45 }).withMessage("El teléfono debe tener entre 7 y 45 caracteres."),
+    .isLength({ min: 7, max: 20 }).withMessage("El teléfono debe tener entre 7 y 20 caracteres."), // MODIFICACIÓN: Rango más ajustado
   body("tipoDocumento").trim().notEmpty().withMessage("El tipo de documento es obligatorio.")
-    .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']) // Asegúrate que estos valores sean los que usas
+    .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad'])
     .withMessage("Tipo de documento no válido."),
   body("numeroDocumento").trim().notEmpty().withMessage("El número de documento es obligatorio.")
     .isLength({ min: 5, max: 45 }).withMessage("El número de documento debe tener entre 5 y 45 caracteres.")
@@ -30,7 +30,7 @@ const crearClienteValidators = [
     .toDate(),
   body("direccion").trim().notEmpty().withMessage("La dirección es obligatoria.")
     .isString().withMessage("La dirección debe ser una cadena de texto."),
-  body("estadoCliente") // Estado para el perfil del Cliente
+  body("estadoCliente")
     .optional().isBoolean().withMessage("El estado del cliente debe ser un valor booleano."),
   
   // --- Campos para la Cuenta de Usuario asociada ---
@@ -38,12 +38,10 @@ const crearClienteValidators = [
     .isEmail().withMessage("Debe ser un correo electrónico válido.")
     .normalizeEmail()
     .custom(async (value) => {
-      // Verificar unicidad en la tabla Usuario
       const usuarioExistente = await db.Usuario.findOne({ where: { correo: value } });
       if (usuarioExistente) {
         return Promise.reject("El correo electrónico ya está registrado para una cuenta de usuario.");
       }
-      // Verificar unicidad en la tabla Cliente (ya que Cliente.correo también es UNIQUE y se usará el mismo)
       const clienteExistente = await db.Cliente.findOne({ where: { correo: value } });
       if (clienteExistente) {
         return Promise.reject("El correo electrónico ya está registrado para un perfil de cliente.");
@@ -52,8 +50,8 @@ const crearClienteValidators = [
   body("contrasena").notEmpty().withMessage("La contraseña para la cuenta es obligatoria.")
     .isString().withMessage("La contraseña debe ser una cadena de texto.")
     .isLength({ min: 8 }).withMessage("La contraseña debe tener al menos 8 caracteres."),
-  body("estadoUsuario") // Estado para la cuenta Usuario
-    .optional().isBoolean().withMessage("El estado del usuario debe ser un valor booleano."),
+  body("estadoUsuario")
+    .optional().isBoolean().withMessage("El estado de la cuenta de usuario debe ser un valor booleano."),
   
   handleValidationErrors,
 ];
@@ -62,9 +60,9 @@ const crearClienteValidators = [
 const actualizarClienteValidators = [
   param("idCliente").isInt({ gt: 0 }).withMessage("El ID del cliente debe ser un entero positivo."),
   
-  body("nombre").optional().trim().notEmpty().withMessage("El nombre no puede ser vacío si se provee.").isLength({ min: 2, max: 100 }),
-  body("apellido").optional().trim().notEmpty().withMessage("El apellido no puede ser vacío si se provee.").isLength({ min: 2, max: 100 }),
-  body("telefono").optional().trim().notEmpty().withMessage("El teléfono no puede ser vacío si se provee.").isLength({ min: 7, max: 45 }),
+  body("nombre").optional().trim().notEmpty().withMessage("El nombre no puede ser vacío si se provee.").isLength({ min: 2, max: 50 }),
+  body("apellido").optional().trim().notEmpty().withMessage("El apellido no puede ser vacío si se provee.").isLength({ min: 2, max: 50 }),
+  body("telefono").optional().trim().notEmpty().withMessage("El teléfono no puede ser vacío si se provee.").isLength({ min: 7, max: 20 }),
   body("tipoDocumento").optional().trim().notEmpty().withMessage("El tipo de documento no puede ser vacío si se provee.")
     .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']).withMessage("Tipo de documento no válido."),
   body("numeroDocumento").optional().trim().notEmpty().withMessage("El número de documento no puede ser vacío si se provee.").isLength({ min: 5, max: 45 })
@@ -84,11 +82,11 @@ const actualizarClienteValidators = [
     .isLength({ max: 255 }).withMessage("La dirección no puede tener más de 255 caracteres."),
   body("estadoCliente").optional().isBoolean().withMessage("El estado del perfil del cliente debe ser un valor booleano."),
 
-  body("correo").optional({ checkFalsy: true }) 
+  body("correo").optional({ checkFalsy: true })
     .trim().isEmail().withMessage("Debe ser un correo electrónico válido si se provee.")
     .normalizeEmail()
     .custom(async (value, { req }) => {
-      if (value) { 
+      if (value) {
         const idCliente = Number(req.params.idCliente);
         const otroClienteConCorreo = await db.Cliente.findOne({
           where: { correo: value, idCliente: { [db.Sequelize.Op.ne]: idCliente } },
@@ -108,15 +106,12 @@ const actualizarClienteValidators = [
       }
     }),
   body("estadoUsuario").optional().isBoolean().withMessage("El estado de la cuenta de usuario debe ser un valor booleano."),
-  //Mensaje para render v1.0
-  // La validación para body("idUsuario") en actualización se mantiene como en tu archivo original,
-  // permitiendo la desvinculación (con null) o la re-vinculación (con validaciones).
   body("idUsuario")
-    .optional({ nullable: true }) // Permite que sea null para desvincular
+    .optional({ nullable: true })
     .isInt({ gt: 0 })
     .withMessage("El ID de usuario debe ser un entero positivo si se proporciona, o null para desvincular.")
     .custom(async (value, { req }) => {
-      if (value) { // Solo validar si no es null y es un número
+      if (value) {
         const idCliente = Number(req.params.idCliente);
         const usuario = await db.Usuario.findByPk(value);
         if (!usuario) {
@@ -125,7 +120,7 @@ const actualizarClienteValidators = [
         const otroClienteConEsteUsuario = await db.Cliente.findOne({
           where: {
             idUsuario: value,
-            idCliente: { [db.Sequelize.Op.ne]: idCliente }, // Excluir el cliente actual
+            idCliente: { [db.Sequelize.Op.ne]: idCliente },
           },
         });
         if (otroClienteConEsteUsuario) {
