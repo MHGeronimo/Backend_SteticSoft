@@ -5,108 +5,77 @@ const {
 } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
 
+// Expresión regular para nombres y apellidos que permite letras, acentos y espacios.
+const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+
 const registrarUsuarioValidators = [
-  // Campos de Usuario
+  // --- Campos de Usuario (Cuenta) ---
   body("correo")
     .trim()
-    .notEmpty()
-    .withMessage("El correo electrónico es obligatorio.")
-    .isEmail()
-    .withMessage("Debe proporcionar un correo electrónico válido.")
+    .notEmpty().withMessage("El correo electrónico es obligatorio.")
+    .isEmail().withMessage("Debe proporcionar un correo electrónico válido.")
     .normalizeEmail()
     .custom(async (value) => {
-      const usuarioExistente = await db.Usuario.findOne({
-        where: { correo: value },
-      });
+      const usuarioExistente = await db.Usuario.findOne({ where: { correo: value } });
       if (usuarioExistente) {
-        return Promise.reject(
-          "El correo electrónico ya está registrado para una cuenta."
-        );
+        return Promise.reject("El correo electrónico ya está registrado para una cuenta.");
       }
     }),
   body("contrasena")
-    .notEmpty()
-    .withMessage("La contraseña es obligatoria.")
-    .isString()
-    .withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8 })
-    .withMessage("La contraseña debe tener al menos 8 caracteres."),
-  // Aquí puedes añadir más reglas de complejidad para la contraseña
+    .notEmpty().withMessage("La contraseña es obligatoria.")
+    .isLength({ min: 8 }).withMessage("La contraseña debe tener al menos 8 caracteres."),
 
-  // Campos de Cliente (obligatorios para el registro)
+  // --- Campos de Cliente (Perfil) ---
   body("nombre")
     .trim()
-    .notEmpty()
-    .withMessage("El nombre es obligatorio.")
-    .isString()
-    .withMessage("El nombre debe ser una cadena de texto.")
-    .isLength({ min: 2, max: 45 })
-    .withMessage("El nombre debe tener entre 2 y 45 caracteres."),
+    .notEmpty().withMessage("El nombre es obligatorio.")
+    // MODIFICACIÓN: Longitud estándar y validación de caracteres.
+    .isLength({ min: 3, max: 50 }).withMessage("El nombre debe tener entre 3 y 50 caracteres.")
+    .matches(nameRegex).withMessage("El nombre solo puede contener letras y espacios."),
   body("apellido")
     .trim()
-    .notEmpty()
-    .withMessage("El apellido es obligatorio.")
-    .isString()
-    .withMessage("El apellido debe ser una cadena de texto.")
-    .isLength({ min: 2, max: 45 })
-    .withMessage("El apellido debe tener entre 2 y 45 caracteres."),
+    .notEmpty().withMessage("El apellido es obligatorio.")
+    // MODIFICACIÓN: Longitud estándar y validación de caracteres.
+    .isLength({ min: 3, max: 50 }).withMessage("El apellido debe tener entre 3 y 50 caracteres.")
+    .matches(nameRegex).withMessage("El apellido solo puede contener letras y espacios."),
   body("telefono")
     .trim()
-    .notEmpty()
-    .withMessage("El teléfono es obligatorio.") // Asumiendo que es obligatorio para el registro
-    .isString()
-    .withMessage("El teléfono debe ser una cadena de texto.")
-    .isLength({ min: 7, max: 45 })
-    .withMessage("El teléfono debe tener entre 7 y 45 caracteres."),
+    .notEmpty().withMessage("El teléfono es obligatorio.")
+    // MODIFICACIÓN: Longitud ajustada y validación numérica.
+    .isLength({ min: 7, max: 15 }).withMessage("El teléfono debe tener entre 7 y 15 dígitos.")
+    .isNumeric().withMessage("El teléfono solo puede contener números."),
   body("tipoDocumento")
     .trim()
-    .notEmpty()
-    .withMessage("El tipo de documento es obligatorio.")
-    .isString()
-    .withMessage("El tipo de documento debe ser texto."),
+    .notEmpty().withMessage("El tipo de documento es obligatorio."),
   body("numeroDocumento")
     .trim()
-    .notEmpty()
-    .withMessage("El número de documento es obligatorio.")
-    .isString()
-    .withMessage("El número de documento debe ser texto.")
-    .isLength({ min: 5, max: 45 })
-    .withMessage("El número de documento debe tener entre 5 y 45 caracteres.")
+    .notEmpty().withMessage("El número de documento es obligatorio.")
+    .isLength({ min: 5, max: 20 }).withMessage("El número de documento debe tener entre 5 y 20 caracteres.")
     .custom(async (value) => {
-      const clienteExistente = await db.Cliente.findOne({
-        where: { numeroDocumento: value },
-      });
+      const clienteExistente = await db.Cliente.findOne({ where: { numeroDocumento: value } });
       if (clienteExistente) {
-        return Promise.reject(
-          "El número de documento ya está registrado para otro cliente."
-        );
+        return Promise.reject("El número de documento ya está registrado para otro cliente.");
       }
     }),
   body("fechaNacimiento")
-    .notEmpty()
-    .withMessage("La fecha de nacimiento es obligatoria.")
-    .isISO8601()
-    .withMessage(
-      "La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD)."
-    )
+    .notEmpty().withMessage("La fecha de nacimiento es obligatoria.")
+    .isISO8601().withMessage("La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD).")
     .toDate(),
-  // El idRol se asignará por defecto a 'Cliente' en el servicio, no se espera del usuario al registrarse.
-  // El estado se asignará por defecto a 'true' en el servicio.
   handleValidationErrors,
 ];
 
 const loginValidators = [
   body("correo")
     .trim()
-    .notEmpty()
-    .withMessage("El correo electrónico es obligatorio.")
-    .isEmail()
-    .withMessage("Debe ser un correo electrónico válido.")
+    .notEmpty().withMessage("El correo electrónico es obligatorio.")
+    .isEmail().withMessage("Debe ser un correo electrónico válido.")
     .normalizeEmail(),
-  body("contrasena").notEmpty().withMessage("La contraseña es obligatoria."),
+  body("contrasena")
+    .notEmpty().withMessage("La contraseña es obligatoria."),
   handleValidationErrors,
 ];
 
+// ... (el resto de validadores de auth.validators.js se mantienen igual)
 const solicitarRecuperacionValidators = [
   body("correo")
     .trim()
