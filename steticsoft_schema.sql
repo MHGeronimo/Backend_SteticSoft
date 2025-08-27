@@ -182,6 +182,16 @@ CREATE TABLE IF NOT EXISTS producto (
     id_categoria_producto INT REFERENCES categoria_producto(id_categoria_producto) ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS servicio (
+    id_servicio SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+    precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
+    imagen TEXT,
+    estado BOOLEAN DEFAULT TRUE NOT NULL
+);
+
 -- =================================================================================================
 -- TABLAS DE OPERACIONES
 -- =================================================================================================
@@ -251,15 +261,6 @@ CREATE TABLE IF NOT EXISTS cita (
     id_servicio INT REFERENCES servicio(id_servicio) ON DELETE set NULL
 );
 
-CREATE TABLE IF NOT EXISTS servicio (
-    id_servicio SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    descripcion TEXT,
-    precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
-    imagen TEXT,
-    estado BOOLEAN DEFAULT TRUE NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS servicio_x_cita (
     id_servicio_x_cita SERIAL PRIMARY KEY,
