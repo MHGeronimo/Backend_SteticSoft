@@ -8,15 +8,9 @@ const {
 } = require("../middlewares/validation.middleware");
 
 // --- FUNCIÓN SANITIZADORA REUTILIZABLE ---
-// Convierte cadenas vacías a NULL. Esto es clave para los campos UNIQUE opcionales.
 const emptyStringToNull = (value) => {
   return value === "" ? null : value;
 };
-
-// --- Expresión regular para direcciones en Colombia ---
-// Ejemplos válidos: "Calle 45 # 23-10", "Carrera 7 # 12B-45 Apto 201", "Av. 68 # 80-20 Local 5"
-const direccionRegex =
-  /^(Calle|Cl\.?|Carrera|Cra\.?|Avenida|Av\.?|Transversal|Tv\.?|Diagonal|Dg\.?|Circular|Cir\.?|Kil[oó]metro|Km\.?)\s+[0-9]+[A-Z]?(?:\s*#\s*[0-9]+[A-Z]?\s*-\s*[0-9]+)?(?:\s+(Apto|Oficina|Local|Interior|Torre|Piso)\s*\w+)?$/i;
 
 // --- Validador para CREAR ---
 const crearProveedorValidators = [
@@ -32,7 +26,8 @@ const crearProveedorValidators = [
   
   body("telefono")
     .trim()
-    .notEmpty().withMessage("El teléfono del proveedor es un campo obligatorio."),
+    .notEmpty().withMessage("El teléfono del proveedor es un campo obligatorio.")
+    .matches(/^\d{10}$/).withMessage("El teléfono del proveedor debe tener exactamente 10 dígitos."),
 
   body("correo")
     .trim()
@@ -49,7 +44,9 @@ const crearProveedorValidators = [
   body("direccion")
     .trim()
     .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio.")
-    .matches(direccionRegex).withMessage("La dirección ingresada no cumple con el formato válido en Colombia. Ejemplo: 'Calle 45 # 23-10'."),
+    .isLength({ min: 5 }).withMessage("La dirección debe tener al menos 5 caracteres.")
+    .matches(/^(Calle|Cl\.|Carrera|Cra\.|Avenida|Av\.|Transversal|Tv\.|Diagonal|Dg\.|Circular|Cir\.|Kilómetro|Km\.)\s+\d+/i)
+    .withMessage("La dirección debe iniciar con un tipo de vía válido (ej: Calle, Carrera, Av., Cra., etc.) seguido de un número."),
 
   // --- Validación de campos opcionales con unicidad ---
   body("numeroDocumento")
@@ -58,7 +55,6 @@ const crearProveedorValidators = [
     .optional({ nullable: true })
     .custom(async (value) => {
       if (value === null) return true;
-      
       const proveedor = await db.Proveedor.findOne({
         where: { numeroDocumento: value, estado: true },
       });
@@ -72,7 +68,6 @@ const crearProveedorValidators = [
     .optional({ nullable: true })
     .custom(async (value) => {
       if (value === null) return true;
-
       const proveedor = await db.Proveedor.findOne({
         where: { nitEmpresa: value, estado: true },
       });
@@ -86,6 +81,11 @@ const crearProveedorValidators = [
     .isLength({ min: 3 }).withMessage("El nombre del encargado debe tener al menos 3 caracteres.")
     .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
   
+  body("telefonoPersonaEncargada")
+    .trim()
+    .notEmpty().withMessage("El teléfono del encargado es obligatorio.")
+    .matches(/^\d{10}$/).withMessage("El teléfono del encargado debe tener exactamente 10 dígitos."),
+
   body("emailPersonaEncargada")
     .trim()
     .notEmpty().withMessage("El correo del encargado es obligatorio.")
@@ -124,20 +124,29 @@ const actualizarProveedorValidators = [
   body("telefono")
     .optional()
     .trim()
-    .notEmpty().withMessage("El teléfono del proveedor es un campo obligatorio."),
+    .notEmpty().withMessage("El teléfono del proveedor es un campo obligatorio.")
+    .matches(/^\d{10}$/).withMessage("El teléfono del proveedor debe tener exactamente 10 dígitos."),
   
   body("direccion")
     .optional()
     .trim()
     .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio.")
-    .matches(direccionRegex).withMessage("La dirección ingresada no cumple con el formato válido en Colombia. Ejemplo: 'Carrera 7 # 12B-45 Apto 201'."),
-
+    .isLength({ min: 5 }).withMessage("La dirección debe tener al menos 5 caracteres.")
+    .matches(/^(Calle|Cl\.|Carrera|Cra\.|Avenida|Av\.|Transversal|Tv\.|Diagonal|Dg\.|Circular|Cir\.|Kilómetro|Km\.)\s+\d+/i)
+    .withMessage("La dirección debe iniciar con un tipo de vía válido (ej: Calle, Carrera, Av., Cra., etc.) seguido de un número."),
+  
   body("nombrePersonaEncargada")
     .optional()
     .trim()
     .notEmpty().withMessage("El nombre del encargado no puede estar vacío.")
     .isLength({ min: 3 }).withMessage("El nombre del encargado debe tener al menos 3 caracteres.")
     .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre del encargado solo puede contener letras y espacios."),
+
+  body("telefonoPersonaEncargada")
+    .optional()
+    .trim()
+    .notEmpty().withMessage("El teléfono del encargado es obligatorio.")
+    .matches(/^\d{10}$/).withMessage("El teléfono del encargado debe tener exactamente 10 dígitos."),
 
   body("correo")
     .optional()
@@ -178,7 +187,6 @@ const actualizarProveedorValidators = [
     .optional({ nullable: true })
     .custom(async (value, { req }) => {
       if (value === null) return true;
-      
       const proveedor = await db.Proveedor.findOne({
         where: {
           numeroDocumento: value,
@@ -195,7 +203,6 @@ const actualizarProveedorValidators = [
     .optional({ nullable: true })
     .custom(async (value, { req }) => {
       if (value === null) return true;
-
       const proveedor = await db.Proveedor.findOne({
         where: {
           nitEmpresa: value,
