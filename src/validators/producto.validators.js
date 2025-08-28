@@ -20,12 +20,16 @@ const crearProductoValidators = [
     body("tipoUso")
     .notEmpty().withMessage("El tipo de uso es obligatorio.")
     .isIn(["Interno", "Externo"]).withMessage("El tipo de uso debe ser 'Interno' o 'Externo'."),
-
   body("precio")
     .trim()
     .notEmpty().withMessage("El precio es obligatorio.")
     .toFloat()
     .isFloat({ gt: 0 }).withMessage("El precio debe ser un número mayor que cero."),
+
+  body("vidaUtilDias")
+    .notEmpty().withMessage("La vida útil es obligatoria.")
+    .toInt()
+    .isInt({ gt: 0 }).withMessage("La vida útil debe ser un número entero mayor que cero."),
 
   body("existencia")
     .trim()
@@ -86,6 +90,15 @@ const actualizarProductoValidators = [
     .trim()
     .notEmpty()
     .isLength({ max: 300 }),
+
+  body("tipoUso")
+    .optional()
+    .isIn(["Interno", "Externo"]).withMessage("El tipo de uso debe ser 'Interno' o 'Externo'."),
+
+  body("vidaUtilDias")
+    .optional()
+    .toInt()
+    .isInt({ gt: 0 }).withMessage("La vida útil debe ser un número entero mayor que cero."),
 
   body("precio")
     .optional()
