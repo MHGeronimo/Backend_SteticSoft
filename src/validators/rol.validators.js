@@ -1,27 +1,41 @@
-// src/validators/rol.validators.js
-const { body, param } = require("express-validator");
+// src/shared/src_api/validators/rol.validators.js
+const { body, param, query } = require("express-validator"); // <-- AÑADIR 'query'
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
 
 const tipoPerfilValues = ["CLIENTE", "EMPLEADO", "NINGUNO"];
-// MODIFICACIÓN: Expresión regular para nombres de roles.
 const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s_]+$/;
+// INICIO DE MODIFICACIÓN: Regex mucho más estricta para la descripción.
+// Solo permite letras (con acentos), números, espacios y los caracteres .,:;_-
+const descriptionRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s.,:;_-]+$/;
+// FIN DE MODIFICACIÓN
 
+// NUEVO CÓDIGO: Validador para la ruta de listar (con búsqueda)
+const listarRolesValidators = [
+  query("search")
+    .optional()
+    .isString().withMessage("El término de búsqueda debe ser texto.")
+    .isLength({ min: 3 }).withMessage("El término de búsqueda debe tener al menos 3 caracteres."),
+  handleValidationErrors,
+];
+// FIN DE NUEVO CÓDIGO
 
 const crearRolValidators = [
   body("nombre")
     .trim()
     .notEmpty().withMessage("El nombre del rol es obligatorio.")
-    // MODIFICACIÓN: Longitud y validación de caracteres estándar.
     .isLength({ min: 3, max: 50 }).withMessage("El nombre del rol debe tener entre 3 y 50 caracteres.")
     .matches(nameRegex).withMessage("El nombre del rol solo puede contener letras, espacios y guiones bajos."),
+  
   body("descripcion")
-    .optional()
     .trim()
-    .isString().withMessage("La descripción debe ser una cadena de texto.")
-    .isLength({ max: 255 }).withMessage("La descripción no debe exceder los 255 caracteres."),
+    .notEmpty().withMessage("La descripción es obligatoria.")
+    .isLength({ min: 3, max: 250 }).withMessage("La descripción debe tener entre 3 y 250 caracteres.")
+    .matches(descriptionRegex).withMessage("La descripción contiene caracteres no válidos."), // Mensaje de error más claro
+
+
   body("estado")
     .optional()
     .isBoolean().withMessage("El estado debe ser un valor booleano (true o false)."),
@@ -39,14 +53,18 @@ const actualizarRolValidators = [
     .optional()
     .trim()
     .notEmpty().withMessage("El nombre del rol no puede estar vacío si se proporciona.")
-    // MODIFICACIÓN: Longitud y validación de caracteres estándar.
     .isLength({ min: 3, max: 50 }).withMessage("El nombre del rol debe tener entre 3 y 50 caracteres.")
     .matches(nameRegex).withMessage("El nombre del rol solo puede contener letras, espacios y guiones bajos."),
+
+  // MODIFICACIÓN: Aplicamos la nueva regex también en la actualización
   body("descripcion")
-    .optional({ nullable: true })
+    .optional()
     .trim()
-    .isString().withMessage("La descripción debe ser una cadena de texto.")
-    .isLength({ max: 255 }).withMessage("La descripción no debe exceder los 255 caracteres."),
+    .notEmpty().withMessage("La descripción no puede estar vacía si se proporciona.")
+    .isLength({ min: 3, max: 250 }).withMessage("La descripción debe tener entre 3 y 250 caracteres.")
+    .matches(descriptionRegex).withMessage("La descripción contiene caracteres no válidos."), // Mensaje de error más claro
+  
+  
   body("estado")
     .optional()
     .isBoolean().withMessage("El estado debe ser un valor booleano (true o false)."),
@@ -57,7 +75,7 @@ const actualizarRolValidators = [
   handleValidationErrors,
 ];
 
-// ... (el resto de validadores de rol.validators.js se mantienen igual)
+// ... (el resto de validadores no cambian)
 const idRolValidator = [
   param("idRol")
     .isInt({ gt: 0 })
@@ -99,7 +117,9 @@ const cambiarEstadoRolValidators = [
   handleValidationErrors,
 ];
 
+
 module.exports = {
+  listarRolesValidators, // <-- Exportar el nuevo validador
   crearRolValidators,
   actualizarRolValidators,
   idRolValidator,
