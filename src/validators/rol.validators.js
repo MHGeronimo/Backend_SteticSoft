@@ -107,7 +107,6 @@ const cambiarEstadoRolValidators = [
 
 
 module.exports = {
-  listarRolesValidators, // <-- Exportar el nuevo validador
   crearRolValidators,
   actualizarRolValidators,
   idRolValidator,
