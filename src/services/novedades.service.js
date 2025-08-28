@@ -56,29 +56,50 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
 
 // --- FUNCIÓN DE OBTENER NOVEDADES (CORREGIDA) ---
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
-  const { estado, empleadoId } = opcionesDeFiltro;
+  // Ahora también recibimos 'busqueda'
+  const { estado, empleadoId, busqueda } = opcionesDeFiltro;
   const whereClause = {};
-  
-  // ✅ Se modifica el 'include' para traer el perfil del empleado
+
   const includeOptions = {
     model: db.Usuario,
     as: 'empleados',
-    attributes: ['idUsuario', 'correo'], // Traemos los datos base del usuario
+    attributes: ['idUsuario', 'correo'],
     through: { attributes: [] },
-    include: [{ // Y DENTRO del usuario, incluimos su perfil de empleado
-        model: db.Empleado,
-        as: 'empleadoInfo',
-        attributes: ['nombre', 'apellido', 'numeroDocumento'],
-        required: true // Solo trae usuarios que tengan un perfil de empleado
-    }]
+    include: [{
+      model: db.Empleado,
+      as: 'empleadoInfo',
+      attributes: ['nombre', 'apellido'],
+    }],
+    required: false // Usamos LEFT JOIN para no excluir novedades
   };
 
+  // Filtro por estado (se mantiene igual)
   if (estado === 'true' || estado === 'false') {
     whereClause.estado = estado === 'true';
   }
 
+  // Filtro por empleadoId (se mantiene igual)
   if (empleadoId) {
     includeOptions.where = { idUsuario: empleadoId };
+    includeOptions.required = true; // Hacemos INNER JOIN si se filtra por empleado
+  }
+
+  // ✅ NUEVA LÓGICA DE BÚSQUEDA GENERAL
+  if (busqueda) {
+    const searchTerm = `%${busqueda}%`;
+
+    // Usamos Op.or para buscar en múltiples campos de la novedad y sus empleados
+    whereClause[Op.or] = [
+      // Campos de la tabla Novedad
+      { fechaInicio: { [Op.like]: searchTerm } },
+      { fechaFin: { [Op.like]: searchTerm } },
+      { horaInicio: { [Op.like]: searchTerm } },
+      { horaFin: { [Op.like]: searchTerm } },
+      // Campos de las tablas asociadas (Usuario y Empleado)
+      { '$empleados.correo$': { [Op.like]: searchTerm } },
+      { '$empleados.empleadoInfo.nombre$': { [Op.like]: searchTerm } },
+      { '$empleados.empleadoInfo.apellido$': { [Op.like]: searchTerm } },
+    ];
   }
 
   try {
