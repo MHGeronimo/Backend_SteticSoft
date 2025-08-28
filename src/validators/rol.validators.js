@@ -7,8 +7,10 @@ const db = require("../models");
 
 const tipoPerfilValues = ["CLIENTE", "EMPLEADO", "NINGUNO"];
 const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s_]+$/;
-// NUEVO: Regex para descripción. Permite alfanuméricos, espacios y puntuación básica.
-const descriptionRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s.,¡!¿?_#-]+$/;
+// INICIO DE MODIFICACIÓN: Regex mucho más estricta para la descripción.
+// Solo permite letras (con acentos), números, espacios y los caracteres .,:;_-
+const descriptionRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s.,:;_-]+$/;
+// FIN DE MODIFICACIÓN
 
 // NUEVO CÓDIGO: Validador para la ruta de listar (con búsqueda)
 const listarRolesValidators = [
@@ -27,13 +29,12 @@ const crearRolValidators = [
     .isLength({ min: 3, max: 50 }).withMessage("El nombre del rol debe tener entre 3 y 50 caracteres.")
     .matches(nameRegex).withMessage("El nombre del rol solo puede contener letras, espacios y guiones bajos."),
   
-  // INICIO DE MODIFICACIÓN: Validación para descripción en la creación
   body("descripcion")
     .trim()
     .notEmpty().withMessage("La descripción es obligatoria.")
     .isLength({ min: 3, max: 250 }).withMessage("La descripción debe tener entre 3 y 250 caracteres.")
-    .matches(descriptionRegex).withMessage("La descripción contiene caracteres no permitidos."),
-  // FIN DE MODIFICACIÓN
+    .matches(descriptionRegex).withMessage("La descripción contiene caracteres no válidos."), // Mensaje de error más claro
+
 
   body("estado")
     .optional()
@@ -55,14 +56,14 @@ const actualizarRolValidators = [
     .isLength({ min: 3, max: 50 }).withMessage("El nombre del rol debe tener entre 3 y 50 caracteres.")
     .matches(nameRegex).withMessage("El nombre del rol solo puede contener letras, espacios y guiones bajos."),
 
-  // INICIO DE MODIFICACIÓN: Validación para descripción en la actualización
+  // MODIFICACIÓN: Aplicamos la nueva regex también en la actualización
   body("descripcion")
-    .optional() // Es opcional en la petición, pero si viene, no puede estar vacío.
+    .optional()
     .trim()
     .notEmpty().withMessage("La descripción no puede estar vacía si se proporciona.")
     .isLength({ min: 3, max: 250 }).withMessage("La descripción debe tener entre 3 y 250 caracteres.")
-    .matches(descriptionRegex).withMessage("La descripción contiene caracteres no permitidos."),
-  // FIN DE MODIFICACIÓN
+    .matches(descriptionRegex).withMessage("La descripción contiene caracteres no válidos."), // Mensaje de error más claro
+  
   
   body("estado")
     .optional()
