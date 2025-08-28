@@ -17,7 +17,7 @@ const listarRolesValidators = [
   query("search")
     .optional()
     .isString().withMessage("El término de búsqueda debe ser texto.")
-    .isLength({ min: 3 }).withMessage("El término de búsqueda debe tener al menos 3 caracteres."),
+    .isLength({ min: 1 }).withMessage("El término de búsqueda debe tener al menos 1 carácter."),
   handleValidationErrors,
 ];
 // FIN DE NUEVO CÓDIGO
