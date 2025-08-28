@@ -24,7 +24,7 @@ router.get(
   "/",
   authMiddleware,
   checkPermission(PERMISO_GESTIONAR_ROLES),
-  rolValidators.listarRolesValidators, // <-- Validador añadido
+  rolValidators.
   rolController.listarRoles
 );
 

@@ -7,20 +7,8 @@ const db = require("../models");
 
 const tipoPerfilValues = ["CLIENTE", "EMPLEADO", "NINGUNO"];
 const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s_]+$/;
-// INICIO DE MODIFICACIÓN: Regex mucho más estricta para la descripción.
 // Solo permite letras (con acentos), números, espacios y los caracteres .,:;_-
 const descriptionRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s.,:;_-]+$/;
-// FIN DE MODIFICACIÓN
-
-// NUEVO CÓDIGO: Validador para la ruta de listar (con búsqueda)
-const listarRolesValidators = [
-  query("search")
-    .optional()
-    .isString().withMessage("El término de búsqueda debe ser texto.")
-    .isLength({ min: 1 }).withMessage("El término de búsqueda debe tener al menos 1 carácter."),
-  handleValidationErrors,
-];
-// FIN DE NUEVO CÓDIGO
 
 const crearRolValidators = [
   body("nombre")
