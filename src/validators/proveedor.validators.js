@@ -45,7 +45,7 @@ const crearProveedorValidators = [
     .trim()
     .notEmpty().withMessage("La dirección del proveedor es un campo obligatorio.")
     .isLength({ min: 5 }).withMessage("La dirección debe tener al menos 5 caracteres.")
-    .matches(/^(Calle|Cl\.?|Carrera|Cra\.?|Avenida|Av\.?|Transversal|Tv\.?|Diagonal|Dg\.?|Circular|Cir\.?|Kilómetro|Km\.?)\s+\d+(\s+#\s*[A-Za-z0-9]+(?:\s*-\s*[A-Za-z0-9]+)?)?$/i)
+    .matches(/^(Calle|Cl\.?|Carrera|Cra\.?|Avenida|Av\.?|Transversal|Tv\.?|Diagonal|Dg\.?|Circular|Cir\.?|Kilómetro|Km\.?)\s+[A-Za-z0-9]+(?:\s+#\s*[A-Za-z0-9]+(?:\s*-\s*[A-Za-z0-9]+)?)?$/i)
     .withMessage("La dirección debe iniciar con un tipo de vía válido (ej: Calle, Carrera, Av., Cra., etc.) seguido de un número y un numeral."),
 
   // --- Validación de campos opcionales con unicidad ---
