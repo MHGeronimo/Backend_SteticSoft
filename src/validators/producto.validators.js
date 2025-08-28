@@ -17,6 +17,10 @@ const crearProductoValidators = [
     .notEmpty().withMessage("La descripción es obligatoria.")
     .isLength({ max: 300 }).withMessage("La descripción no puede superar los 300 caracteres."),
 
+    body("tipoUso")
+    .notEmpty().withMessage("El tipo de uso es obligatorio.")
+    .isIn(["Interno", "Externo"]).withMessage("El tipo de uso debe ser 'Interno' o 'Externo'."),
+
   body("precio")
     .trim()
     .notEmpty().withMessage("El precio es obligatorio.")
