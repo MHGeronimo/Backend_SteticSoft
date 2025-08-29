@@ -122,6 +122,13 @@ const crearUsuarioValidators = [
     }),
   body("fechaNacimiento")
     .optional({ checkFalsy: true })
+    .customSanitizer((value) => {
+      if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        const [day, month, year] = value.split("/");
+        return `${year}-${month}-${day}`;
+      }
+      return value;
+    })
     .isISO8601()
     .withMessage("La fecha de nacimiento no es válida.")
     .custom((value) => {
@@ -253,8 +260,16 @@ const actualizarUsuarioValidators = [
     }),
   body("fechaNacimiento")
     .optional({ checkFalsy: true })
+    // Sanitizer: Convierte DD/MM/YYYY a YYYY-MM-DD antes de validar
+    .customSanitizer((value) => {
+      if (value && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        const [day, month, year] = value.split("/");
+        return `${year}-${month}-${day}`;
+      }
+      return value;
+    })
     .isISO8601()
-    .withMessage("La fecha de nacimiento no es válida.")
+    .withMessage("La fecha de nacimiento no tiene un formato válido.")
     .custom((value) => {
       const birthDate = new Date(value);
       const today = new Date();
