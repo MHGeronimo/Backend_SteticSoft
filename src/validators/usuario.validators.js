@@ -1,77 +1,107 @@
-// src/validators/usuario.validators.js
+// src/shared/src_api/validators/usuario.validators.js
 const { body, param, query } = require("express-validator");
 const {
   handleValidationErrors,
 } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
 
+// --- Expresiones Regulares para Validación Estricta ---
 const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+const phoneRegex = /^\d{7,15}$/; // Acepta solo números, de 7 a 15 dígitos.
+const docRegex = /^[a-zA-Z0-9]{5,20}$/; // Alfanumérico, de 5 a 20 caracteres.
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Formato de email estricto.
+// Requiere: min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 símbolo.
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
+// --- Validador para CREAR Usuario ---
 const crearUsuarioValidators = [
-  // --- Validaciones para la entidad Usuario ---
+  // --- Campos de Cuenta (Siempre Requeridos) ---
   body("correo")
     .trim()
     .notEmpty()
-    .withMessage("La dirección de correo es obligatoria.")
+    .withMessage("El correo electrónico es obligatorio.")
     .isEmail()
-    .withMessage("Debe proporcionar una dirección de correo válida.")
+    .withMessage("El formato del correo no es válido.")
+    .matches(emailRegex)
+    .withMessage("El correo electrónico no tiene un formato válido.")
     .normalizeEmail()
     .custom(async (value) => {
-      const usuarioExistente = await db.Usuario.findOne({
-        where: { correo: value },
-      });
-      if (usuarioExistente) {
-        return Promise.reject("La dirección de correo ya está registrada.");
+      const usuario = await db.Usuario.findOne({ where: { correo: value } });
+      if (usuario) {
+        return Promise.reject("Este correo electrónico ya está registrado.");
       }
     }),
+
   body("contrasena")
     .notEmpty()
     .withMessage("La contraseña es obligatoria.")
     .isLength({ min: 8 })
-    .withMessage("La contraseña debe tener al menos 8 caracteres."),
+    .withMessage("La contraseña debe tener al menos 8 caracteres.")
+    .matches(passwordRegex)
+    .withMessage(
+      "La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial."
+    ),
+
   body("idRol")
     .notEmpty()
-    .withMessage("El ID del rol es obligatorio.")
+    .withMessage("Debe seleccionar un rol.")
     .isInt({ gt: 0 })
-    .withMessage("El ID del rol debe ser un entero positivo."),
-  // ... (la validación custom de idRol se mantiene)
+    .withMessage("El ID del rol no es válido."),
 
-  // --- Validaciones para el Perfil (Cliente/Empleado) ---
+  // --- Validador Condicional Centralizado para Campos de Perfil ---
+  body().custom(async (value, { req }) => {
+    if (!req.body.idRol) return true; // Si no hay rol, otras validaciones ya fallaron.
+
+    const rol = await db.Rol.findByPk(req.body.idRol);
+    if (
+      rol &&
+      (rol.tipoPerfil === "CLIENTE" || rol.tipoPerfil === "EMPLEADO")
+    ) {
+      const requiredFields = {
+        nombre: "El nombre es obligatorio.",
+        apellido: "El apellido es obligatorio.",
+        telefono: "El teléfono es obligatorio.",
+        tipoDocumento: "El tipo de documento es obligatorio.",
+        numeroDocumento: "El número de documento es obligatorio.",
+        fechaNacimiento: "La fecha de nacimiento es obligatoria.",
+      };
+
+      if (rol.tipoPerfil === "CLIENTE") {
+        requiredFields.direccion = "La dirección es obligatoria.";
+      }
+
+      for (const field in requiredFields) {
+        if (!req.body[field] || String(req.body[field]).trim() === "") {
+          throw new Error(requiredFields[field]);
+        }
+      }
+    }
+    return true;
+  }),
+
+  // --- Validaciones de Formato para Campos de Perfil (siempre se aplican si el campo existe) ---
   body("nombre")
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("El nombre es obligatorio para perfiles.")
-    .isLength({ min: 3, max: 50 })
-    .withMessage("El nombre debe tener entre 3 y 50 caracteres.")
     .matches(nameRegex)
-    .withMessage("El nombre solo puede contener letras y espacios."),
+    .withMessage("El nombre solo debe contener letras.")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("El nombre debe tener entre 2 y 100 caracteres."),
   body("apellido")
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("El apellido es obligatorio para perfiles.")
-    .isLength({ min: 3, max: 50 })
-    .withMessage("El apellido debe tener entre 3 y 50 caracteres.")
     .matches(nameRegex)
-    .withMessage("El apellido solo puede contener letras y espacios."),
+    .withMessage("El apellido solo debe contener letras.")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("El apellido debe tener entre 2 y 100 caracteres."),
   body("telefono")
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("El teléfono es obligatorio para perfiles.")
-    .isLength({ min: 7, max: 15 })
-    .withMessage("El teléfono debe tener entre 7 y 15 dígitos.")
-    .isNumeric()
-    .withMessage("El teléfono solo puede contener números."),
-
+    .matches(phoneRegex)
+    .withMessage("El teléfono debe contener entre 7 y 15 dígitos numéricos."),
   body("tipoDocumento")
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage("El tipo de documento no puede estar vacío si se proporciona.")
-    .isString()
-    .withMessage("El tipo de documento debe ser texto.")
+    .optional({ checkFalsy: true })
     .isIn([
       "Cédula de Ciudadanía",
       "Cédula de Extranjería",
@@ -79,143 +109,79 @@ const crearUsuarioValidators = [
       "Tarjeta de Identidad",
     ])
     .withMessage("Tipo de documento no válido."),
-
   body("numeroDocumento")
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
+    .matches(docRegex)
     .withMessage(
-      "El número de documento no puede estar vacío si se proporciona."
-    )
-    .isString()
-    .withMessage("El número de documento debe ser texto.")
-    .isLength({ min: 5, max: 45 })
-    .withMessage("El número de documento debe tener entre 5 y 45 caracteres.")
-    .custom(async (value, { req }) => {
-      if (!value) return true;
-
-      const rol = await db.Rol.findByPk(req.body.idRol);
-      if (!rol) return true;
-
-      let profileModel;
-      if (rol.tipo_perfil === "CLIENTE") {
-        profileModel = db.Cliente;
-      } else if (rol.tipo_perfil === "EMPLEADO") {
-        profileModel = db.Empleado;
-      } else {
-        return true;
-      }
-
-      const perfilExistente = await profileModel.findOne({
-        where: { numero_documento: value },
-      });
-      if (perfilExistente) {
-        return Promise.reject(
-          `El número de documento ya está registrado para un ${rol.tipo_perfil.toLowerCase()}.`
-        );
-      }
-      return true;
-    }),
-
+      "El documento debe tener entre 5 y 20 caracteres alfanuméricos."
+    ),
   body("fechaNacimiento")
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
-    .withMessage(
-      "La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD)."
-    )
+    .withMessage("La fecha de nacimiento no es válida (formato YYYY-MM-DD).")
     .toDate(),
+  body("direccion")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 5, max: 255 })
+    .withMessage("La dirección debe tener entre 5 y 255 caracteres."),
 
   handleValidationErrors,
 ];
 
+// --- Validador para ACTUALIZAR Usuario ---
 const actualizarUsuarioValidators = [
   param("idUsuario")
     .isInt({ gt: 0 })
-    .withMessage("El ID de usuario debe ser un entero positivo."),
+    .withMessage("El ID de usuario es inválido."),
+
   body("correo")
     .optional()
     .trim()
     .isEmail()
-    .withMessage("Debe proporcionar un correo electrónico válido si actualiza.")
     .normalizeEmail()
     .custom(async (value, { req }) => {
-      const idUsuario = Number(req.params.idUsuario);
-      const usuarioExistente = await db.Usuario.findOne({
+      const usuario = await db.Usuario.findOne({
         where: {
           correo: value,
-          id_usuario: { [db.Sequelize.Op.ne]: idUsuario },
+          idUsuario: { [db.Sequelize.Op.ne]: req.params.idUsuario },
         },
       });
-      if (usuarioExistente) {
-        return Promise.reject(
-          "La dirección de correo ya está registrada por otro usuario."
-        );
+      if (usuario) {
+        return Promise.reject("Este correo ya está en uso por otro usuario.");
       }
     }),
-  body("contrasena")
+  // No se valida la contraseña aquí, debe tener su propia ruta/lógica de "cambiar contraseña"
+  body("idRol").optional().isInt({ gt: 0 }),
+  body("estado").optional().isBoolean(),
+
+  // Las validaciones de formato de perfil se mantienen igual que en la creación
+  body("nombre")
     .optional({ checkFalsy: true })
-    .isString()
-    .withMessage("La contraseña debe ser una cadena de texto.")
-    .isLength({ min: 8, max: 100 }) // MODIFICACIÓN: Añadido max y mensaje
-    .withMessage(
-      "La contraseña debe tener entre 8 y 100 caracteres si se actualiza."
-    ),
-  body("idRol")
-    .optional()
-    .isInt({ gt: 0 })
-    .withMessage("El ID del rol debe ser un entero positivo si se actualiza.")
-    .custom(async (value) => {
-      if (value) {
-        const rolExistente = await db.Rol.findOne({
-          where: { id_rol: value, estado: true },
-        });
-        if (!rolExistente) {
-          return Promise.reject(
-            "El rol especificado para la actualización no existe o no está activo."
-          );
-        }
-      }
-    }),
-  body("estado")
-    .optional()
-    .isBoolean()
-    .withMessage("El estado debe ser un valor booleano (true o false)."),
-
-  body("nombre").optional().trim().notEmpty().withMessage("El nombre no puede estar vacío si se actualiza.").isLength({ min: 2, max: 100 }),
-  body("apellido").optional().trim().notEmpty().withMessage("El apellido no puede estar vacío si se actualiza.").isLength({ min: 2, max: 100 }),
-  body("telefono").optional().trim().notEmpty().withMessage("El teléfono no puede estar vacío si se actualiza.").isLength({ min: 7, max: 20 }),
-  body("tipoDocumento").optional().trim().notEmpty().withMessage("El tipo de documento no puede estar vacío si se actualiza.").isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']),
-  body("numeroDocumento").optional().trim().notEmpty().withMessage("El número de documento no puede estar vacío si se actualiza.").isLength({ min: 5, max: 45 })
-    .custom(async (value, { req }) => {
-        if (!value) return true;
-        const idUsuario = Number(req.params.idUsuario);
-        const usuario = await db.Usuario.findByPk(idUsuario, { include: [{ model: db.Rol, as: 'rol' }] });
-        if (!usuario || !usuario.rol) return true;
-
-        let profileModel;
-        let profileFk = 'id_usuario';
-        if (usuario.rol.tipo_perfil === "CLIENTE") {
-            profileModel = db.Cliente;
-        } else if (usuario.rol.tipo_perfil === "EMPLEADO") {
-            profileModel = db.Empleado;
-        } else {
-            return true;
-        }
-
-        const perfilAsociado = await profileModel.findOne({ where: { [profileFk]: idUsuario } });
-        if (perfilAsociado && perfilAsociado.numero_documento === value) return true;
-
-        const otroPerfilConDocumento = await profileModel.findOne({ where: { numero_documento: value } });
-        if (otroPerfilConDocumento) {
-            return Promise.reject(`El número de documento ya está registrado para otro ${usuario.rol.tipo_perfil.toLowerCase()}.`);
-        }
-        return true;
-    }),
-  body("fechaNacimiento").optional().isISO8601().withMessage("La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD).").toDate(),
+    .trim()
+    .matches(nameRegex)
+    .isLength({ min: 2, max: 100 }),
+  body("apellido")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(nameRegex)
+    .isLength({ min: 2, max: 100 }),
+  body("telefono").optional({ checkFalsy: true }).trim().matches(phoneRegex),
+  body("numeroDocumento")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(docRegex),
+  body("fechaNacimiento").optional({ checkFalsy: true }).isISO8601().toDate(),
+  body("direccion")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 5, max: 255 }),
 
   handleValidationErrors,
 ];
 
+// --- Otros Validadores (Sin cambios, pero revisados para consistencia) ---
 const idUsuarioValidator = [
   param("idUsuario")
     .isInt({ gt: 0 })
@@ -229,9 +195,9 @@ const cambiarEstadoUsuarioValidators = [
     .withMessage("El ID de usuario debe ser un entero positivo."),
   body("estado")
     .exists({ checkFalsy: false })
-    .withMessage("El campo 'estado' es obligatorio en el cuerpo de la solicitud.")
+    .withMessage("El campo 'estado' es obligatorio.")
     .isBoolean()
-    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+    .withMessage("El valor de 'estado' debe ser un booleano."),
   handleValidationErrors,
 ];
 
