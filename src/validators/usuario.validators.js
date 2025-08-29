@@ -63,8 +63,21 @@ const crearUsuarioValidators = [
   body("apellido").optional({ checkFalsy: true }).trim().matches(nameRegex).withMessage("El apellido solo debe contener letras.").isLength({ min: 2, max: 100 }),
   body("telefono").optional({ checkFalsy: true }).trim().matches(phoneRegex).withMessage("El teléfono solo puede contener números.").isLength({ min: 7, max: 15 }),
   body("tipoDocumento").optional({ checkFalsy: true }).isIn(["Cédula de Ciudadanía", "Cédula de Extranjería", "Pasaporte", "Tarjeta de Identidad"]),
-  body("numeroDocumento").optional({ checkFalsy: true }).trim().matches(docRegex).withMessage("El número de documento solo admite letras y números.").isLength({ min: 5, max: 20 }),
-  body("fechaNacimiento").optional({ checkFalsy: true }).isISO8601().withMessage("La fecha de nacimiento no es válida.").custom((value) => {
+  body("numeroDocumento").optional({ checkFalsy: true }).trim().isLength({ min: 5, max: 20 }).withMessage("El documento debe tener entre 5 y 20 caracteres.")
+    .custom((value, { req }) => {
+      const docType = req.body.tipoDocumento;
+      if (docType === "Cédula de Ciudadanía" || docType === "Tarjeta de Identidad" || docType === "Cédula de Extranjería") {
+        if (!numericOnlyRegex.test(value)) {
+          throw new Error("Para este tipo de documento, ingrese solo números.");
+        }
+      } else if (docType === "Pasaporte") {
+        if (!alphanumericRegex.test(value)) {
+          throw new Error("Para Pasaporte, ingrese solo letras y números.");
+        }
+      }
+      return true;
+    }),
+    body("fechaNacimiento").optional({ checkFalsy: true }).isISO8601().withMessage("La fecha de nacimiento no es válida.").custom((value) => {
       const birthDate = new Date(value);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
@@ -121,23 +134,20 @@ const actualizarUsuarioValidators = [
   body("apellido").optional({ checkFalsy: true }).trim().matches(nameRegex).withMessage("El apellido solo debe contener letras.").isLength({ min: 2, max: 100 }),
   body("telefono").optional({ checkFalsy: true }).trim().matches(phoneRegex).withMessage("El teléfono solo puede contener números.").isLength({ min: 7, max: 15 }),
   body("tipoDocumento").optional({ checkFalsy: true }).isIn(["Cédula de Ciudadanía", "Cédula de Extranjería", "Pasaporte", "Tarjeta de Identidad"]),
-  body("numeroDocumento").optional({ checkFalsy: true }).trim().matches(docRegex).withMessage("El número de documento solo admite letras y números.").isLength({ min: 5, max: 20 })
-    .custom(async (value, { req }) => {
-        if (!value || !req.body.idRol) return true;
-        const rol = await db.Rol.findByPk(req.body.idRol);
-        if (!rol || (rol.tipoPerfil !== 'CLIENTE' && rol.tipoPerfil !== 'EMPLEADO')) return true;
-
-        const model = rol.tipoPerfil === 'CLIENTE' ? db.Cliente : db.Empleado;
-        const profile = await model.findOne({
-            where: {
-                numeroDocumento: value,
-                idUsuario: { [db.Sequelize.Op.ne]: req.params.idUsuario }
-            }
-        });
-        if (profile) {
-            return Promise.reject(`Este número de documento ya está registrado para otro ${rol.tipoPerfil.toLowerCase()}.`);
-        }
-    }),
+  body("numeroDocumento").optional({ checkFalsy: true }).trim().isLength({ min: 5, max: 20 }).withMessage("El documento debe tener entre 5 y 20 caracteres.")
+  .custom((value, { req }) => {
+    const docType = req.body.tipoDocumento;
+    if (docType === "Cédula de Ciudadanía" || docType === "Tarjeta de Identidad" || docType === "Cédula de Extranjería") {
+      if (!numericOnlyRegex.test(value)) {
+        throw new Error("Para este tipo de documento, ingrese solo números.");
+      }
+    } else if (docType === "Pasaporte") {
+      if (!alphanumericRegex.test(value)) {
+        throw new Error("Para Pasaporte, ingrese solo letras y números.");
+      }
+    }
+    return true;
+  }),
   body("fechaNacimiento").optional({ checkFalsy: true }).isISO8601().withMessage("La fecha de nacimiento no es válida.").custom((value) => {
       const birthDate = new Date(value);
       const today = new Date();
