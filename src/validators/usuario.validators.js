@@ -62,14 +62,11 @@ const crearUsuarioValidators = [
   }),
   body("nombre").optional({ checkFalsy: true }).trim().matches(nameRegex).withMessage("El nombre solo debe contener letras y espacios.").isLength({ min: 2, max: 100 }),
   body("apellido").optional({ checkFalsy: true }).trim().matches(nameRegex).withMessage("El apellido solo debe contener letras y espacios.").isLength({ min: 2, max: 100 }),
-  
-  // CORRECCIÓN: Simplificado para mayor claridad
   body("telefono")
     .optional({ checkFalsy: true })
     .trim()
     .matches(numericOnlyRegex).withMessage("El teléfono solo puede contener números.")
     .isLength({ min: 7, max: 15 }).withMessage("El teléfono debe tener entre 7 y 15 dígitos."),
-
   body("tipoDocumento").optional({ checkFalsy: true }).isIn(["Cédula de Ciudadanía", "Cédula de Extranjería", "Pasaporte", "Tarjeta de Identidad"]),
   body("numeroDocumento").optional({ checkFalsy: true }).trim().isLength({ min: 5, max: 20 }).withMessage("El documento debe tener entre 5 y 20 caracteres.").custom((value, { req }) => {
       const docType = req.body.tipoDocumento;
@@ -117,20 +114,13 @@ const actualizarUsuarioValidators = [
     if (!req.body.idRol) return true;
     const rol = await db.Rol.findByPk(req.body.idRol);
     if (rol && (rol.tipoPerfil === "CLIENTE" || rol.tipoPerfil === "EMPLEADO")) {
-      const requiredFields = {
-        nombre: "El nombre es obligatorio.",
-        apellido: "El apellido es obligatorio.",
-        telefono: "El teléfono es obligatorio.",
-        tipoDocumento: "El tipo de documento es obligatorio.",
-        numeroDocumento: "El número de documento es obligatorio.",
-        fechaNacimiento: "La fecha de nacimiento es obligatoria.",
-      };
+      const requiredFields = [ "nombre", "apellido", "telefono", "tipoDocumento", "numeroDocumento", "fechaNacimiento" ];
       if (rol.tipoPerfil === "CLIENTE") {
-        requiredFields.direccion = "La dirección es obligatoria.";
+        requiredFields.push("direccion");
       }
-      for (const field in requiredFields) {
+      for (const field of requiredFields) {
         if (req.body[field] !== undefined && String(req.body[field]).trim() === "") {
-          throw new Error(requiredFields[field]);
+          throw new Error(`El campo '${field}' no puede estar vacío si se proporciona.`);
         }
       }
     }
@@ -138,20 +128,12 @@ const actualizarUsuarioValidators = [
   }),
   body("nombre").optional({ checkFalsy: true }).trim().matches(nameRegex).withMessage("El nombre solo debe contener letras y espacios.").isLength({ min: 2, max: 100 }),
   body("apellido").optional({ checkFalsy: true }).trim().matches(nameRegex).withMessage("El apellido solo debe contener letras y espacios.").isLength({ min: 2, max: 100 }),
-  
-  // CORRECCIÓN: Simplificado para mayor claridad
-  body("telefono")
-    .optional({ checkFalsy: true })
-    .trim()
-    .matches(numericOnlyRegex).withMessage("El teléfono solo puede contener números.")
-    .isLength({ min: 7, max: 15 }).withMessage("El teléfono debe tener entre 7 y 15 dígitos."),
-
+  body("telefono").optional({ checkFalsy: true }).trim().matches(numericOnlyRegex).withMessage("El teléfono solo puede contener números.").isLength({ min: 7, max: 15 }).withMessage("El teléfono debe tener entre 7 y 15 dígitos."),
   body("tipoDocumento").optional({ checkFalsy: true }).isIn(["Cédula de Ciudadanía", "Cédula de Extranjería", "Pasaporte", "Tarjeta de Identidad"]),
   
   // CORRECCIÓN CRÍTICA: Añadida validación de unicidad para numeroDocumento
   body("numeroDocumento").optional({ checkFalsy: true }).trim().isLength({ min: 5, max: 20 }).withMessage("El documento debe tener entre 5 y 20 caracteres.")
     .custom((value, { req }) => {
-      // Validador de formato
       const docType = req.body.tipoDocumento;
       if (docType === "Cédula de Ciudadanía" || docType === "Tarjeta de Identidad" || docType === "Cédula de Extranjería") {
         if (!numericOnlyRegex.test(value)) { throw new Error("Para este tipo de documento, ingrese solo números."); }
@@ -161,7 +143,6 @@ const actualizarUsuarioValidators = [
       return true;
     })
     .custom(async (value, { req }) => {
-      // Validador de unicidad
       if (!value || !req.body.idRol) return true;
       const rol = await db.Rol.findByPk(req.body.idRol);
       if (!rol || (rol.tipoPerfil !== 'CLIENTE' && rol.tipoPerfil !== 'EMPLEADO')) return true;
