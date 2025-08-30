@@ -16,7 +16,6 @@ const crearServicio = async (datosServicio) => {
     precio,
     categoriaServicioId,
     descripcion,
-    imagen, // La ruta de la imagen ya viene como string desde el controller
   } = datosServicio;
 
   // 1. Verificaciones previas
@@ -41,8 +40,6 @@ const crearServicio = async (datosServicio) => {
       precio: parseFloat(precio),
       // Se usa el nombre de campo correcto que espera el modelo de Sequelize
       idCategoriaServicio: categoriaServicioId,
-      // El campo 'imagen' se añade solo si existe
-      ...(imagen && { imagen: imagen }),
     };
 
     const nuevoServicio = await db.Servicio.create(servicioParaCrear);
@@ -81,7 +78,6 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   if (busqueda) {
     whereClause[Op.or] = [
       { nombre: { [Op.iLike]: `%${busqueda}%` } },
-      { descripcion: { [Op.iLike]: `%${busqueda}%` } },
       // Para buscar por precio, hay que convertirlo a texto en la consulta
       db.where(db.cast(db.col("precio"), "text"), {
         [Op.iLike]: `%${busqueda}%`,

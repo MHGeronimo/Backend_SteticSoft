@@ -12,6 +12,7 @@ const crearServicioValidators = [
     .notEmpty().withMessage("El nombre del servicio es obligatorio.")
     .isString().withMessage("El nombre debe ser texto.")
     .isLength({ min: 3, max: 100 }).withMessage("El nombre debe tener entre 3 y 100 caracteres.")
+    .matches(/^[a-zA-Z0-9\s]+$/).withMessage("El nombre solo puede contener letras, números y espacios.")
     .custom(async (value) => {
       const servicio = await db.Servicio.findOne({ where: { nombre: value } });
       if (servicio) {
@@ -42,10 +43,6 @@ const crearServicioValidators = [
         return Promise.reject("La categoría seleccionada no existe o no está activa.");
       }
     }),
-
-  body("imagen")
-    .optional({ nullable: true, checkFalsy: true }),
-
 
   handleValidationErrors,
 ];
@@ -91,9 +88,6 @@ const actualizarServicioValidators = [
         return Promise.reject("La categoría seleccionada no existe o no está activa.");
       }
     }),
-
-  body("imagen")
-    .optional({ nullable: true, checkFalsy: true }),
 
   handleValidationErrors,
 ];
