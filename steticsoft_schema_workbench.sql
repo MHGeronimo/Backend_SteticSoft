@@ -181,7 +181,6 @@ CREATE TABLE IF NOT EXISTS servicio (
     descripcion TEXT,
     precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     id_categoria_servicio INT NOT NULL,
-    imagen TEXT,
     estado TINYINT(1) DEFAULT 1 NOT NULL,
     FOREIGN KEY (id_categoria_servicio) REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT
 );

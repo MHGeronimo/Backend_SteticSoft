@@ -16,9 +16,6 @@ const servicioService = require("../services/servicio.service.js");
 const crearServicio = async (req, res, next) => {
   try {
     const servicioData = { ...req.body };
-    if (req.file) {
-      servicioData.imagen = path.join('uploads', 'servicios', req.file.filename).replace(/\\/g, '/');
-    }
 
     const nuevoServicio = await servicioService.crearServicio(servicioData);
     res.status(201).json({
@@ -81,9 +78,6 @@ const actualizarServicio = async (req, res, next) => {
   try {
     const { idServicio } = req.params;
     const datosActualizar = { ...req.body };
-    if (req.file) {
-      datosActualizar.imagen = path.join('uploads', 'servicios', req.file.filename).replace(/\\/g, '/');
-    }
     const servicioActualizado = await servicioService.actualizarServicio(
       Number(idServicio),
       datosActualizar
