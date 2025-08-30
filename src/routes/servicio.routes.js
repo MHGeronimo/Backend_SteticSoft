@@ -13,7 +13,7 @@ const PERMISO_MODULO_SERVICIOS = "MODULO_SERVICIOS_GESTIONAR";
 
 // --- RUTAS DE LA API ---
 
-// Crear un nuevo servicio (acepta un archivo 'imagen' opcional)
+// Crear un nuevo servicio
 router.post(
   "/",
   authMiddleware,
@@ -22,11 +22,12 @@ router.post(
   servicioController.crearServicio
 );
 
-// Listar todos los servicios
+// Listar todos los servicios con filtros/búsqueda
 router.get(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
+  servicioValidators.listarServiciosValidator,
   servicioController.listarServicios
 );
 
@@ -39,8 +40,7 @@ router.get(
   servicioController.obtenerServicioPorId
 );
 
-// Actualizar un servicio (acepta un archivo 'imagen' opcional)
-// MODIFICADO: Se usa PATCH para actualizaciones parciales, es una mejor práctica.
+// Actualizar un servicio (PATCH para actualizaciones parciales)
 router.patch(
   "/:idServicio",
   authMiddleware,

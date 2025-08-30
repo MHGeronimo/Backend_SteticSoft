@@ -1,6 +1,6 @@
-const path = require("path");
 const db = require("../models");
-const { Op } = db.Sequelize;
+const { Op, Sequelize } = require("sequelize");
+const Servicio = db.Servicio;
 const {
   NotFoundError,
   ConflictError,
@@ -8,129 +8,143 @@ const {
   BadRequestError,
 } = require("../errors");
 
-const servicioService = require("../services/servicio.service.js");
-
 /**
- * Crea un nuevo servicio.
+ * Validadores
  */
-const crearServicio = async (req, res, next) => {
-  try {
-    const servicioData = { ...req.body };
+const validarTexto = (texto, campo) => {
+  if (texto === undefined || texto === null) return;
 
-    const nuevoServicio = await servicioService.crearServicio(servicioData);
-    res.status(201).json({
-      success: true,
-      message: "Servicio creado exitosamente.",
-      data: nuevoServicio,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  const limpio = texto.trim();
 
-/**
- * Obtiene una lista de todos los servicios con filtros y búsqueda.
- */
-const listarServicios = async (req, res, next) => {
-  try {
-    const opcionesDeFiltro = {
-      busqueda: req.query.busqueda,
-      estado: req.query.estado,
-      categoriaServicioId: req.query.categoriaServicioId,
-    };
-
-    const servicios = await servicioService.obtenerTodosLosServicios(
-      opcionesDeFiltro
+  if (limpio.length !== texto.length) {
+    throw new BadRequestError(
+      `${campo} no debe tener espacios al inicio o final.`
     );
-    
-    // El servicio ahora devuelve directamente el array de datos.
-    res.status(200).json({
-      success: true,
-      data: servicios,
-    });
-  } catch (error) {
-    next(error);
   }
-};
 
-/**
- * Obtiene un servicio específico por su ID.
- */
-const obtenerServicioPorId = async (req, res, next) => {
-  try {
-    const { idServicio } = req.params;
-    const servicio = await servicioService.obtenerServicioPorId(
-      Number(idServicio)
+  const regex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]+$/;
+  if (!regex.test(limpio)) {
+    throw new BadRequestError(
+      `${campo} contiene caracteres no permitidos.`
     );
-    res.status(200).json({
-      success: true,
-      data: servicio,
-    });
-  } catch (error) {
-    next(error);
+  }
+};
+
+const validarPrecio = (precio) => {
+  if (precio === undefined || precio === null) return;
+  if (isNaN(precio) || Number(precio) < 0) {
+    throw new BadRequestError("El precio debe ser un número válido y positivo.");
   }
 };
 
 /**
- * Actualiza un servicio existente por su ID.
+ * Crear un nuevo servicio
  */
-const actualizarServicio = async (req, res, next) => {
+const crearServicio = async (data) => {
+  validarTexto(data.nombre, "Nombre");
+  validarPrecio(data.precio);
+
+  const servicio = await Servicio.create(data);
+  return servicio;
+};
+
+/**
+ * Obtener todos los servicios con filtros y búsqueda
+ */
+const obtenerTodosLosServicios = async ({ busqueda, estado, categoriaServicioId }) => {
   try {
-    const { idServicio } = req.params;
-    const datosActualizar = { ...req.body };
-    const servicioActualizado = await servicioService.actualizarServicio(
-      Number(idServicio),
-      datosActualizar
-    );
-    res.status(200).json({
-      success: true,
-      message: "Servicio actualizado exitosamente.",
-      data: servicioActualizado,
-    });
+    const where = {};
+
+    // 🔎 Búsqueda por nombre o precio
+    if (busqueda) {
+      const termino = `%${busqueda.trim()}%`;
+      where[Op.or] = [
+        { nombre: { [Op.iLike]: termino } },
+        // Convertimos precio a texto para poder buscar con LIKE
+        Sequelize.where(
+          Sequelize.cast(Sequelize.col("precio"), "TEXT"),
+          { [Op.iLike]: termino }
+        ),
+      ];
+    }
+
+    // Filtro por estado (true/false)
+    if (estado !== undefined) {
+      where.estado = estado;
+    }
+
+    // Filtro por categoría
+    if (categoriaServicioId) {
+      where.categoriaServicioId = categoriaServicioId;
+    }
+
+    const servicios = await Servicio.findAll({ where });
+    return servicios;
   } catch (error) {
-    next(error);
+    console.error("Error en obtenerTodosLosServicios:", error);
+    throw new CustomError("No se pudieron obtener los servicios", 500);
   }
 };
 
 /**
- * Cambia el estado (activo/inactivo) de un servicio.
+ * Obtener un servicio por ID
  */
-const cambiarEstadoServicio = async (req, res, next) => {
-  try {
-    const { idServicio } = req.params;
-    const { estado } = req.body;
-    const servicioActualizado = await servicioService.cambiarEstadoServicio(
-      Number(idServicio),
-      estado
-    );
-    res.status(200).json({
-      success: true,
-      message: `Estado del servicio cambiado exitosamente.`,
-      data: servicioActualizado,
-    });
-  } catch (error) {
-    next(error);
+const obtenerServicioPorId = async (idServicio) => {
+  const servicio = await Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado");
   }
+  return servicio;
 };
 
 /**
- * Elimina físicamente un servicio por su ID.
+ * Actualizar un servicio
  */
-const eliminarServicioFisico = async (req, res, next) => {
-  try {
-    const { idServicio } = req.params;
-    await servicioService.eliminarServicioFisico(Number(idServicio));
-    res.status(204).send();
-  } catch (error) {
-    next(error);
+const actualizarServicio = async (idServicio, data) => {
+  validarTexto(data.nombre, "Nombre");
+  validarPrecio(data.precio);
+
+  const servicio = await Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado");
   }
+
+  await servicio.update(data);
+  return servicio;
+};
+
+/**
+ * Cambiar estado (activo/inactivo)
+ */
+const cambiarEstadoServicio = async (idServicio, estado) => {
+  const servicio = await Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado");
+  }
+
+  servicio.estado = estado;
+  await servicio.save();
+  return servicio;
+};
+
+/**
+ * Eliminar servicio físicamente
+ */
+const eliminarServicioFisico = async (idServicio) => {
+  const servicio = await Servicio.findByPk(idServicio);
+  if (!servicio) {
+    throw new NotFoundError("Servicio no encontrado");
+  }
+
+  await servicio.destroy();
+  return true;
 };
 
 module.exports = {
   crearServicio,
-  listarServicios,
+  obtenerTodosLosServicios,
   obtenerServicioPorId,
   actualizarServicio,
-  cambiarEstadoServicio, // Esta función es más genérica y puede reemplazar a anular/habilitar
+  cambiarEstadoServicio,
   eliminarServicioFisico,
 };
