@@ -83,7 +83,7 @@ module.exports = (sequelize, DataTypes) => {
     Cliente.belongsTo(models.Usuario, {
       foreignKey: "idUsuario", // ✅ CORRECCIÓN: Clave foránea explícita
       targetKey: "idUsuario", // ✅ BUENA PRÁCTICA: Especificar la columna de destino en el modelo Usuario.
-      as: "usuarioCuenta",
+      as: "usuario",
     });
 
     // Un Cliente puede tener muchas Ventas.
