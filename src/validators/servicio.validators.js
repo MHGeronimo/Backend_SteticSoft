@@ -109,23 +109,25 @@ const listarServiciosValidator = [
   query("busqueda")
     .optional()
     .trim()
-    .matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/).withMessage("La búsqueda contiene caracteres no permitidos."),
-
+    .matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/)
+    .withMessage("La búsqueda contiene caracteres no permitidos."),
   query("estado")
     .optional()
-    .isBoolean().withMessage("El estado debe ser true o false."),
-
+    .isBoolean()
+    .withMessage("El estado debe ser true o false."),
+  // Usamos idCategoriaServicio (coherente con el modelo/DB)
   query("idCategoriaServicio")
     .optional()
-    .isInt({ gt: 0 }).withMessage("El id de categoría debe ser un número entero positivo."),
-
+    .isInt({ gt: 0 })
+    .withMessage("El id de categoría debe ser un entero positivo."),
   handleValidationErrors,
 ];
 
+// 👇 MUY IMPORTANTE: que sí esté exportado
 module.exports = {
   crearServicioValidators,
   actualizarServicioValidators,
   cambiarEstadoServicioValidators,
   idServicioValidator,
-  listarServiciosValidator,
+  listarServiciosValidator, // <- sin esto, Express recibe undefined y truena
 };

@@ -27,9 +27,10 @@ router.get(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  servicioValidators.listarServiciosValidator,
+  servicioValidators.listarServiciosValidator, // <- debe ser un array de funciones
   servicioController.listarServicios
 );
+
 
 // Obtener un servicio por ID
 router.get(
