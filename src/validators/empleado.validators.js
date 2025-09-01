@@ -11,12 +11,14 @@ const crearEmpleadoValidators = [
     .trim()
     .notEmpty().withMessage("The employee's name is required.")
     .isString().withMessage("The employee's name must be a text string.")
-    .isLength({ min: 2, max: 100 }).withMessage("The name must be between 2 and 100 characters."),
+    .isLength({ min: 2, max: 100 }).withMessage("The name must be between 2 and 100 characters.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre solo puede contener letras y espacios."),
   body("apellido") // New field: Last Name
     .trim()
     .notEmpty().withMessage("The employee's last name is required.")
     .isString().withMessage("The employee's last name must be a text string.")
-    .isLength({ min: 2, max: 100 }).withMessage("The last name must be between 2 and 100 characters."),
+    .isLength({ min: 2, max: 100 }).withMessage("The last name must be between 2 and 100 characters.")
+    .matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El apellido solo puede contener letras y espacios."),
   body("correo") // New field: Employee's email (assuming it's the same as the user's)
     .trim()
     .notEmpty().withMessage("The employee's email address is required.")
@@ -43,6 +45,7 @@ const crearEmpleadoValidators = [
     .trim()
     .notEmpty().withMessage("The document type is required.")
     .isString().withMessage("The document type must be text.")
+    .matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/).withMessage("El tipo de documento no debe contener caracteres especiales.")
     .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad'])
     .withMessage("Invalid document type."),
   body("numeroDocumento")
@@ -50,6 +53,7 @@ const crearEmpleadoValidators = [
     .notEmpty().withMessage("The document number is required.")
     .isString().withMessage("The document number must be text.")
     .isLength({ min: 5, max: 45 }).withMessage("The document number must be between 5 and 45 characters.")
+    .matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/).withMessage("El número de documento no debe contener caracteres especiales.")
     .custom(async (value) => {
       const empleadoExistente = await db.Empleado.findOne({
         where: { numeroDocumento: value },
@@ -83,8 +87,8 @@ const actualizarEmpleadoValidators = [
     .withMessage("The employee ID must be a positive integer."),
   
   // Employee Profile Fields (optional in update)
-  body("nombre").optional().trim().notEmpty().withMessage("The name cannot be empty if provided.").isString().withMessage("The name must be text.").isLength({ min: 2, max: 100 }),
-  body("apellido").optional().trim().notEmpty().withMessage("The last name cannot be empty if provided.").isString().withMessage("The last name must be text.").isLength({ min: 2, max: 100 }), // Added
+  body("nombre").optional().trim().notEmpty().withMessage("The name cannot be empty if provided.").isString().withMessage("The name must be text.").isLength({ min: 2, max: 100 }).matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El nombre solo puede contener letras y espacios."),
+  body("apellido").optional().trim().notEmpty().withMessage("The last name cannot be empty if provided.").isString().withMessage("The last name must be text.").isLength({ min: 2, max: 100 }).matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/).withMessage("El apellido solo puede contener letras y espacios."), // Added
   body("correo").optional().trim().notEmpty().withMessage("The email address cannot be empty if provided.").isEmail().withMessage("You must provide a valid email address.")
     .normalizeEmail()
     .custom(async (value, { req }) => {
@@ -112,8 +116,8 @@ const actualizarEmpleadoValidators = [
       }
     }),
   body("telefono").optional().trim().notEmpty().withMessage("The phone number cannot be empty if provided.").isString().withMessage("The phone number must be text.").isLength({ min: 7, max: 45 }), // Added
-  body("tipoDocumento").optional().trim().notEmpty().withMessage("The document type cannot be empty if provided.").isString().withMessage("The document type must be text.").isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']).withMessage("Invalid document type."),
-  body("numeroDocumento").optional().trim().notEmpty().withMessage("The document number cannot be empty if provided.").isString().withMessage("The document number must be text.").isLength({ min: 5, max: 45 })
+  body("tipoDocumento").optional().trim().notEmpty().withMessage("The document type cannot be empty if provided.").isString().withMessage("The document type must be text.").matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/).withMessage("El tipo de documento no debe contener caracteres especiales.").isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']).withMessage("Invalid document type."),
+  body("numeroDocumento").optional().trim().notEmpty().withMessage("The document number cannot be empty if provided.").isString().withMessage("The document number must be text.").isLength({ min: 5, max: 45 }).matches(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/).withMessage("El número de documento no debe contener caracteres especiales.")
     .custom(async (value, { req }) => {
       if (value) {
         const idEmpleado = Number(req.params.idEmpleado);

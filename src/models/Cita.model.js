@@ -32,13 +32,13 @@ module.exports = (sequelize, DataTypes) => {
         },
         onDelete: 'CASCADE'
       },
-      idEmpleado: { 
+      idUsuario: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: 'id_empleado', 
+        field: 'id_usuario',
         references: {
-          model: 'empleado',
-          key: 'id_empleado' 
+          model: 'usuario',
+          key: 'id_usuario'
         },
         onDelete: 'SET NULL'
       },
@@ -51,6 +51,16 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id_estado' 
         },
         onDelete: 'RESTRICT' 
+      },
+      idNovedad: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'id_novedad',
+        references: {
+          model: 'novedades',
+          key: 'id_novedad'
+        },
+        onDelete: 'SET NULL'
       }
     },
     {
@@ -66,9 +76,9 @@ module.exports = (sequelize, DataTypes) => {
       as: 'cliente'
     });
 
-    // Una Cita es atendida por un Empleado.
-    Cita.belongsTo(models.Empleado, {
-      foreignKey: 'idEmpleado',
+    // Una Cita es atendida por un Usuario (Empleado).
+    Cita.belongsTo(models.Usuario, {
+      foreignKey: 'idUsuario',
       as: 'empleado'
     });
 
