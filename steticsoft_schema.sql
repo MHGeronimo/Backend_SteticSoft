@@ -297,7 +297,6 @@ CREATE TABLE IF NOT EXISTS abastecimiento (
     id_abastecimiento SERIAL PRIMARY KEY,
     cantidad INT NOT NULL,
     id_producto INT NOT NULL REFERENCES producto(id_producto) ON DELETE RESTRICT,
-    id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     fecha_ingreso DATE NOT NULL DEFAULT CURRENT_DATE,
     esta_agotado BOOLEAN DEFAULT FALSE NOT NULL,
     razon_agotamiento TEXT,
