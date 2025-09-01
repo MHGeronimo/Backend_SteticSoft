@@ -1,7 +1,7 @@
 // src/routes/abastecimiento.routes.js
 const express = require("express");
 const router = express.Router();
-
+ 
 // Importar el controlador de abastecimiento
 const AbastecimientoController = require("../controllers/abastecimiento.controller");
 

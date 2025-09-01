@@ -6,6 +6,7 @@ const {
 const db = require("../models");
 
 const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+const noSpecialChars = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]*$/;
 
 const crearClienteValidators = [
   // --- Campos para el Perfil del Cliente ---
@@ -22,16 +23,19 @@ const crearClienteValidators = [
     .isLength({ min: 7, max: 15 }).withMessage("El teléfono debe tener entre 7 y 15 dígitos.")
     .isNumeric().withMessage("El teléfono solo puede contener números."),
   body("tipoDocumento")
-    .trim().notEmpty().withMessage("El tipo de documento es obligatorio."),
+    .trim().notEmpty().withMessage("El tipo de documento es obligatorio.")
+    .matches(noSpecialChars).withMessage("El tipo de documento no debe contener caracteres especiales."),
   body("numeroDocumento")
     .trim().notEmpty().withMessage("El número de documento es obligatorio.")
-    .isLength({ min: 5, max: 20 }).withMessage("El número de documento debe tener entre 5 y 20 caracteres."),
+    .isLength({ min: 5, max: 20 }).withMessage("El número de documento debe tener entre 5 y 20 caracteres.")
+    .matches(noSpecialChars).withMessage("El número de documento no debe contener caracteres especiales."),
   body("fechaNacimiento")
     .notEmpty().withMessage("La fecha de nacimiento es obligatoria.")
     .isISO8601().withMessage("Formato de fecha no válido (YYYY-MM-DD).").toDate(),
   body("direccion")
     .trim().notEmpty().withMessage("La dirección es obligatoria.")
-    .isLength({ min: 5, max: 255 }).withMessage("La dirección debe tener entre 5 y 255 caracteres."),
+    .isLength({ min: 5, max: 255 }).withMessage("La dirección debe tener entre 5 y 255 caracteres.")
+    .matches(noSpecialChars).withMessage("La dirección no debe contener caracteres especiales."),
   
   // --- Campos para la Cuenta de Usuario asociada ---
   body("correo")
@@ -48,12 +52,13 @@ const crearClienteValidators = [
 const actualizarClienteValidators = [
   param("idCliente").isInt({ gt: 0 }).withMessage("El ID del cliente debe ser un entero positivo."),
   
-  body("nombre").optional().trim().notEmpty().withMessage("El nombre no puede ser vacío si se provee.").isLength({ min: 2, max: 50 }),
-  body("apellido").optional().trim().notEmpty().withMessage("El apellido no puede ser vacío si se provee.").isLength({ min: 2, max: 50 }),
+  body("nombre").optional().trim().notEmpty().withMessage("El nombre no puede ser vacío si se provee.").isLength({ min: 2, max: 50 }).matches(nameRegex).withMessage("El nombre solo puede contener letras y espacios."),
+  body("apellido").optional().trim().notEmpty().withMessage("El apellido no puede ser vacío si se provee.").isLength({ min: 2, max: 50 }).matches(nameRegex).withMessage("El apellido solo puede contener letras y espacios."),
   body("telefono").optional().trim().notEmpty().withMessage("El teléfono no puede ser vacío si se provee.").isLength({ min: 7, max: 20 }),
   body("tipoDocumento").optional().trim().notEmpty().withMessage("El tipo de documento no puede ser vacío si se provee.")
-    .isIn(['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'Tarjeta de Identidad']).withMessage("Tipo de documento no válido."),
+    .matches(noSpecialChars).withMessage("El tipo de documento no debe contener caracteres especiales."),
   body("numeroDocumento").optional().trim().notEmpty().withMessage("El número de documento no puede ser vacío si se provee.").isLength({ min: 5, max: 45 })
+    .matches(noSpecialChars).withMessage("El número de documento no debe contener caracteres especiales.")
     .custom(async (value, { req }) => {
       if (value) {
         const idCliente = Number(req.params.idCliente);
@@ -67,7 +72,8 @@ const actualizarClienteValidators = [
     }),
   body("fechaNacimiento").optional().isISO8601().withMessage("La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD) si se provee.").toDate(),
   body("direccion").optional().trim().isString().withMessage("La dirección debe ser una cadena de texto.")
-    .isLength({ max: 255 }).withMessage("La dirección no puede tener más de 255 caracteres."),
+    .isLength({ max: 255 }).withMessage("La dirección no puede tener más de 255 caracteres.")
+    .matches(noSpecialChars).withMessage("La dirección no debe contener caracteres especiales."),
   body("estadoCliente").optional().isBoolean().withMessage("El estado del perfil del cliente debe ser un valor booleano."),
 
   body("correo").optional({ checkFalsy: true })

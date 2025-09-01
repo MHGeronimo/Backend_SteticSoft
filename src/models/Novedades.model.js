@@ -37,6 +37,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: 'hora_fin'
       },
+      dias: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        field: 'dias'
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

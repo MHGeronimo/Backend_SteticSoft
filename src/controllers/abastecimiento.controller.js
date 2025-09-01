@@ -1,7 +1,7 @@
 // src/controllers/abastecimiento.controller.js
 const abastecimientoService = require("../services/abastecimiento.service.js");
 const { NotFoundError } = require("../errors");
-
+ 
 
 const crearAbastecimiento = async (req, res, next) => {
   try {
