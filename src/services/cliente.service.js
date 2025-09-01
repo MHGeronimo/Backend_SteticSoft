@@ -106,7 +106,7 @@ const crearCliente = async (datosCompletos) => {
 
     // Devolver el cliente con su cuenta de usuario asociada
     return db.Cliente.findByPk(nuevoCliente.idCliente, {
-      include: [{ model: db.Usuario, as: "usuarioCuenta", attributes: ["idUsuario", "correo", "estado", "idRol"] }]
+      include: [{ model: db.Usuario, as: "usuario", attributes: ["idUsuario", "correo", "estado", "idRol"] }]
     });
 
   } catch (error) {
@@ -136,7 +136,7 @@ const obtenerTodosLosClientes = async (opcionesDeFiltro = {}) => {
       include: [
         {
           model: db.Usuario,
-          as: "usuarioCuenta",
+          as: "usuario",
           attributes: ["idUsuario", "correo", "estado", "idRol"],
           include: [{
             model: db.Rol,
@@ -172,7 +172,7 @@ const obtenerClientePorId = async (idCliente) => {
       include: [
         {
           model: db.Usuario,
-          as: "usuarioCuenta",
+          as: "usuario",
           attributes: ["idUsuario", "correo", "estado", "idRol"],
           include: [{
             model: db.Rol,
