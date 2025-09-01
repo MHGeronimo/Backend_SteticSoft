@@ -38,20 +38,20 @@ const crearCitaValidators = [
         );
       }
     }),
-  body("empleadoId")
+  body("usuarioId")
     .optional({ nullable: true })
     .isInt({ gt: 0 })
     .withMessage(
-      "El ID del empleado debe ser un entero positivo si se proporciona."
+      "El ID del usuario (empleado) debe ser un entero positivo si se proporciona."
     )
     .custom(async (value) => {
       if (value) {
-        const empleado = await db.Empleado.findOne({
-          where: { idEmpleado: value, estado: true },
+        const usuario = await db.Usuario.findOne({
+          where: { idUsuario: value, estado: true },
         });
-        if (!empleado) {
+        if (!usuario) {
           return Promise.reject(
-            "El empleado especificado no existe o no está activo."
+            "El usuario (empleado) especificado no existe o no está activo."
           );
         }
       }
@@ -125,21 +125,21 @@ const actualizarCitaValidators = [
           );
       }
     }),
-  body("empleadoId")
+  body("usuarioId")
     .optional({ nullable: true })
     .custom(async (value) => {
       if (value !== null && value !== undefined) {
         if (!(Number.isInteger(value) && value > 0)) {
           throw new Error(
-            "El ID del empleado debe ser un entero positivo o null."
+            "El ID del usuario (empleado) debe ser un entero positivo o null."
           );
         }
-        const empleado = await db.Empleado.findOne({
-          where: { idEmpleado: value, estado: true },
+        const usuario = await db.Usuario.findOne({
+          where: { idUsuario: value, estado: true },
         });
-        if (!empleado)
+        if (!usuario)
           return Promise.reject(
-            "El nuevo empleado especificado no existe o no está activo."
+            "El nuevo usuario (empleado) especificado no existe o no está activo."
           );
       }
       return true;

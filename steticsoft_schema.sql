@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS novedades (
     fecha_fin DATE NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
+    dias JSONB NOT NULL,
     estado BOOLEAN DEFAULT TRUE NOT NULL,
     CONSTRAINT chk_rango_fechas CHECK (fecha_fin >= fecha_inicio),
     CONSTRAINT chk_rango_horas CHECK (hora_fin > hora_inicio)
@@ -253,6 +254,8 @@ CREATE TABLE IF NOT EXISTS novedad_empleado (
 
 CREATE TABLE IF NOT EXISTS cita (
     id_cita SERIAL PRIMARY KEY,
+    fecha_hora TIMESTAMP WITH TIME ZONE NOT NULL,
+    estado BOOLEAN DEFAULT TRUE NOT NULL,
     id_novedad INT REFERENCES novedades(id_novedad) ON DELETE SET NULL,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
     id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,

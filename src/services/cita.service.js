@@ -146,19 +146,63 @@ const crearCita = async (datosCita) => {
   const {
     fechaHora,
     clienteId,
-    empleadoId,
+    usuarioId,
     estadoCitaId,
     servicios = [],
     estado,
+    novedadId,
   } = datosCita;
 
-  const cliente = await db.Cliente.findOne({
-    where: { idCliente: clienteId, estado: true }, // Esto ya valida que el cliente esté activo
+  const novedad = await db.Novedad.findByPk(novedadId, {
+    include: [{ model: db.Usuario, as: 'empleados' }]
   });
-  if (!cliente)
-    throw new BadRequestError(
-      `Cliente con ID ${clienteId} no encontrado o inactivo.`
-    );
+
+  if (!novedad) {
+    throw new BadRequestError(`La novedad con ID ${novedadId} no fue encontrada.`);
+  }
+
+  const empleadoValido = novedad.empleados.some(emp => emp.id_usuario === usuarioId);
+  if (!empleadoValido) {
+    throw new BadRequestError(`El empleado con ID ${usuarioId} no está asociado a la novedad seleccionada.`);
+  }
+
+  const fechaCita = moment(fechaHora);
+  const fechaInicioNovedad = moment(novedad.fechaInicio);
+  const fechaFinNovedad = moment(novedad.fechaFin);
+
+  if (!fechaCita.isBetween(fechaInicioNovedad, fechaFinNovedad, 'days', '[]')) {
+    throw new BadRequestError(`La fecha de la cita está fuera del rango de fechas de la novedad.`);
+  }
+
+  const diaCita = fechaCita.day();
+  if (!novedad.dias.includes(diaCita)) {
+    throw new BadRequestError(`El día de la cita no está disponible en la novedad seleccionada.`);
+  }
+
+  const horaCita = fechaCita.format('HH:mm:ss');
+  if (horaCita < novedad.horaInicio || horaCita > novedad.horaFin) {
+    throw new BadRequestError(`La hora de la cita está fuera del rango de horas de la novedad.`);
+  }
+
+  const cliente = await db.Cliente.findOne({
+    where: { idCliente: clienteId, estado: true },
+    include: [{
+      model: db.Usuario,
+      as: 'usuario',
+      include: [{
+        model: db.Rol,
+        as: 'rol'
+      }]
+    }]
+  });
+
+  if (!cliente) {
+    throw new BadRequestError(`Cliente con ID ${clienteId} no encontrado o inactivo.`);
+  }
+
+  if (cliente.usuario.rol.nombre !== 'Cliente') {
+    throw new BadRequestError(`El usuario asociado al cliente no tiene el rol de "Cliente".`);
+  }
 
   const estadoProcesoCita = await db.Estado.findByPk(estadoCitaId);
   if (!estadoProcesoCita)
@@ -167,14 +211,22 @@ const crearCita = async (datosCita) => {
     );
 
   let empleado = null;
-  if (empleadoId) {
-    empleado = await db.Empleado.findOne({
-      where: { idEmpleado: empleadoId, estado: true },
+  if (usuarioId) {
+    empleado = await db.Usuario.findOne({
+      where: { idUsuario: usuarioId, estado: true },
+      include: [{
+        model: db.Rol,
+        as: 'rol'
+      }]
     });
-    if (!empleado)
+    if (!empleado) {
       throw new BadRequestError(
-        `Empleado con ID ${empleadoId} no encontrado o inactivo.`
+        `Usuario (empleado) con ID ${usuarioId} no encontrado o inactivo.`
       );
+    }
+    if (empleado.rol.nombre !== 'Empleado') {
+      throw new BadRequestError(`El usuario (empleado) no tiene el rol de "Empleado".`);
+    }
   }
 
   const serviciosConsultados = [];
@@ -384,13 +436,85 @@ const actualizarCita = async (idCita, datosActualizar) => {
     let clienteParaCorreo = clienteAsociado; // Usamos el cliente validado
 
     if (datosActualizar.clienteId && datosActualizar.clienteId !== cita.clienteId) {
-      const clienteNuevo = await db.Cliente.findOne({ where: { idCliente: datosActualizar.clienteId, estado: true }, transaction });
-      if (!clienteNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo cliente con ID ${datosActualizar.clienteId} no encontrado o inactivo.`); }
+      const clienteNuevo = await db.Cliente.findOne({
+        where: { idCliente: datosActualizar.clienteId, estado: true },
+        include: [{
+          model: db.Usuario,
+          as: 'usuario',
+          include: [{
+            model: db.Rol,
+            as: 'rol'
+          }]
+        }],
+        transaction
+      });
+      if (!clienteNuevo) {
+        await transaction.rollback();
+        throw new BadRequestError(`Nuevo cliente con ID ${datosActualizar.clienteId} no encontrado o inactivo.`);
+      }
+      if (clienteNuevo.usuario.rol.nombre !== 'Cliente') {
+        await transaction.rollback();
+        throw new BadRequestError(`El usuario asociado al nuevo cliente no tiene el rol de "Cliente".`);
+      }
       clienteParaCorreo = clienteNuevo;
     }
-    if (datosActualizar.empleadoId && datosActualizar.empleadoId !== cita.empleadoId) {
-      const empleadoNuevo = await db.Empleado.findOne({ where: {idEmpleado: datosActualizar.empleadoId, estado: true}, transaction});
-      if(!empleadoNuevo) { await transaction.rollback(); throw new BadRequestError(`Nuevo empleado con ID ${datosActualizar.empleadoId} no encontrado o inactivo.`);}
+    if (datosActualizar.novedadId) {
+      const novedad = await db.Novedad.findByPk(datosActualizar.novedadId, {
+        include: [{ model: db.Usuario, as: 'empleados' }],
+        transaction
+      });
+
+      if (!novedad) {
+        await transaction.rollback();
+        throw new BadRequestError(`La novedad con ID ${datosActualizar.novedadId} no fue encontrada.`);
+      }
+
+      const usuarioId = datosActualizar.usuarioId || cita.usuarioId;
+      const empleadoValido = novedad.empleados.some(emp => emp.id_usuario === usuarioId);
+      if (!empleadoValido) {
+        await transaction.rollback();
+        throw new BadRequestError(`El empleado con ID ${usuarioId} no está asociado a la novedad seleccionada.`);
+      }
+
+      const fechaCita = moment(datosActualizar.fechaHora || cita.fechaHora);
+      const fechaInicioNovedad = moment(novedad.fechaInicio);
+      const fechaFinNovedad = moment(novedad.fechaFin);
+
+      if (!fechaCita.isBetween(fechaInicioNovedad, fechaFinNovedad, 'days', '[]')) {
+        await transaction.rollback();
+        throw new BadRequestError(`La fecha de la cita está fuera del rango de fechas de la novedad.`);
+      }
+
+      const diaCita = fechaCita.day();
+      if (!novedad.dias.includes(diaCita)) {
+        await transaction.rollback();
+        throw new BadRequestError(`El día de la cita no está disponible en la novedad seleccionada.`);
+      }
+
+      const horaCita = fechaCita.format('HH:mm:ss');
+      if (horaCita < novedad.horaInicio || horaCita > novedad.horaFin) {
+        await transaction.rollback();
+        throw new BadRequestError(`La hora de la cita está fuera del rango de horas de la novedad.`);
+      }
+    }
+
+    if (datosActualizar.usuarioId && datosActualizar.usuarioId !== cita.usuarioId) {
+      const empleadoNuevo = await db.Usuario.findOne({
+        where: {idUsuario: datosActualizar.usuarioId, estado: true},
+        include: [{
+          model: db.Rol,
+          as: 'rol'
+        }],
+        transaction
+      });
+      if(!empleadoNuevo) {
+        await transaction.rollback();
+        throw new BadRequestError(`Nuevo usuario (empleado) con ID ${datosActualizar.usuarioId} no encontrado o inactivo.`);
+      }
+      if (empleadoNuevo.rol.nombre !== 'Empleado') {
+        await transaction.rollback();
+        throw new BadRequestError(`El nuevo usuario (empleado) no tiene el rol de "Empleado".`);
+      }
     }
     if (datosActualizar.estadoCitaId && datosActualizar.estadoCitaId !== cita.estadoCitaId) {
       const estadoNuevo = await db.Estado.findByPk(datosActualizar.estadoCitaId, {transaction});
