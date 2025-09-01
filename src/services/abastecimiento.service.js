@@ -21,12 +21,8 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     productoId,
     cantidad,
     fechaIngreso,
-    empleadoId, // El frontend envía 'empleadoId'
     estado,
   } = datosAbastecimiento;
-
-  // CORRECCIÓN CLAVE: Mapeamos el 'empleadoId' del frontend a la variable que usaremos.
-  const idEmpleadoAsignado = empleadoId;
 
   const producto = await db.Producto.findByPk(productoId);
   if (!producto) throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
@@ -46,17 +42,10 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     throw new ConflictError(`No hay suficiente stock para '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`);
   }
 
-  if (idEmpleadoAsignado) {
-    const empleado = await db.Empleado.findOne({ where: { idEmpleado: idEmpleadoAsignado, estado: true } });
-    if (!empleado) throw new BadRequestError(`Empleado con ID ${idEmpleadoAsignado} no encontrado o inactivo.`);
-  }
-
   const transaction = await db.sequelize.transaction();
   try {
     const nuevoAbastecimiento = await db.Abastecimiento.create({
-        // CORRECCIÓN FINAL: Los nombres de campo aquí deben coincidir EXACTAMENTE con el modelo Abastecimiento.model.js
         idProducto: productoId,
-        idEmpleadoAsignado: idEmpleadoAsignado,
         cantidad: Number(cantidad),
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
@@ -93,12 +82,6 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
           as: "producto", 
           attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
         },
-        {
-          model: db.Empleado,
-          as: "empleado", 
-          attributes: ["idEmpleado", "nombre"],
-          required: false,
-        },
       ],
       order: [
         ["fechaIngreso", "DESC"],
@@ -119,7 +102,6 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
     const abastecimiento = await db.Abastecimiento.findByPk(idAbastecimiento, {
       include: [
         { model: db.Producto, as: "producto", attributes: ["idProducto", "nombre", "stockMinimo", "existencia"] },
-        { model: db.Empleado, as: "empleado", required: false },
       ],
     });
     if (!abastecimiento)
@@ -140,7 +122,6 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
 
 const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
   const {
-    empleadoAsignado,
     estaAgotado,
     razonAgotamiento,
     fechaAgotamiento,
@@ -174,9 +155,6 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
     const cantidadOriginal = abastecimiento.cantidad;
     const camposAActualizar = {};
 
-    if (empleadoAsignado !== undefined) {
-      camposAActualizar.empleadoAsignado = empleadoAsignado === null ? null : empleadoAsignado;
-    }
     if (estaAgotado !== undefined) camposAActualizar.estaAgotado = estaAgotado;
     if (estaAgotado === true) {
       if (razonAgotamiento !== undefined) camposAActualizar.razonAgotamiento = razonAgotamiento;

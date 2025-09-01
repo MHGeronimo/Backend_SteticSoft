@@ -24,9 +24,6 @@ const createAbastecimientoValidator = [
   body("productoId")
     .isInt({ gt: 0 })
     .withMessage("El ID del producto debe ser un número entero positivo."),
-  body("empleadoId")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del empleado debe ser un número entero positivo."),
   body("cantidad")
     .isInt({ gt: 0 })
     .withMessage("La cantidad debe ser un número entero positivo."),
