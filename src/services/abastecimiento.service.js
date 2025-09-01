@@ -8,7 +8,7 @@ const {
   BadRequestError,
 } = require("../errors");
 const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // Import stock alert helper
-
+ 
 /**
  * Crear un nuevo registro de abastecimiento (salida de producto para empleado)
  * y DISMINUIR la existencia del producto.

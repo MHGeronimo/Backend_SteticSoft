@@ -1,6 +1,6 @@
 // src/validators/abastecimiento.validators.js
 const { body, param } = require("express-validator");
-
+ 
 // Validador para IDs en parámetros de URL
 const idValidator = [
   param("id")
