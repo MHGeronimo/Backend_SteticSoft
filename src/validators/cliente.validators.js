@@ -5,7 +5,7 @@ const {
 } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
 
-// --- Expresiones Regulares para Validación ---
+// --- Expresiones Regulares para Validación (Consistentes con usuario.validators.js) ---
 const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
 const numericOnlyRegex = /^\d+$/;
 const addressRegex = /^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s.,#\-_]+$/;
@@ -32,7 +32,6 @@ const clienteCreateValidators = [
     .isEmail().withMessage("El formato del correo no es válido.")
     .normalizeEmail()
     .custom(async (value) => {
-      // CORRECTO: Verifica que el correo no esté ya registrado en la tabla de Usuarios.
       const usuario = await db.Usuario.findOne({ where: { correo: value } });
       if (usuario) {
         return Promise.reject("Este correo electrónico ya está registrado.");
@@ -56,7 +55,6 @@ const clienteCreateValidators = [
     .notEmpty().withMessage("El número de documento es obligatorio.")
     .isLength({ min: 5, max: 20 }).withMessage("El número de documento debe tener entre 5 y 20 caracteres.")
     .custom(async (value) => {
-      // CORRECTO: Verifica que el número de documento no esté ya registrado en la tabla de Clientes.
       const cliente = await db.Cliente.findOne({ where: { numeroDocumento: value } });
       if (cliente) {
         return Promise.reject("Este número de documento ya está registrado.");
@@ -118,17 +116,14 @@ const clienteUpdateValidators = [
     .normalizeEmail()
     .custom(async (value, { req }) => {
       const idCliente = req.params.idCliente;
-      // Primero, obtenemos el cliente para encontrar su idUsuario asociado.
       const clienteActual = await db.Cliente.findByPk(idCliente);
-      if (!clienteActual) {
-        // Si el cliente no existe, la validación de idCliente ya debería haber fallado, pero es una buena práctica manejarlo.
-        return Promise.reject("El cliente no existe.");
+      if (!clienteActual || !clienteActual.idUsuario) {
+        return; 
       }
-      // CORRECTO: Busca si otro usuario (con un ID diferente) ya está usando este correo.
       const usuario = await db.Usuario.findOne({
         where: {
           correo: value,
-          idUsuario: { [db.Sequelize.Op.ne]: clienteActual.idUsuario }, // Excluir el usuario actual
+          idUsuario: { [db.Sequelize.Op.ne]: clienteActual.idUsuario },
         },
       });
       if (usuario) {
@@ -154,11 +149,10 @@ const clienteUpdateValidators = [
     .isLength({ min: 5, max: 20 }).withMessage("El número de documento debe tener entre 5 y 20 caracteres.")
     .custom(async (value, { req }) => {
       const idCliente = req.params.idCliente;
-      // CORRECTO: Busca si otro cliente (con un ID diferente) ya está usando este número de documento.
       const cliente = await db.Cliente.findOne({
         where: {
           numeroDocumento: value,
-          idCliente: { [db.Sequelize.Op.ne]: idCliente }, // Excluir el cliente actual
+          idCliente: { [db.Sequelize.Op.ne]: idCliente }, 
         },
       });
       if (cliente) {
