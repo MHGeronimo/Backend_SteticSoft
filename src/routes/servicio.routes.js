@@ -15,6 +15,8 @@ const PERMISO_MODULO_SERVICIOS = "MODULO_SERVICIOS_GESTIONAR";
 
 const { uploadServicioImage } = require("../middlewares/upload.middleware.js");
 
+router.get("/public", servicioController.listarServiciosPublicos);
+
 // Crear un nuevo servicio
 router.post(
   "/",

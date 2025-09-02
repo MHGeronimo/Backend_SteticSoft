@@ -78,6 +78,10 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   // Filtro por estado
   if (estado === "true" || estado === "false") {
     whereClause.estado = estado === "true";
+  } else if (estado === "Activo") {
+    whereClause.estado = true;
+  } else if (estado === "Inactivo") {
+    whereClause.estado = false;
   }
 
   // Filtro por categoría
