@@ -27,6 +27,13 @@ const createAbastecimientoValidator = [
   body("cantidad")
     .isInt({ gt: 0 })
     .withMessage("La cantidad debe ser un número entero positivo."),
+  body("empleadoAsignado")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .withMessage("El nombre del empleado asignado debe ser una cadena de texto.")
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("El nombre del empleado no debe exceder los 255 caracteres."),
 ];
 
 // Validador para la ACTUALIZACIÓN de un abastecimiento
@@ -39,6 +46,13 @@ const updateAbastecimientoValidator = [
     .optional()
     .isBoolean()
     .withMessage("El estado debe ser un valor booleano."),
+  body("empleadoAsignado")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .withMessage("El nombre del empleado asignado debe ser una cadena de texto.")
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("El nombre del empleado no debe exceder los 255 caracteres."),
 ];
 
 
