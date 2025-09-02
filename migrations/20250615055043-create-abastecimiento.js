@@ -19,15 +19,9 @@ module.exports = {
         onDelete: 'RESTRICT',
       },
       // id_compra field removed
-      id_empleado_asignado: { // Renamed from id_empleado_registra
-        type: Sequelize.INTEGER,
+      empleado_asignado: {
+        type: Sequelize.STRING,
         allowNull: true,
-        references: {
-          model: 'empleado',
-          key: 'id_empleado',
-        },
-        // onUpdate: 'CASCADE' removed
-        onDelete: 'SET NULL', // Adjusted
       },
       cantidad: { // Renamed from cantidad_ingresada
         type: Sequelize.INTEGER,

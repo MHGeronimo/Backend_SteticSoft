@@ -78,12 +78,12 @@ const crearProductoValidators = [
 const actualizarProductoValidators = [
   param("idProducto").isInt({ gt: 0 }).withMessage("ID de producto inválido."),
 
-  body("nombre")
+    body("nombre")
     .optional()
     .trim()
-    .notEmpty()
-    .isLength({ min: 3, max: 100 })
-    .matches(/^[\w\sáéíóúÁÉÍÓÚñÑ-]+$/),
+    .notEmpty().withMessage("El nombre del producto no puede estar vacío.")
+    .isLength({ min: 3, max: 100 }).withMessage("El nombre debe tener entre 3 y 100 caracteres.")
+    .matches(/^[\w\sáéíóúÁÉÍÓÚñÑ-]+$/).withMessage("El nombre contiene caracteres inválidos."),
 
   body("descripcion")
     .optional()

@@ -15,7 +15,7 @@ router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CLIENTES),
-  clienteValidators.crearClienteValidators,
+  clienteValidators.clienteCreateValidators,
   clienteController.crearCliente
 );
 
@@ -45,7 +45,7 @@ router.put(
   "/:idCliente",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CLIENTES),
-  clienteValidators.actualizarClienteValidators,
+  clienteValidators.clienteUpdateValidators,
   clienteController.actualizarCliente
 );
 

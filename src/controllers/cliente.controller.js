@@ -1,12 +1,23 @@
 // src/controllers/cliente.controller.js
-// REVISADO: Controlador de Clientes revisado y aprobado. La implementación es correcta y sigue las mejores prácticas.
+const { validationResult } = require("express-validator");
 const clienteService = require("../services/cliente.service.js");
-const db = require("../models"); // Importar db para acceder a Sequelize.Op
+const db = require("../models"); 
 
 /**
  * Crea un nuevo cliente.
  */
 const crearCliente = async (req, res, next) => {
+  // 1. Manejo de errores de validación
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: "Errores de validación detectados.",
+      errors: errors.array(),
+    });
+  }
+
+  // 2. Lógica de negocio
   try {
     const nuevoCliente = await clienteService.crearCliente(req.body);
     res.status(201).json({
@@ -24,27 +35,22 @@ const crearCliente = async (req, res, next) => {
  */
 const listarClientes = async (req, res, next) => {
   try {
-    const { page, limit, search, estado } = req.query; // Extraer parámetros de la URL
+    const { page, limit, search, estado } = req.query; 
 
     const opcionesDeFiltro = {
-      // Configuraciones de paginación
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: page && limit ? (parseInt(page, 10) - 1) * parseInt(limit, 10) : undefined,
-
-      where: {}, // Objeto donde se pueden añadir filtros de Sequelize
+      where: {},
     };
 
-    // Añadir filtro por estado si se provee
     if (estado === "true") {
       opcionesDeFiltro.where.estado = true;
     } else if (estado === "false") {
       opcionesDeFiltro.where.estado = false;
     }
 
-    // Añadir lógica de búsqueda si se provee un término 'search'
     if (search) {
       const searchTerm = search.toLowerCase();
-      // Usamos el operador OR de Sequelize para buscar en múltiples campos
       opcionesDeFiltro.where[db.Sequelize.Op.or] = [
         { nombre: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
         { apellido: { [db.Sequelize.Op.like]: `%${searchTerm}%` } },
@@ -93,6 +99,17 @@ const obtenerClientePorId = async (req, res, next) => {
  * Actualiza (Edita) un cliente existente por su ID.
  */
 const actualizarCliente = async (req, res, next) => {
+  // 1. Manejo de errores de validación
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: "Errores de validación detectados.",
+      errors: errors.array(),
+    });
+  }
+
+  // 2. Lógica de negocio
   try {
     const { idCliente } = req.params;
     const clienteActualizado = await clienteService.actualizarCliente(
@@ -115,7 +132,7 @@ const actualizarCliente = async (req, res, next) => {
 const cambiarEstadoCliente = async (req, res, next) => {
   try {
     const { idCliente } = req.params;
-    const { estado } = req.body; // Se espera un booleano
+    const { estado } = req.body; 
 
     const clienteActualizado = await clienteService.cambiarEstadoCliente(
       Number(idCliente),
@@ -176,7 +193,7 @@ const eliminarClienteFisico = async (req, res, next) => {
   try {
     const { idCliente } = req.params;
     await clienteService.eliminarClienteFisico(Number(idCliente));
-    res.status(204).send(); // 204 No Content para eliminación exitosa
+    res.status(204).send(); 
   } catch (error) {
     next(error);
   }
