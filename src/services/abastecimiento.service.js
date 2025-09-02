@@ -1,5 +1,5 @@
 // src/services/abastecimiento.service.js
-const { Sequelize, Producto, sequelize, Abastecimiento, CategoriaProducto, Empleado } = require("../models");
+const { Sequelize, Producto, sequelize, Abastecimiento, CategoriaProducto } = require("../models");
 const { Op } = Sequelize;
 const { NotFoundError, ConflictError, CustomError, BadRequestError } = require("../errors");
 const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // Import stock alert helper
@@ -95,11 +95,6 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
             },
           ],
         },
-        {
-          model: Empleado,
-          as: "empleado",
-          attributes: ["idEmpleado", "nombre", "apellido"],
-        },
       ],
       order: [
         ["fechaIngreso", "DESC"],
@@ -129,8 +124,7 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   try {
     const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, {
       include: [
-        { model: Producto, as: "producto", attributes: ["idProducto", "nombre", "stockMinimo", "existencia", "vida_util_dias"] },
-        { model: Empleado, as: "empleado", attributes: ["idEmpleado", "nombre", "apellido"] },
+        { model: Producto, as: "producto", attributes: ["idProducto", "nombre", "stockMinimo", "existencia"] },
       ],
     });
     if (!abastecimiento)
