@@ -1,8 +1,8 @@
 // src/services/abastecimiento.service.js
-import { Sequelize, Producto, sequelize, Abastecimiento } from "../models";
+const { Sequelize, Producto, sequelize, Abastecimiento } = require("../models");
 const { Op } = Sequelize;
-import { NotFoundError, ConflictError, CustomError, BadRequestError } from "../errors";
-import { checkAndSendStockAlert } from '../utils/stockAlertHelper.js'; // Import stock alert helper
+const { NotFoundError, ConflictError, CustomError, BadRequestError } = require("../errors");
+const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // Import stock alert helper
  
 /**
  * Crear un nuevo registro de abastecimiento (salida de producto para empleado)
@@ -303,7 +303,7 @@ const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
 };
 
 
-export default {
+module.exports = {
   crearAbastecimiento,
   obtenerTodosLosAbastecimientos,
   obtenerAbastecimientoPorId,
