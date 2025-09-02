@@ -21,7 +21,7 @@ const toggleEstadoValidator = [
 
 // Validador para la creación de un abastecimiento
 const createAbastecimientoValidator = [
-  body("productoId")
+  body("idProducto")
     .isInt({ gt: 0 })
     .withMessage("El ID del producto debe ser un número entero positivo."),
   body("cantidad")

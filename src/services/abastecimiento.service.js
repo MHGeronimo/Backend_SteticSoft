@@ -18,7 +18,7 @@ const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // I
  */
 const crearAbastecimiento = async (datosAbastecimiento) => {
   const {
-    idproducto,
+    idProducto,
     cantidad,
     fechaIngreso,
     estado,
@@ -26,7 +26,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   } = datosAbastecimiento;
 
   const producto = await db.Producto.findByPk(idproducto);
-  if (!producto) throw new BadRequestError(`Producto con ID ${idproducto} no encontrado.`);
+  if (!producto) throw new BadRequestError(`Producto con ID ${idProducto} no encontrado.`);
   if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
 
   console.log("### Objeto 'producto' completo que se está validando ###");
@@ -35,7 +35,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
 
   // --- INICIO DE NUEVA VALIDACIÓN ---
   if (producto.tipoUso?.toLowerCase() !== 'interno') {
-    throw new BadRequestError(`El producto '${producto.nombre}' (ID: ${productoId}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`);
+    throw new BadRequestError(`El producto '${producto.nombre}' (ID: ${idProducto}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`);
   }
   // --- FIN DE NUEVA VALIDACIÓN ---
 
@@ -46,7 +46,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   const transaction = await db.sequelize.transaction();
   try {
     const nuevoAbastecimiento = await db.Abastecimiento.create({
-        idProducto: productoId,
+        idProducto: idproducto,
         cantidad: Number(cantidad),
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
@@ -57,7 +57,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     await producto.decrement("existencia", { by: Number(cantidad), transaction });
     await transaction.commit();
 
-    const productoActualizado = await db.Producto.findByPk(productoId);
+    const productoActualizado = await db.Producto.findByPk(idProducto);
     if (productoActualizado) {
         await checkAndSendStockAlert(productoActualizado, `tras abastecimiento ID ${nuevoAbastecimiento.idAbastecimiento}`);
     }
