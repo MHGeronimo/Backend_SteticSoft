@@ -11,16 +11,33 @@ const {
 /**
  * Crear un nuevo servicio.
  */
+const fs = require("fs");
+const path = require("path");
+
 const crearServicio = async (datosServicio) => {
-  const { nombre, precio, idCategoriaServicio, descripcion } = datosServicio;
+  const { nombre, precio, idCategoriaServicio, descripcion, imagenUrl } =
+    datosServicio;
 
   // 1. Verificaciones previas
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
+    if (imagenUrl) {
+      // Si ya existe y se subió una imagen, hay que borrarla para no dejar basura.
+      const imagePath = path.join(__dirname, "..", "public", imagenUrl);
+      fs.unlink(imagePath, (err) => {
+        if (err)
+          console.error(
+            `Error al eliminar imagen huérfana '${imagePath}':`,
+            err
+          );
+      });
+    }
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
 
-  const categoriaServicio = await db.CategoriaServicio.findByPk(idCategoriaServicio);
+  const categoriaServicio = await db.CategoriaServicio.findByPk(
+    idCategoriaServicio
+  );
   if (!categoriaServicio || !categoriaServicio.estado) {
     throw new BadRequestError(
       "La categoría de servicio especificada no existe o no está activa."
@@ -34,6 +51,7 @@ const crearServicio = async (datosServicio) => {
       descripcion: descripcion || null,
       precio: parseFloat(precio),
       idCategoriaServicio,
+      imagenUrl: imagenUrl || null, // Guardamos la URL de la imagen
     };
 
     const nuevoServicio = await db.Servicio.create(servicioParaCrear);
@@ -115,8 +133,26 @@ const obtenerServicioPorId = async (idServicio) => {
 const actualizarServicio = async (idServicio, datosActualizar) => {
   const servicio = await db.Servicio.findByPk(idServicio);
   if (!servicio) {
+    // Si el servicio no se encuentra, y se subió una imagen, hay que borrarla.
+    if (datosActualizar.imagenUrl) {
+      const imagePath = path.join(
+        __dirname,
+        "..",
+        "public",
+        datosActualizar.imagenUrl
+      );
+      fs.unlink(imagePath, (err) => {
+        if (err)
+          console.error(
+            `Error al eliminar imagen para servicio no encontrado '${imagePath}':`,
+            err
+          );
+      });
+    }
     throw new NotFoundError("Servicio no encontrado para actualizar.");
   }
+
+  const oldImageUrl = servicio.imagenUrl; // Guardamos la URL de la imagen antigua
 
   // Validación de nombre duplicado
   if (datosActualizar.nombre) {
@@ -138,6 +174,19 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
 
   try {
     await servicio.update(datosActualizar);
+
+    // Si se actualizó la imagen (la nueva URL es diferente a la antigua), borramos la antigua.
+    if (oldImageUrl && datosActualizar.imagenUrl !== oldImageUrl) {
+      const oldImagePath = path.join(__dirname, "..", "public", oldImageUrl);
+      fs.unlink(oldImagePath, (err) => {
+        if (err)
+          console.error(
+            `Error al eliminar la imagen antigua '${oldImagePath}':`,
+            err
+          );
+      });
+    }
+
     return await obtenerServicioPorId(idServicio);
   } catch (error) {
     console.error("Error al actualizar el servicio en la BD:", error);
@@ -183,8 +232,25 @@ const eliminarServicioFisico = async (idServicio) => {
     );
   }
 
+  const imageUrl = servicio.imagenUrl;
+
   // Si no hay relaciones, eliminar
   await servicio.destroy();
+
+  // Si el servicio tenía una imagen, la eliminamos del sistema de archivos.
+  if (imageUrl) {
+    const imagePath = path.join(__dirname, "..", "public", imageUrl);
+    fs.unlink(imagePath, (err) => {
+      if (err) {
+        // No bloqueamos la respuesta por esto, pero sí lo registramos.
+        console.error(
+          `Error al eliminar la imagen '${imagePath}' del servicio eliminado:`,
+          err
+        );
+      }
+    });
+  }
+
   return { mensaje: "Servicio eliminado correctamente." };
 };
 
