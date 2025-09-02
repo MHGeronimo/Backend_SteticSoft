@@ -195,10 +195,8 @@
         { "name": "nombre", "type": "VARCHAR(100)", "isNotNull": true, "isUnique": true },
         { "name": "descripcion", "type": "TEXT" },
         { "name": "precio", "type": "DECIMAL(12, 2)", "isNotNull": true, "defaultValue": "0.00" },
-        { "name": "duracion_estimada_min", "type": "INT" },
+        { "name": "imagen_url", "type": "VARCHAR(255)" },
         { "name": "id_categoria_servicio", "type": "INT", "isNotNull": true },
-        { "name": "id_especialidad", "type": "INT" },
-        { "name": "imagen", "type": "TEXT" },
         { "name": "estado", "type": "BOOLEAN", "isNotNull": true, "defaultValue": "TRUE" }
       ]
     },
