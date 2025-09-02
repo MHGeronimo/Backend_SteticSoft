@@ -168,6 +168,21 @@ const eliminarProductoFisico = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtiene una lista de productos para uso interno.
+ */
+const listarProductosInternos = async (req, res, next) => {
+  try {
+    const productos = await productoService.obtenerProductosInternos();
+    res.status(200).json({
+      success: true,
+      data: productos,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearProducto,
   listarProductos,
@@ -177,4 +192,5 @@ module.exports = {
   habilitarProducto,
   eliminarProductoFisico,
   cambiarEstadoProducto,
+  listarProductosInternos,
 };

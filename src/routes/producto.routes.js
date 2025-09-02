@@ -33,6 +33,14 @@ router.get(
   productoController.listarProductos
 );
 
+// Ruta para obtener productos de uso interno (para abastecimiento).
+router.get(
+  "/interno",
+  authMiddleware,
+  checkPermission("MODULO_ABASTECIMIENTOS_GESTIONAR"), // Permiso del módulo que la consume
+  productoController.listarProductosInternos
+);
+
 // Ruta para obtener un producto por su ID.
 router.get(
   "/:idProducto",

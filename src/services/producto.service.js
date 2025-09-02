@@ -337,6 +337,38 @@ const eliminarProductoFisico = async (idProducto) => {
   }
 };
 
+/**
+ * Obtener todos los productos activos para uso interno.
+ */
+const obtenerProductosInternos = async () => {
+  try {
+    const productos = await db.Producto.findAll({
+      where: {
+        tipoUso: "Interno",
+        estado: true,
+      },
+      include: [
+        {
+          model: db.CategoriaProducto,
+          as: "categoria",
+          required: false,
+        },
+      ],
+      order: [["nombre", "ASC"]],
+    });
+    return productos;
+  } catch (error) {
+    console.error("Error inesperado al obtener productos internos:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new CustomError(
+      "Ocurrió un error inesperado al obtener los productos para abastecimiento.",
+      500
+    );
+  }
+};
+
 module.exports = {
   crearProducto,
   obtenerTodosLosProductos,
@@ -346,4 +378,5 @@ module.exports = {
   habilitarProducto,
   eliminarProductoFisico,
   cambiarEstadoProducto,
+  obtenerProductosInternos,
 };
