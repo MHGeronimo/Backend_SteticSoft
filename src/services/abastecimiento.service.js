@@ -68,12 +68,15 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
 // Aquí pego el resto del archivo para que lo tengas completo.
 
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
+  const { page = 1, limit = 10, ...filtros } = opcionesDeFiltro;
+  const offset = (page - 1) * limit;
+
   try {
-    return await Abastecimiento.findAll({
+    const { count, rows } = await Abastecimiento.findAndCountAll({
       attributes: {
         exclude: ["empleado_asignado", "empleadoAsignado"],
       },
-      where: opcionesDeFiltro,
+      where: filtros,
       include: [
         {
           model: Producto,
@@ -85,7 +88,17 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
         ["fechaIngreso", "DESC"],
         ["idAbastecimiento", "DESC"],
       ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      distinct: true,
     });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      data: rows,
+    };
   } catch (error) {
     console.error("Error al obtener todos los abastecimientos:", error.message);
     throw new CustomError(
