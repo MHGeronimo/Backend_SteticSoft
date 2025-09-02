@@ -53,6 +53,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: true,
         allowNull: false,
         field: 'estado'
+      },
+      empleadoAsignado: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'empleado_asignado'
       }
     },
     {

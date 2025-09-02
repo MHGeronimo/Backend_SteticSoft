@@ -22,6 +22,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     cantidad,
     fechaIngreso,
     estado,
+    empleadoAsignado,
   } = datosAbastecimiento;
 
   const producto = await db.Producto.findByPk(productoId);
@@ -50,6 +51,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
         estado: typeof estado === "boolean" ? estado : true,
+        empleadoAsignado,
     }, { transaction });
 
     await producto.decrement("existencia", { by: Number(cantidad), transaction });

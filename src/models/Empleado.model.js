@@ -95,12 +95,6 @@ module.exports = (sequelize, DataTypes) => {
       as: 'citasAtendidas'
     });
 
-    // Un Empleado puede tener muchos Abastecimientos asignados.
-    Empleado.hasMany(models.Abastecimiento, {
-      foreignKey: 'idEmpleadoAsignado', // Se refiere al atributo en el modelo Abastecimiento.
-      as: 'abastecimientosAsignados'
-    });
-    
     // Un Empleado puede tener muchas Novedades (ausencias, vacaciones, etc.)
     // La relación es Muchos a Muchos a través de la tabla NovedadEmpleado,
     // y se vincula mediante el id_usuario del empleado.
