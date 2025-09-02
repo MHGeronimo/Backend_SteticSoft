@@ -13,11 +13,14 @@ const PERMISO_MODULO_SERVICIOS = "MODULO_SERVICIOS_GESTIONAR";
 
 // --- RUTAS DE LA API ---
 
+const { uploadServicioImage } = require("../middlewares/upload.middleware.js");
+
 // Crear un nuevo servicio
 router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
+  uploadServicioImage,
   servicioValidators.crearServicioValidators,
   servicioController.crearServicio
 );
@@ -41,11 +44,12 @@ router.get(
   servicioController.obtenerServicioPorId
 );
 
-// Actualizar un servicio (PATCH para actualizaciones parciales)
-router.patch(
+// Actualizar un servicio (PUT para actualizaciones completas)
+router.put(
   "/:idServicio",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
+  uploadServicioImage,
   servicioValidators.actualizarServicioValidators,
   servicioController.actualizarServicio
 );
