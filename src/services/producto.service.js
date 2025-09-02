@@ -128,8 +128,15 @@ const obtenerTodosLosProductos = async (filtros) => {
   }
 
   if (estado !== undefined) {
+  if (estado === "true" || estado === "false") {
     whereCondition.estado = estado === "true";
+  } else if (estado === "Activo") {
+    whereCondition.estado = true;
+  } else if (estado === "Inactivo") {
+    whereCondition.estado = false;
   }
+}
+
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
   }

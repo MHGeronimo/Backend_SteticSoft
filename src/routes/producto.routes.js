@@ -14,6 +14,13 @@ const { uploadProductoImage } = require("../middlewares/upload.middleware.js");
 
 const PERMISO_MODULO_PRODUCTOS = "MODULO_PRODUCTOS_GESTIONAR";
 
+// Ruta pública para obtener productos activos
+router.get(
+  "/public",
+  productoController.listarProductosPublicos
+);
+
+
 // Ruta para crear un nuevo producto, incluye subida de imagen.
 router.post(
   "/",

@@ -183,6 +183,37 @@ const listarProductosInternos = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtiene una lista de productos activos para mostrar en la landing pública.
+ */
+const listarProductosPublicos = async (req, res, next) => {
+  try {
+    console.log("🔍 Entrando a listarProductosPublicos");
+    const productos = await productoService.obtenerTodosLosProductos({
+      estado: "Activo"
+    });
+    console.log("📦 Productos encontrados:", productos);
+
+    const productosPublicos = productos.map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      description: p.description,
+      categoria: p.categoria,
+      price: p.price,
+      imagenURL: p.imagenURL
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: productosPublicos,
+    });
+  } catch (error) {
+    console.error("Error al listar productos públicos:", error);
+    next(error);
+  }
+};
+
+
 module.exports = {
   crearProducto,
   listarProductos,
@@ -193,4 +224,5 @@ module.exports = {
   eliminarProductoFisico,
   cambiarEstadoProducto,
   listarProductosInternos,
+  listarProductosPublicos
 };
