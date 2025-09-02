@@ -18,14 +18,14 @@ const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // I
  */
 const crearAbastecimiento = async (datosAbastecimiento) => {
   const {
-    productoId,
+    idproducto,
     cantidad,
     fechaIngreso,
     estado,
   } = datosAbastecimiento;
 
-  const producto = await db.Producto.findByPk(productoId);
-  if (!producto) throw new BadRequestError(`Producto con ID ${productoId} no encontrado.`);
+  const producto = await db.Producto.findByPk(idproducto);
+  if (!producto) throw new BadRequestError(`Producto con ID ${idproducto} no encontrado.`);
   if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
 
   console.log("### Objeto 'producto' completo que se está validando ###");
