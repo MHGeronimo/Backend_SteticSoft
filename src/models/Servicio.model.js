@@ -27,6 +27,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0.0,
         field: 'precio'
       },
+      imagenUrl: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        field: 'imagen_url'
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
