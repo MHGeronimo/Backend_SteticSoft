@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS servicio (
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
     precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    imagen_url VARCHAR(255),
     id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );
