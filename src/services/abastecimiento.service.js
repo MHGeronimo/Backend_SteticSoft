@@ -1,5 +1,5 @@
 // src/services/abastecimiento.service.js
-const { Sequelize, Producto, sequelize, Abastecimiento } = require("../models");
+const { Sequelize, Producto, sequelize, Abastecimiento, CategoriaProducto, Empleado } = require("../models");
 const { Op } = Sequelize;
 const { NotFoundError, ConflictError, CustomError, BadRequestError } = require("../errors");
 const { checkAndSendStockAlert } = require('../utils/stockAlertHelper.js'); // Import stock alert helper
@@ -17,6 +17,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
     cantidad,
     fechaIngreso,
     estado,
+    empleadoAsignado,
   } = datosAbastecimiento;
 
   const producto = await Producto.findByPk(idProducto);
@@ -45,6 +46,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
         estado: typeof estado === "boolean" ? estado : true,
+        empleadoAsignado: empleadoAsignado,
     }, { transaction });
 
     await producto.decrement("existencia", { by: Number(cantidad), transaction });
@@ -73,15 +75,30 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
 
   try {
     const { count, rows } = await Abastecimiento.findAndCountAll({
-      attributes: {
-        exclude: ["empleado_asignado", "empleadoAsignado"],
-      },
       where: filtros,
       include: [
         {
           model: Producto,
           as: "producto",
-          attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
+          attributes: [
+            "idProducto",
+            "nombre",
+            "stockMinimo",
+            "existencia",
+            "vida_util_dias",
+          ],
+          include: [
+            {
+              model: CategoriaProducto,
+              as: "categoria",
+              attributes: ["idCategoria", "nombre"],
+            },
+          ],
+        },
+        {
+          model: Empleado,
+          as: "empleado",
+          attributes: ["idEmpleado", "nombre", "apellido"],
         },
       ],
       order: [
@@ -112,7 +129,8 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   try {
     const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, {
       include: [
-        { model: Producto, as: "producto", attributes: ["idProducto", "nombre", "stockMinimo", "existencia"] },
+        { model: Producto, as: "producto", attributes: ["idProducto", "nombre", "stockMinimo", "existencia", "vida_util_dias"] },
+        { model: Empleado, as: "empleado", attributes: ["idEmpleado", "nombre", "apellido"] },
       ],
     });
     if (!abastecimiento)
@@ -138,6 +156,7 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
     fechaAgotamiento,
     estado,
     cantidad,
+    empleadoAsignado,
   } = datosActualizar;
 
   const transaction = await sequelize.transaction();
@@ -167,6 +186,7 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
     const camposAActualizar = {};
 
     if (estaAgotado !== undefined) camposAActualizar.estaAgotado = estaAgotado;
+    if (empleadoAsignado !== undefined) camposAActualizar.empleadoAsignado = empleadoAsignado;
     if (estaAgotado === true) {
       if (razonAgotamiento !== undefined) camposAActualizar.razonAgotamiento = razonAgotamiento;
       if (fechaAgotamiento !== undefined) camposAActualizar.fechaAgotamiento = fechaAgotamiento;
