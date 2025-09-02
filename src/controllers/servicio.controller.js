@@ -3,7 +3,19 @@ const servicioService = require("../services/servicio.service.js");
 
 const crearServicio = async (req, res, next) => {
   try {
-    const nuevo = await servicioService.crearServicio(req.body);
+    // El cuerpo de la solicitud que contiene los datos del servicio
+    const servicioData = req.body;
+
+    // Si se subió un archivo, su información estará en req.file
+    if (req.file) {
+      // Construimos la URL pública de la imagen.
+      // La ruta guardada debe ser relativa a la carpeta 'public' para ser accesible.
+      // Ejemplo: /uploads/servicios/nombre-unico-12345.jpg
+      const imageUrl = `/uploads/servicios/${req.file.filename}`;
+      servicioData.imagenUrl = imageUrl;
+    }
+
+    const nuevo = await servicioService.crearServicio(servicioData);
     res.status(201).json({
       success: true,
       message: "Servicio creado exitosamente.",
@@ -48,10 +60,19 @@ const obtenerServicioPorId = async (req, res, next) => {
 const actualizarServicio = async (req, res, next) => {
   try {
     const { idServicio } = req.params;
+    const servicioData = req.body;
+
+    // Si se sube una nueva imagen, la añadimos a los datos a actualizar.
+    if (req.file) {
+      const imageUrl = `/uploads/servicios/${req.file.filename}`;
+      servicioData.imagenUrl = imageUrl;
+    }
+
     const actualizado = await servicioService.actualizarServicio(
       Number(idServicio),
-      { ...req.body }
+      servicioData
     );
+
     res.status(200).json({
       success: true,
       message: "Servicio actualizado exitosamente.",
