@@ -21,10 +21,13 @@ const citaRoutes = require("./cita.routes.js");
 const servicioRoutes = require("./servicio.routes.js");
 const abastecimientoRoutes = require("./abastecimiento.routes.js");
 const novedadesRoutes = require("./novedades.routes.js");
+const dashboardRoutes = require("./dashboard.routes.js");
+
 // ... y así para otras entidades
 
 // Montar las rutas de las entidades en el router principal
 router.use("/auth", authRoutes); 
+router.use("/dashboard", dashboardRoutes);
 router.use("/roles", rolRoutes);
 router.use("/permisos", permisoRoutes);
 router.use("/usuarios", usuarioRoutes); 
