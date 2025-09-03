@@ -57,7 +57,7 @@ app.use(sessionMiddleware);
 // Ej: imágenes, CSS, JS del lado del cliente para la página de bienvenida.
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Ruta raíz para servir la página de bienvenida (welcome.html)
 app.get("/", (req, res) => {
