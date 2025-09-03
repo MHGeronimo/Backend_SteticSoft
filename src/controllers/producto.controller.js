@@ -184,42 +184,43 @@ const listarProductosInternos = async (req, res, next) => {
 };
 
 /**
- * Obtiene una lista de productos activos para mostrar en la landing pública.
+ * Obtiene una lista de servicios activos para mostrar en la landing pública.
  */
-const listarProductosPublicos = async (req, res, next) => {
+const listarServiciosPublicos = async (req, res, next) => {
   try {
-    console.log("🔍 Entrando a listarProductosPublicos");
+    console.log("🔍 Entrando a listarServiciosPublicos");
 
-    const resultado = await productoService.obtenerTodosLosProductos();
+    const resultado = await servicioService.obtenerTodosLosServicios();
 
-    // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
-    const listaProductos = Array.isArray(resultado)
+    // 🛡️ Asegurar que trabajamos con un array
+    const listaServicios = Array.isArray(resultado)
       ? resultado
-      : resultado?.productos || [];
+      : resultado?.servicios || [];
 
-    console.log("📦 Productos encontrados:", listaProductos);
+    console.log("📦 Servicios encontrados:", listaServicios);
 
-    // 🔍 Filtrar productos cuyo estado sea "activo", sin importar mayúsculas
-    const productosPublicos = listaProductos
-      .filter(p => p.estado?.toLowerCase() === "activo")
-      .map(p => ({
-        id: p.id,
-        nombre: p.nombre,
-        description: p.description,
-        categoria: p.categoria,
-        price: p.price,
-        imagenURL: p.imagen
+    // 🔍 Filtrar servicios cuyo estado sea "activo", sin importar mayúsculas
+    const serviciosPublicos = listaServicios
+      .filter(s => s.estado?.toLowerCase() === "activo")
+      .map(s => ({
+        id: s.id,
+        nombre: s.nombre,
+        description: s.descripcion, // normalizado
+        categoria: s.categoria,
+        price: s.price || 0, // valor por defecto
+        imagenURL: s.imagen || null // tolerancia si no hay imagen
       }));
 
     res.status(200).json({
       success: true,
-      data: productosPublicos,
+      data: serviciosPublicos,
     });
   } catch (error) {
-    console.error("❌ Error al listar productos públicos:", error);
+    console.error("❌ Error al listar servicios públicos:", error);
     next(error);
   }
 };
+
 
 
 
