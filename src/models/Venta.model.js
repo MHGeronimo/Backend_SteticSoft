@@ -90,7 +90,7 @@ module.exports = (sequelize, DataTypes) => {
 
     // Una Venta puede tener muchos Productos.
     Venta.belongsToMany(models.Producto, {
-      through: 'producto_x_venta', 
+      through: models.ProductoXVenta,
       foreignKey: 'id_venta',      
       otherKey: 'id_producto',     
       as: 'productos'
@@ -98,7 +98,7 @@ module.exports = (sequelize, DataTypes) => {
     
     // Una Venta puede tener muchos Servicios.
     Venta.belongsToMany(models.Servicio, {
-      through: 'venta_x_servicio', 
+      through: models.VentaXServicio,
       foreignKey: 'id_venta',      
       otherKey: 'id_servicio',     
       as: 'servicios'
