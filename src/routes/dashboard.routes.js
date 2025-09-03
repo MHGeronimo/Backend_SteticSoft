@@ -1,10 +1,12 @@
-// src/routes/dashboard.routes.js
 const { Router } = require("express");
 const dashboardController = require("../controllers/dashboard.controller");
+
+// SOLUCIÓN DEFINITIVA: Importar con desestructuración
 const { authMiddleware, authorizationMiddleware } = require("../middlewares");
 
 const router = Router();
 
+// Esta línea ahora funcionará porque authorizationMiddleware es una función válida
 router.use(authMiddleware, authorizationMiddleware(["Dashboard"]));
 
 router.get(
