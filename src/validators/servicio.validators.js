@@ -1,4 +1,3 @@
-// src/validators/servicio.validators.js
 const { body, param, query } = require("express-validator");
 const { handleValidationErrors } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
@@ -6,6 +5,8 @@ const { Op } = db.Sequelize;
 
 // Expresión regular: letras, números y espacios (incluye tildes y ñ)
 const regexNombre = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]+$/;
+
+const regexImagen = /\.(jpg|jpeg|png|webp)$/i;
 
 const crearServicioValidators = [
   body("nombre")
@@ -39,6 +40,11 @@ const crearServicioValidators = [
         return Promise.reject("La categoría seleccionada no existe o no está activa.");
       }
     }),
+
+  body("imagenUrl")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString().withMessage("La URL de la imagen debe ser texto.")
+    .matches(regexImagen).withMessage("La imagen debe ser .jpg, .jpeg, .png o .webp."),
 
   handleValidationErrors,
 ];
@@ -84,6 +90,11 @@ const actualizarServicioValidators = [
       }
     }),
 
+  body("imagenUrl")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString().withMessage("La URL de la imagen debe ser texto.")
+    .matches(regexImagen).withMessage("La imagen debe ser .jpg, .jpeg, .png o .webp."),
+
   handleValidationErrors,
 ];
 
@@ -93,7 +104,19 @@ const cambiarEstadoServicioValidators = [
 
   body("estado")
     .exists({ checkFalsy: false }).withMessage("El campo 'estado' es obligatorio.")
-    .isBoolean().withMessage("El valor de 'estado' debe ser booleano (true o false)."),
+    .custom((value) => {
+      if (
+        value === true ||
+        value === false ||
+        value === "true" ||
+        value === "false" ||
+        value === "Activo" ||
+        value === "Inactivo"
+      ) {
+        return true;
+      }
+      throw new Error("El valor de 'estado' debe ser true, false, 'Activo' o 'Inactivo'.");
+    }),
 
   handleValidationErrors,
 ];
@@ -113,9 +136,19 @@ const listarServiciosValidator = [
     .withMessage("La búsqueda contiene caracteres no permitidos."),
   query("estado")
     .optional()
-    .isBoolean()
-    .withMessage("El estado debe ser true o false."),
-  // Usamos idCategoriaServicio (coherente con el modelo/DB)
+    .custom((value) => {
+      if (
+        value === "true" ||
+        value === "false" ||
+        value === true ||
+        value === false ||
+        value === "Activo" ||
+        value === "Inactivo"
+      ) {
+        return true;
+      }
+      throw new Error("El estado debe ser true, false, 'Activo' o 'Inactivo'.");
+    }),
   query("idCategoriaServicio")
     .optional()
     .isInt({ gt: 0 })
@@ -123,11 +156,10 @@ const listarServiciosValidator = [
   handleValidationErrors,
 ];
 
-// 👇 MUY IMPORTANTE: que sí esté exportado
 module.exports = {
   crearServicioValidators,
   actualizarServicioValidators,
   cambiarEstadoServicioValidators,
   idServicioValidator,
-  listarServiciosValidator, // <- sin esto, Express recibe undefined y truena
+  listarServiciosValidator,
 };
