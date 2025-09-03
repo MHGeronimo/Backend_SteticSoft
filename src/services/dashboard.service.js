@@ -90,7 +90,7 @@ class DashboardService {
         [sequelize.fn("SUM", sequelize.col("total")), "totalVentas"],
         [sequelize.fn("COUNT", sequelize.col("id_venta")), "transacciones"],
       ],
-      where: { fecha: { [Op.gte]: hace12Meses }, estado: true },
+      where: { fecha: { [Op.gte]: hace12Meses }, id_estado: 1 },
       group: ["mes"],
       order: [["mes", "ASC"]],
       raw: true,
@@ -113,7 +113,7 @@ class DashboardService {
         [sequelize.fn("SUM", sequelize.col("total")), "gran_total"],
         [sequelize.fn("SUM", sequelize.col("iva")), "total_iva"],
       ],
-      where: { estado: true },
+      where: { id_estado: 1 },
       raw: true,
     });
     
