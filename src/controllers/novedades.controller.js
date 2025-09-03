@@ -25,9 +25,9 @@ const crearNovedad = async (req, res, next) => {
  */
 const listarNovedades = async (req, res, next) => {
   try {
-    const opcionesDeFiltro = {
-      estado: req.query.estado,
-      empleadoId: req.query.empleadoId,
+      const opcionesDeFiltro = {
+          estado: req.query.estado !== undefined ? req.query.estado === "true" : undefined,
+          empleadoId: req.query.empleadoId ? Number(req.query.empleadoId) : undefined
     };
 
     const novedades = await novedadesService.obtenerTodasLasNovedades(opcionesDeFiltro);
