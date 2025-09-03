@@ -10,7 +10,7 @@ const { authMiddleware, authorizationMiddleware } = require("../middlewares");
 const router = Router();
 
 // Esta línea AHORA SÍ funcionará, porque "authorizationMiddleware" es una función válida.
-router.use(authMiddleware, authorizationMiddleware(["Dashboard"]));
+router.use(authMiddleware, authorizationMiddleware(["MODULO_DASHBOARD_VER"]));
 
 router.get(
   "/ingresos-por-categoria",
