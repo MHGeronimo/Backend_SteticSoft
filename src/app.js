@@ -26,6 +26,8 @@ const app = express();
 
 // --- Middlewares Esenciales ---
 
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
+
 // 1. Helmet: Ayuda a proteger la aplicación estableciendo varias cabeceras HTTP de seguridad.
 app.use(helmet());
 

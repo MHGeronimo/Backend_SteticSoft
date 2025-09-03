@@ -190,9 +190,7 @@ const listarProductosPublicos = async (req, res, next) => {
   try {
     console.log("🔍 Entrando a listarProductosPublicos");
 
-    const resultado = await productoService.obtenerTodosLosProductos({
-      estado: "Activo"
-    });
+    const resultado = await productoService.obtenerTodosLosProductos();
 
     // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
     const listaProductos = Array.isArray(resultado)
@@ -201,14 +199,17 @@ const listarProductosPublicos = async (req, res, next) => {
 
     console.log("📦 Productos encontrados:", listaProductos);
 
-    const productosPublicos = listaProductos.map(p => ({
-      id: p.id,
-      nombre: p.nombre,
-      description: p.description,
-      categoria: p.categoria,
-      price: p.price,
-      imagenURL: p.imagenURL
-    }));
+    // 🔍 Filtrar productos cuyo estado sea "activo", sin importar mayúsculas
+    const productosPublicos = listaProductos
+      .filter(p => p.estado?.toLowerCase() === "activo")
+      .map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        description: p.description,
+        categoria: p.categoria,
+        price: p.price,
+        imagenURL: p.imagen
+      }));
 
     res.status(200).json({
       success: true,
@@ -219,6 +220,7 @@ const listarProductosPublicos = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 
