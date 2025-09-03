@@ -20,6 +20,12 @@ const crearNovedadValidators = [
       return true;
     }),
 
+  body("dias")
+  .notEmpty().withMessage("Escoger el día es obligatorio.")
+  .isString().withMessage("Cada día debe ser un texto.")
+  .isIn(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'])
+  .withMessage("El día proporcionado no es válido."),
+
   body("horaInicio")
     .notEmpty().withMessage("La hora de inicio es obligatoria.")
     .matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/).withMessage("La hora de inicio debe estar en formato HH:mm."),
