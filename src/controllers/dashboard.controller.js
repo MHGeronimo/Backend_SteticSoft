@@ -1,4 +1,4 @@
-// src/controllers/dashboard.controller.js
+// Ubicación: src/shared/src_api/controllers/dashboard.controller.js
 const dashboardService = require("../services/dashboard.service");
 
 class DashboardController {
