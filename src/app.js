@@ -54,11 +54,9 @@ app.use(sessionMiddleware);
 // --- Rutas Estáticas y de Bienvenida ---
 
 // Servir archivos estáticos desde la carpeta 'src/public'
+app.use("/api/uploads", express.static(path.join(__dirname, "public/uploads")));
 // Ej: imágenes, CSS, JS del lado del cliente para la página de bienvenida.
 app.use(express.static(path.join(__dirname, "public")));
-
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
 // Ruta raíz para servir la página de bienvenida (welcome.html)
 app.get("/", (req, res) => {
   // __dirname es el directorio del archivo actual (src/)
