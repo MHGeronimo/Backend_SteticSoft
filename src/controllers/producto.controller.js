@@ -184,46 +184,42 @@ const listarProductosInternos = async (req, res, next) => {
 };
 
 /**
- * Obtiene una lista de servicios activos para mostrar en la landing pública.
+ * Obtiene una lista de productos activos para mostrar en la landing pública.
  */
-const listarServiciosPublicos = async (req, res, next) => {
+const listarProductosPublicos = async (req, res, next) => {
   try {
-    console.log("🔍 Entrando a listarServiciosPublicos");
+    console.log("🔍 Entrando a listarProductosPublicos");
 
-    const resultado = await servicioService.obtenerTodosLosServicios();
+    const resultado = await productoService.obtenerTodosLosProductos();
 
-    // 🛡️ Asegurar que trabajamos con un array
-    const listaServicios = Array.isArray(resultado)
+    // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
+    const listaProductos = Array.isArray(resultado)
       ? resultado
-      : resultado?.servicios || [];
+      : resultado?.productos || [];
 
-    console.log("📦 Servicios encontrados:", listaServicios);
+    console.log("📦 Productos encontrados:", listaProductos);
 
-    // 🔍 Filtrar servicios cuyo estado sea "activo", sin importar mayúsculas
-    const serviciosPublicos = listaServicios
-      .filter(s => s.estado?.toLowerCase() === "activo")
-      .map(s => ({
-        id: s.id,
-        nombre: s.nombre,
-        description: s.descripcion, // normalizado
-        categoria: s.categoria,
-        price: s.price || 0, // valor por defecto
-        imagenURL: s.imagen || null // tolerancia si no hay imagen
+    // 🔍 Filtrar productos cuyo estado sea "activo", sin importar mayúsculas
+    const productosPublicos = listaProductos
+      .filter(p => p.estado?.toLowerCase() === "activo")
+      .map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        description: p.description,
+        categoria: p.categoria,
+        price: p.price,
+        imagenURL: p.imagen
       }));
 
     res.status(200).json({
       success: true,
-      data: serviciosPublicos,
+      data: productosPublicos,
     });
   } catch (error) {
-    console.error("❌ Error al listar servicios públicos:", error);
+    console.error("❌ Error al listar productos públicos:", error);
     next(error);
   }
 };
-
-
-
-
 
 module.exports = {
   crearProducto,
