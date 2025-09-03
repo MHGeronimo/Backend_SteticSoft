@@ -13,95 +13,71 @@ const { Op } = require("sequelize");
 
 class DashboardService {
   async getIngresosPorCategoria() {
-    const ingresosProductos = await CategoriaProducto.findAll({
+    const ingresosProductos = await ProductoXVenta.findAll({
       attributes: [
-        'nombre',
-        [sequelize.fn('SUM', sequelize.literal('productos->productos_x_venta.cantidad * productos->productos_x_venta.valor_unitario')), 'total']
+        [sequelize.col('producto.categoria.nombre'), 'categoria'],
+        [sequelize.fn("SUM", sequelize.literal("cantidad * valor_unitario")), "total"],
       ],
       include: [{
         model: Producto,
-        as: 'productos',
+        as: 'producto',
         attributes: [],
-        required: true,
-        include: [{
-          model: ProductoXVenta,
-          as: 'productos_x_venta',
-          attributes: [],
-          required: true,
-        }]
+        include: [{ model: CategoriaProducto, as: 'categoria', attributes: [] }],
       }],
-      group: ['CategoriaProducto.id_categoria_producto'],
-      raw: true
+      group: [sequelize.col('producto.categoria.nombre')],
+      raw: true,
     });
 
-    const ingresosServicios = await CategoriaServicio.findAll({
+    const ingresosServicios = await VentaXServicio.findAll({
       attributes: [
-        'nombre',
-        [sequelize.fn('SUM', sequelize.col('servicios->ventas_x_servicio.valor_servicio')), 'total']
+        [sequelize.col('servicio.categoria.nombre'), 'categoria'],
+        [sequelize.fn("SUM", sequelize.col("valor_servicio")), "total"],
       ],
       include: [{
         model: Servicio,
-        as: 'servicios',
+        as: 'servicio',
         attributes: [],
-        required: true,
-        include: [{
-          model: VentaXServicio,
-          as: 'ventas_x_servicio',
-          attributes: [],
-          required: true,
-        }]
+        include: [{ model: CategoriaServicio, as: 'categoria', attributes: [] }],
       }],
-      group: ['CategoriaServicio.id_categoria_servicio'],
-      raw: true
+      group: [sequelize.col('servicio.categoria.nombre')],
+      raw: true,
     });
-
+    
     const ingresos = {};
     [...ingresosProductos, ...ingresosServicios].forEach(item => {
-      if (!ingresos[item.nombre]) ingresos[item.nombre] = 0;
-      ingresos[item.nombre] += parseFloat(item.total || 0);
+      if (!ingresos[item.categoria]) ingresos[item.categoria] = 0;
+      ingresos[item.categoria] += parseFloat(item.total);
     });
 
     return Object.entries(ingresos).map(([categoria, total]) => ({ categoria, total }));
   }
 
   async getServiciosMasVendidos() {
-    const servicios = await Servicio.findAll({
+    return VentaXServicio.findAll({
       attributes: [
-        'nombre',
-        [sequelize.fn('COUNT', sequelize.col('ventas_x_servicio.id_servicio')), 'totalVendido']
+        [sequelize.col('servicio.nombre'), 'nombre'],
+        [sequelize.fn('COUNT', sequelize.col('VentaXServicio.id_servicio')), 'totalVendido']
       ],
-      include: [{
-        model: VentaXServicio,
-        as: 'ventas_x_servicio',
-        attributes: [],
-        required: true
-      }],
-      group: ['Servicio.id_servicio'],
+      include: [{ model: Servicio, as: 'servicio', attributes: [] }],
+      group: [sequelize.col('servicio.nombre')],
       order: [[sequelize.literal('"totalVendido"'), 'DESC']],
       limit: 5,
       raw: true
-    });
-    return servicios.map(s => ({ ...s, totalVendido: parseInt(s.totalVendido, 10) }));
+    }).then(results => results.map(s => ({...s, totalVendido: parseInt(s.totalVendido, 10)})));
   }
 
   async getProductosMasVendidos() {
-    const productos = await Producto.findAll({
+    return ProductoXVenta.findAll({
       attributes: [
-        'nombre',
-        [sequelize.fn('SUM', sequelize.col('productos_x_venta.cantidad')), 'totalVendido']
+        [sequelize.col('producto.nombre'), 'nombre'],
+        [sequelize.fn('SUM', sequelize.col('cantidad')), 'totalVendido']
       ],
-      include: [{
-        model: ProductoXVenta,
-        as: 'productos_x_venta',
-        attributes: [],
-        required: true
-      }],
-      group: ['Producto.id_producto'],
+      include: [{ model: Producto, as: 'producto', attributes: [] }],
+      group: [sequelize.col('producto.nombre')],
       order: [[sequelize.literal('"totalVendido"'), 'DESC']],
       limit: 5,
       raw: true
-    });
-    return productos.map(p => ({ ...p, totalVendido: parseInt(p.totalVendido, 10) }));
+    }).then(results => results.map(p => ({...p, totalVendido: parseInt(p.totalVendido, 10)})));
   }
 
   async getEvolucionVentas() {
@@ -115,8 +91,8 @@ class DashboardService {
         [sequelize.fn("COUNT", sequelize.col("id_venta")), "transacciones"],
       ],
       where: { fecha: { [Op.gte]: hace12Meses }, estado: true },
-      group: [sequelize.fn("TO_CHAR", sequelize.col("fecha"), "YYYY-MM")],
-      order: [[sequelize.fn("TO_CHAR", sequelize.col("fecha"), "YYYY-MM"), "ASC"]],
+      group: ["mes"],
+      order: [["mes", "ASC"]],
       raw: true,
     });
       
