@@ -1,16 +1,11 @@
 // Ubicación: src/shared/src_api/routes/dashboard.routes.js
 const { Router } = require("express");
 const dashboardController = require("../controllers/dashboard.controller");
-
-// La importación se hace con llaves {} porque el archivo /middlewares/index.js
-// exporta un objeto con todas las funciones.
-// Esta línea extrae las dos funciones que necesitamos de ese objeto.
-const { authMiddleware, authorizationMiddleware } = require("../middlewares");
+const { authMiddleware, checkPermission } = require("../middlewares");
 
 const router = Router();
 
-// Esta línea AHORA SÍ funcionará, porque "authorizationMiddleware" es una función válida.
-router.use(authMiddleware, authorizationMiddleware(["MODULO_DASHBOARD_VER"]));
+router.use(authMiddleware, checkPermission("MODULO_DASHBOARD_VER"));
 
 router.get(
   "/ingresos-por-categoria",
