@@ -5,10 +5,8 @@ const { authMiddleware, authorizationMiddleware } = require("../middlewares");
 
 const router = Router();
 
-// Middleware de autenticación y autorización para todas las rutas del dashboard
 router.use(authMiddleware, authorizationMiddleware(["Dashboard"]));
 
-// Definición de las rutas para obtener las métricas del dashboard
 router.get(
   "/ingresos-por-categoria",
   dashboardController.getIngresosPorCategoria
