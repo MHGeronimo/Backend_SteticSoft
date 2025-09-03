@@ -189,12 +189,19 @@ const listarProductosInternos = async (req, res, next) => {
 const listarProductosPublicos = async (req, res, next) => {
   try {
     console.log("🔍 Entrando a listarProductosPublicos");
-    const productos = await productoService.obtenerTodosLosProductos({
+
+    const resultado = await productoService.obtenerTodosLosProductos({
       estado: "Activo"
     });
-    console.log("📦 Productos encontrados:", productos);
 
-    const productosPublicos = productos.map(p => ({
+    // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
+    const listaProductos = Array.isArray(resultado)
+      ? resultado
+      : resultado?.productos || [];
+
+    console.log("📦 Productos encontrados:", listaProductos);
+
+    const productosPublicos = listaProductos.map(p => ({
       id: p.id,
       nombre: p.nombre,
       description: p.description,
@@ -208,10 +215,11 @@ const listarProductosPublicos = async (req, res, next) => {
       data: productosPublicos,
     });
   } catch (error) {
-    console.error("Error al listar productos públicos:", error);
+    console.error("❌ Error al listar productos públicos:", error);
     next(error);
   }
 };
+
 
 
 module.exports = {
