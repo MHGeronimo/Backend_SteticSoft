@@ -191,17 +191,23 @@ const listarProductosPublicos = async (req, res, next) => {
     console.log("🔍 Entrando a listarProductosPublicos");
 
     const resultado = await productoService.obtenerTodosLosProductos();
+    console.log("📥 Resultado crudo de productoService:", resultado);
 
     // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
     const listaProductos = Array.isArray(resultado)
       ? resultado
       : resultado?.productos || [];
 
-    console.log("📦 Productos encontrados:", listaProductos);
+    console.log("📦 Lista de productos procesada:", listaProductos.length, "items");
 
     // 🔍 Filtrar productos cuyo estado sea "activo", sin importar mayúsculas
     const productosPublicos = listaProductos
-      .filter(p => p.estado?.toLowerCase() === "activo")
+      .filter(p => {
+        const estado = p.estado?.toLowerCase();
+        const esActivo = estado === "activo";
+        console.log(`🔎 Producto ID ${p.id} estado: ${estado} → ${esActivo ? "✅ incluido" : "❌ excluido"}`);
+        return esActivo;
+      })
       .map(p => ({
         id: p.id,
         nombre: p.nombre,
@@ -210,6 +216,8 @@ const listarProductosPublicos = async (req, res, next) => {
         price: p.price,
         imagenURL: p.imagen
       }));
+
+    console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
 
     res.status(200).json({
       success: true,
@@ -220,6 +228,7 @@ const listarProductosPublicos = async (req, res, next) => {
     next(error);
   }
 };
+
 
 module.exports = {
   crearProducto,
