@@ -190,7 +190,9 @@ const listarProductosPublicos = async (req, res, next) => {
   try {
     console.log("🔍 Entrando a listarProductosPublicos");
 
-    const resultado = await productoService.obtenerTodosLosProductos();
+    const resultado = await productoService.obtenerTodosLosProductos({
+      tipoUso: "Externo",
+    });
     console.log("📥 Resultado crudo de productoService:", resultado);
 
     // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
