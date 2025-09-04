@@ -82,7 +82,7 @@ module.exports = (sequelize, DataTypes) => {
 
     // El resto de tus asociaciones se mantienen igual...
     Producto.belongsToMany(models.Compra, {
-      through: "compra_x_producto",
+      through: models.CompraXProducto,
       foreignKey: "id_producto",
       otherKey: "id_compra",
       as: "compras",
