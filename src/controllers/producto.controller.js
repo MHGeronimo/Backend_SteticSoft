@@ -200,12 +200,11 @@ const listarProductosPublicos = async (req, res, next) => {
 
     console.log("📦 Lista de productos procesada:", listaProductos.length, "items");
 
-    // 🔍 Filtrar productos cuyo estado sea "activo", sin importar mayúsculas
+    // 🔍 Filtrar productos cuyo estado sea `true` (activo).
     const productosPublicos = listaProductos
       .filter(p => {
-        const estado = p.estado?.toLowerCase();
-        const esActivo = estado === "activo";
-        console.log(`🔎 Producto ID ${p.id} estado: ${estado} → ${esActivo ? "✅ incluido" : "❌ excluido"}`);
+        const esActivo = p.estado === true;
+        console.log(`🔎 Producto ID ${p.idProducto} estado: ${p.estado} → ${esActivo ? "✅ incluido" : "❌ excluido"}`);
         return esActivo;
       })
       .map(p => ({
