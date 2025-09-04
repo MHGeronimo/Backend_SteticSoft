@@ -209,11 +209,11 @@ const listarProductosPublicos = async (req, res, next) => {
         return esActivo;
       })
       .map(p => ({
-        id: p.id,
+        id: p.idProducto,
         nombre: p.nombre,
-        description: p.description,
+        description: p.descripcion,
         categoria: p.categoria,
-        price: p.price,
+        price: p.precio,
         imagenURL: p.imagen
       }));
 
