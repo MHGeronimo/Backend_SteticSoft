@@ -106,7 +106,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
             {
               model: CategoriaProducto,
               as: 'categoria',
-              attributes: ['idCategoria', 'nombre'],
+              attributes: ['idCategoriaProducto', 'nombre'],
             },
           ],
         },
