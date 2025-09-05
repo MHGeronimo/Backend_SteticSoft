@@ -32,10 +32,10 @@ const crearProductoValidators = [
     .isInt({ gt: 0 }).withMessage("La vida útil debe ser un número entero mayor que cero."),
 
   body("existencia")
-    .trim()
-    .notEmpty().withMessage("La existencia es obligatoria.")
-    .toInt()
-    .isInt({ min: 0 }).withMessage("La existencia debe ser un número entero no negativo."),
+  .notEmpty().withMessage("La existencia es obligatoria.")
+  .toInt()
+  .isInt().withMessage("La existencia debe ser un número entero."),
+
 
   body("stockMinimo")
     .trim()
