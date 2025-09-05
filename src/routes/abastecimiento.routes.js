@@ -23,6 +23,14 @@ const {
 
 const PERMISO_GESTION = "MODULO_ABASTECIMIENTOS_GESTIONAR";
 
+// GET /api/abastecimientos/empleados
+router.get(
+  "/empleados",
+  authMiddleware,
+  checkPermission(PERMISO_GESTION),
+  AbastecimientoController.getEmpleados
+);
+
 // GET /api/abastecimientos
 router.get(
   "/",

@@ -104,6 +104,15 @@ const agotarAbastecimiento = async (req, res, next) => {
   }
 };
 
+const getEmpleados = async (req, res, next) => {
+  try {
+    const empleados = await abastecimientoService.obtenerEmpleados();
+    res.status(200).json(empleados);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearAbastecimiento,
   listarAbastecimientos,
@@ -112,4 +121,5 @@ module.exports = {
   cambiarEstadoAbastecimiento,
   eliminarAbastecimientoFisico,
   agotarAbastecimiento,
+  getEmpleados,
 };
