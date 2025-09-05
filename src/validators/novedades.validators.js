@@ -3,6 +3,10 @@ const { body, param } = require("express-validator");
 const { handleValidationErrors } = require("../middlewares/validation.middleware.js");
 const moment = require("moment");
 
+// Lista de días válidos en minúsculas.
+// Aceptamos "miércoles" con y sin tilde para evitar errores.
+const DIAS_VALIDOS = ['lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
 const crearNovedadValidators = [
   body("fechaInicio")
     .notEmpty().withMessage("La fecha de inicio es obligatoria.")
@@ -20,16 +24,16 @@ const crearNovedadValidators = [
       return true;
     }),
 
-  // ✅ --- SECCIÓN CORREGIDA ---
-  // 1. Se valida que "dias" sea un array y no esté vacío.
   body("dias")
     .notEmpty().withMessage("Escoger los días es obligatorio.")
     .isArray({ min: 1 }).withMessage("El campo 'dias' debe ser un array con al menos un día."),
   
-  // 2. Con "dias.*", se valida cada elemento DENTRO del array.
+  // ✅ --- LA MAGIA ESTÁ AQUÍ ---
+  // Se sanea cada día (lo convierte a minúsculas) y LUEGO se valida.
   body("dias.*")
-    .isString().withMessage("Cada día debe ser un texto.")
-    .isIn(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'])
+    .trim()               // Quita espacios en blanco inútiles.
+    .toLowerCase()        // Convierte el día a minúsculas (ej: "Lunes" -> "lunes").
+    .isIn(DIAS_VALIDOS)   // Ahora sí, compara "lunes" contra la lista de días válidos.
     .withMessage("Uno de los días proporcionados no es válido."),
   // ✅ --- FIN DE LA CORRECCIÓN ---
 
@@ -65,6 +69,14 @@ const actualizarNovedadValidators = [
   param("idNovedad")
     .isInt({ gt: 0 }).withMessage("El ID de la novedad debe ser un entero positivo."),
   
+  body("dias").optional().isArray(),
+  body("dias.*")
+    .trim()
+    .toLowerCase() // También se aplica la misma lógica aquí
+    .isIn(DIAS_VALIDOS)
+    .withMessage("Uno de los días proporcionados no es válido."),
+
+  // ... (resto de las validaciones de actualización no cambian)
   body("fechaInicio").optional().isISO8601().toDate(),
   body("fechaFin").optional().isISO8601().toDate().custom((value, { req }) => {
     const fechaInicio = req.body.fechaInicio;
@@ -75,18 +87,9 @@ const actualizarNovedadValidators = [
   }),
   body("horaInicio").optional().matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/),
   body("horaFin").optional().matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/),
-  
-  // También se corrige aquí para la actualización
-  body("dias").optional().isArray({ min: 1 }).withMessage("El campo 'dias' debe ser un array."),
-  body("dias.*")
-    .isString().withMessage("Cada día debe ser un texto.")
-    .isIn(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'])
-    .withMessage("Uno de los días proporcionados no es válido."),
-
   body("empleadosIds").optional().isArray().withMessage("El campo 'empleadosIds' debe ser un array."),
   body("empleadosIds.*").optional().isInt({ gt: 0 }).withMessage("Cada ID de empleado debe ser un número entero positivo."),
   body("estado").optional().isBoolean(),
-
   handleValidationErrors,
 ];
 
@@ -111,3 +114,4 @@ module.exports = {
   idNovedadValidator,
   cambiarEstadoNovedadValidators,
 };
+
