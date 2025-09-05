@@ -80,6 +80,12 @@ module.exports = (sequelize, DataTypes) => {
       otherKey: 'id_novedad',
       as: 'novedades'
     });
+
+    // Un Usuario (Empleado) puede registrar muchos Abastecimientos.
+    Usuario.hasMany(models.Abastecimiento, {
+      foreignKey: 'idUsuario',
+      as: 'abastecimientos'
+    });
   };
 
   return Usuario;

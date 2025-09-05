@@ -54,10 +54,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         field: 'estado'
       },
-      empleadoAsignado: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: 'empleado_asignado'
+      idUsuario: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'id_usuario',
+        references: {
+          model: 'usuario',
+          key: 'id_usuario'
+        }
       }
     },
     {
@@ -73,6 +77,11 @@ module.exports = (sequelize, DataTypes) => {
       as: 'producto'
     });
 
+    // Un Abastecimiento es registrado por un Usuario (Empleado).
+    Abastecimiento.belongsTo(models.Usuario, {
+      foreignKey: 'idUsuario',
+      as: 'usuario'
+    });
   };
 
   return Abastecimiento;
