@@ -224,6 +224,22 @@ const listarEspecialidadesDeEmpleado = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtiene una lista de todos los empleados ACTIVOS.
+ * Ideal para poblar listas desplegables en la UI.
+ */
+const listarEmpleadosActivos = async (req, res, next) => {
+  try {
+    const empleados = await empleadoService.obtenerEmpleadosActivos();
+    res.status(200).json({
+      success: true,
+      data: empleados,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearEmpleado,
   listarEmpleados,
@@ -235,5 +251,6 @@ module.exports = {
   asignarEspecialidadesAEmpleado,
   quitarEspecialidadesDeEmpleado,
   listarEspecialidadesDeEmpleado,
-  cambiarEstadoEmpleado, // <-- Nueva función exportada
+  cambiarEstadoEmpleado,
+  listarEmpleadosActivos,
 };

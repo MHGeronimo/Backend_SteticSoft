@@ -26,6 +26,14 @@ router.get(
   empleadoController.listarEmpleados
 );
 
+// Nueva ruta para obtener solo empleados activos
+router.get(
+  "/activos",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_EMPLEADOS),
+  empleadoController.listarEmpleadosActivos
+);
+
 router.get(
   "/:idEmpleado",
   authMiddleware,

@@ -346,6 +346,35 @@ const eliminarEmpleadoFisico = async (idEmpleado) => {
   }
 };
 
+/**
+ * Get all ACTIVE employees, including their User account information.
+ * This is useful for populating dropdowns where only active employees should be listed.
+ */
+const obtenerEmpleadosActivos = async () => {
+  try {
+    const empleados = await db.Empleado.findAll({
+      where: { estado: true }, // Filter for active employees
+      include: [
+        {
+          model: db.Usuario,
+          as: "cuentaUsuario",
+          attributes: ["idUsuario", "correo", "estado", "idRol"],
+          where: { estado: true }, // Also ensure the user account is active
+          include: [{
+            model: db.Rol,
+            as: "rol",
+            attributes: ["nombre"]
+          }]
+        }
+      ],
+      order: [["apellido", "ASC"], ["nombre", "ASC"]],
+    });
+    return empleados;
+  } catch (error) {
+    throw new CustomError(`Error al obtener empleados activos: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearEmpleado,
   obtenerTodosLosEmpleados,
@@ -355,4 +384,5 @@ module.exports = {
   habilitarEmpleado,
   eliminarEmpleadoFisico,
   cambiarEstadoEmpleado,
+  obtenerEmpleadosActivos,
 };
