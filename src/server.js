@@ -41,4 +41,5 @@ const startServer = async () => {
   }
 };
 
+// Triggering a restart to apply model changes
 startServer();
