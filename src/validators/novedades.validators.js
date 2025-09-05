@@ -5,7 +5,7 @@ const moment = require("moment");
 
 // Lista de días válidos en minúsculas.
 // Aceptamos "miércoles" con y sin tilde para evitar errores.
-const DIAS_VALIDOS = ['lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const DIAS_VALIDOS = ['lunes','Lunes', 'martes','Martes', 'miercoles', 'miércoles', 'Miercoles', 'Miércoles', 'jueves', 'Jueves', 'viernes', 'Viernes', 'sabado', 'Sabado', 'domingo', 'Domingo'];
 
 const crearNovedadValidators = [
   body("fechaInicio")
@@ -32,7 +32,6 @@ const crearNovedadValidators = [
   // Se sanea cada día (lo convierte a minúsculas) y LUEGO se valida.
   body("dias.*")
     .trim()               // Quita espacios en blanco inútiles.
-    .toLowerCase()        // Convierte el día a minúsculas (ej: "Lunes" -> "lunes").
     .isIn(DIAS_VALIDOS)   // Ahora sí, compara "lunes" contra la lista de días válidos.
     .withMessage("Uno de los días proporcionados no es válido."),
   // ✅ --- FIN DE LA CORRECCIÓN ---
@@ -72,7 +71,6 @@ const actualizarNovedadValidators = [
   body("dias").optional().isArray(),
   body("dias.*")
     .trim()
-    .toLowerCase() // También se aplica la misma lógica aquí
     .isIn(DIAS_VALIDOS)
     .withMessage("Uno de los días proporcionados no es válido."),
 
