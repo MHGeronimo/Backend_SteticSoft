@@ -190,8 +190,6 @@ const actualizarNovedad = async (idNovedad, datosActualizar, empleadosIds) => {
     throw error;
   }
 };
-
-
 /**
  * Cambia el estado de una novedad.
  */
@@ -203,7 +201,6 @@ const cambiarEstadoNovedad = async (idNovedad, estado) => {
   await novedad.update({ estado });
   return novedad;
 };
-
 /**
  * Elimina una novedad. La tabla de unión se limpia gracias a ON DELETE CASCADE.
  */
@@ -215,6 +212,134 @@ const eliminarNovedadFisica = async (idNovedad) => {
   await novedad.destroy();
 };
 
+/**
+ * Obtiene días disponibles para una novedad (para el Paso 2 del frontend)
+ */
+const obtenerDiasDisponibles = async (idNovedad, anio, mes) => {
+  const novedad = await db.Novedad.findByPk(idNovedad);
+  if (!novedad) {
+    throw new NotFoundError('Novedad no encontrada');
+  }
+
+  // Convertir días JSON a array de números
+  const diasDisponibles = Array.isArray(novedad.dias) ? novedad.dias : JSON.parse(novedad.dias);
+  
+  // Generar todos los días del mes que coincidan con los días disponibles
+  const fechaInicio = moment(`${anio}-${mes}-01`);
+  const fechaFin = fechaInicio.clone().endOf('month');
+  const diasDelMes = [];
+
+  while (fechaInicio.isSameOrBefore(fechaFin)) {
+    if (diasDisponibles.includes(fechaInicio.isoWeekday())) {
+      // Verificar que la fecha esté dentro del rango de la novedad
+      const fechaActual = fechaInicio.clone();
+      const fechaInicioNovedad = moment(novedad.fechaInicio);
+      const fechaFinNovedad = moment(novedad.fechaFin);
+      
+      if (fechaActual.isBetween(fechaInicioNovedad, fechaFinNovedad, null, '[]')) {
+        diasDelMes.push(fechaActual.format('YYYY-MM-DD'));
+      }
+    }
+    fechaInicio.add(1, 'day');
+  }
+
+  return diasDelMes;
+};
+
+/**
+ * Obtiene horarios disponibles para una novedad y fecha (Paso 3 del frontend)
+ */
+const obtenerHorasDisponibles = async (idNovedad, fecha) => {
+  const novedad = await db.Novedad.findByPk(idNovedad);
+  if (!novedad) {
+    throw new NotFoundError('Novedad no encontrada');
+  }
+
+  const fechaMoment = moment(fecha);
+  const diaSemana = fechaMoment.isoWeekday();
+  
+  // Verificar si el día está disponible en la novedad
+  const diasDisponibles = Array.isArray(novedad.dias) ? novedad.dias : JSON.parse(novedad.dias);
+  if (!diasDisponibles.includes(diaSemana)) {
+    return [];
+  }
+
+  // Verificar que la fecha esté dentro del rango de la novedad
+  const fechaInicioNovedad = moment(novedad.fechaInicio);
+  const fechaFinNovedad = moment(novedad.fechaFin);
+  if (!fechaMoment.isBetween(fechaInicioNovedad, fechaFinNovedad, null, '[]')) {
+    return [];
+  }
+
+  // Generar slots de tiempo disponibles
+  const horariosDisponibles = [];
+  const horaInicio = moment(novedad.horaInicio, 'HH:mm:ss');
+  const horaFin = moment(novedad.horaFin, 'HH:mm:ss');
+  
+  // Obtener citas existentes para esta fecha y novedad
+  const citasExistentes = await db.Cita.findAll({
+    where: {
+      fechaHora: {
+        [Op.between]: [
+          fechaMoment.startOf('day').toDate(),
+          fechaMoment.endOf('day').toDate()
+        ]
+      },
+      idNovedad: idNovedad
+    }
+  });
+
+  // Generar horarios cada 30 minutos
+  let horaActual = horaInicio.clone();
+  while (horaActual.isBefore(horaFin)) {
+    const horarioFormateado = horaActual.format('HH:mm');
+    
+    // Verificar si ya existe una cita en este horario
+    const citaExistente = citasExistentes.find(cita => 
+      moment(cita.fechaHora).format('HH:mm') === horarioFormateado
+    );
+    
+    if (!citaExistente) {
+      horariosDisponibles.push(horarioFormateado);
+    }
+    
+    horaActual.add(30, 'minutes');
+  }
+
+  return horariosDisponibles;
+};
+
+/**
+ * Obtiene empleados asociados a una novedad (Paso 5 del frontend)
+ */
+const obtenerEmpleadosPorNovedad = async (idNovedad) => {
+  const novedad = await db.Novedad.findByPk(idNovedad, {
+    include: [{
+      model: db.Usuario,
+      as: 'empleados',
+      attributes: ['idUsuario', 'nombre', 'correo'],
+      through: { attributes: [] },
+      include: [{
+        model: db.Empleado,
+        as: 'empleadoInfo',
+        attributes: ['telefono']
+      }]
+    }]
+  });
+
+  if (!novedad) {
+    throw new NotFoundError('Novedad no encontrada');
+  }
+
+  // Formatear respuesta para incluir teléfono
+  return novedad.empleados.map(empleado => ({
+    idUsuario: empleado.idUsuario,
+    nombre: empleado.nombre,
+    correo: empleado.correo,
+    telefono: empleado.empleadoInfo?.telefono || 'No disponible'
+  }));
+};
+
 module.exports = {
   crearNovedad,
   obtenerTodasLasNovedades,
@@ -222,5 +347,8 @@ module.exports = {
   actualizarNovedad,
   cambiarEstadoNovedad,
   eliminarNovedadFisica,
-  obtenerNovedadesActivas, // <-- ✅ Exportar la nueva función
+  obtenerNovedadesActivas,
+  obtenerDiasDisponibles,
+  obtenerHorasDisponibles,
+  obtenerEmpleadosPorNovedad
 };

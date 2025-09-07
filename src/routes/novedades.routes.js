@@ -16,6 +16,30 @@ router.get(
   novedadesController.listarNovedadesAgendables // Necesitaremos crear esta función
 );
 
+router.get(
+  "/agendables/activas", 
+  authMiddleware, 
+  checkPermission(PERMISO_MODULO_CITAS), 
+  novedadesController.listarNovedadesAgendables);
+
+router.get(
+  "/:idNovedad/dias-disponibles", 
+  authMiddleware, 
+  checkPermission(PERMISO_MODULO_CITAS), 
+  novedadesController.listarDiasDisponibles);
+
+router.get(
+  "/:idNovedad/horas-disponibles", 
+  authMiddleware, 
+  checkPermission(PERMISO_MODULO_CITAS), 
+  novedadesController.listarHorasDisponibles);
+
+router.get(
+  "/:idNovedad/empleados", 
+  authMiddleware, 
+  checkPermission(PERMISO_MODULO_CITAS), 
+  novedadesController.listarEmpleadosPorNovedad);
+
 // Crear una nueva novedad y asignarla a empleados
 router.post(
   "/",
