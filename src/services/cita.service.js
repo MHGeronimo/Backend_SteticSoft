@@ -12,7 +12,7 @@ const moment = require("moment-timezone");
 const { enviarCorreoCita } = require('../utils/CitaEmailTemplate.js');
 const { formatDateTime } = require('../utils/dateHelpers.js');
 
-
+// Helper para obtener la información completa de una cita, incluyendo el estado
 const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
   return db.Cita.findByPk(idCita, {
     include: [
@@ -22,12 +22,13 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
         attributes: ["idCliente", "nombre", "apellido", "correo", "estado"],
       },
       {
-        model: db.Usuario,
+        model: db.Usuario, // ✅ CORRECCIÓN: Se usa el modelo correcto 'Usuario'
         as: "empleado",
         attributes: ["idUsuario", "nombre"],
         required: false,
       },
       {
+        // ✅ RESTAURADO: Se vuelve a incluir la asociación con la tabla Estado
         model: db.Estado,
         as: "estadoDetalle",
         attributes: ["idEstado", "nombreEstado"],
@@ -43,90 +44,32 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
   });
 };
 
-const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
-    const transaction = await db.sequelize.transaction();
-    try {
-        const cita = await db.Cita.findByPk(idCita, {
-            include: [
-                { model: db.Cliente, as: 'cliente', attributes: ['nombre', 'correo'] },
-                { model: db.Usuario, as: 'empleado', attributes: ['nombre'], required: false },
-                { model: db.Estado, as: 'estadoDetalle' },
-                { model: db.Servicio, as: 'serviciosProgramados', attributes: ["idServicio", "nombre", "precio", "descripcion"], through: { attributes: [] } }
-            ],
-            transaction
-        });
-
-        if (!cita) {
-            await transaction.rollback();
-            throw new NotFoundError(`Cita no encontrada para ${accionCorreo}.`);
-        }
-
-        if (cita.estado === nuevoEstadoBooleano) {
-            await transaction.rollback();
-            return cita;
-        }
-
-        const updates = { estado: nuevoEstadoBooleano };
-        const estadoNombre = nuevoEstadoBooleano ? 'Pendiente' : 'Cancelado';
-        const estadoCita = await db.Estado.findOne({ where: { nombreEstado: estadoNombre }, transaction });
-        if (estadoCita) {
-            updates.idEstado = estadoCita.idEstado;
-        }
-
-        await cita.update(updates, { transaction });
-        await transaction.commit();
-
-        const citaActualizadaConDetalles = await obtenerCitaCompletaPorIdInterno(idCita);
-
-        if (citaActualizadaConDetalles && cita.cliente && cita.cliente.correo) {
-            // ... (lógica de envío de correo)
-        }
-        return citaActualizadaConDetalles;
-    } catch (error) {
-        await transaction.rollback();
-        console.error(`Error al ${accionCorreo} la cita con ID ${idCita}:`, error.message);
-        throw new CustomError(`Error al ${accionCorreo} la cita: ${error.message}`, 500);
-    }
-};
-
-
+// Crea una cita, asignando un idEstado inicial
 const crearCita = async (datosCita) => {
   const { fechaHora, idCliente, idUsuario, idEstado, servicios = [], idNovedad } = datosCita;
 
-  const novedad = await db.Novedad.findByPk(idNovedad, {
-    include: [{ model: db.Usuario, as: 'empleados' }]
-  });
-  if (!novedad) {
-    throw new BadRequestError(`La novedad con ID ${idNovedad} no fue encontrada.`);
-  }
-
+  const novedad = await db.Novedad.findByPk(idNovedad, { include: [{ model: db.Usuario, as: 'empleados' }] });
+  if (!novedad) throw new BadRequestError(`La novedad con ID ${idNovedad} no fue encontrada.`);
+  
   const empleadoValido = novedad.empleados.some(emp => emp.idUsuario === idUsuario);
-  if (!empleadoValido) {
-    throw new BadRequestError(`El empleado con ID ${idUsuario} no está asociado a la novedad seleccionada.`);
-  }
-
-  // ... (validaciones de fecha/hora)
+  if (!empleadoValido) throw new BadRequestError(`El empleado con ID ${idUsuario} no está asociado a la novedad.`);
 
   const transaction = await db.sequelize.transaction();
   try {
-    const nuevaCita = await db.Cita.create(
-      {
+    const nuevaCita = await db.Cita.create({
         fechaHora,
         idCliente,
         idUsuario,
-        idEstado,
+        idEstado, // El front-end debe enviar el ID del estado 'Pendiente'
         idNovedad,
-        estado: true,
-      },
-      { transaction }
+        estado: true, // El registro está activo por defecto
+      }, { transaction }
     );
 
     if (servicios.length > 0) {
-        const serviciosConsultados = await db.Servicio.findAll({ where: { idServicio: servicios, estado: true }});
-        if (serviciosConsultados.length !== servicios.length) {
-            throw new BadRequestError("Uno o más servicios no existen o están inactivos.");
-        }
-        await nuevaCita.addServiciosProgramados(serviciosConsultados, { transaction });
+        const serviciosDb = await db.Servicio.findAll({ where: { idServicio: servicios, estado: true }});
+        if (serviciosDb.length !== servicios.length) throw new BadRequestError("Uno o más servicios no existen o están inactivos.");
+        await nuevaCita.addServiciosProgramados(serviciosDb, { transaction });
     }
 
     await transaction.commit();
@@ -138,9 +81,11 @@ const crearCita = async (datosCita) => {
   }
 };
 
+// Obtiene todas las citas, permitiendo filtrar por el ID del estado
 const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
   const whereClause = {};
   
+  // ✅ LÓGICA RESTAURADA: Se filtra por 'idEstado' (FK) en lugar del booleano.
   if (opcionesDeFiltro.idEstado) whereClause.idEstado = opcionesDeFiltro.idEstado;
   if (opcionesDeFiltro.idCliente) whereClause.idCliente = opcionesDeFiltro.idCliente;
   if (opcionesDeFiltro.idUsuario) whereClause.idUsuario = opcionesDeFiltro.idUsuario;
@@ -154,10 +99,10 @@ const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
     return await db.Cita.findAll({
       where: whereClause,
       include: [
-        { model: db.Cliente, as: "cliente", attributes: ["idCliente", "nombre", "apellido"] },
-        { model: db.Usuario, as: "empleado", attributes: ["idUsuario", "nombre"], required: false },
-        { model: db.Estado, as: "estadoDetalle", attributes: ["idEstado", "nombreEstado"] },
-        { model: db.Servicio, as: "serviciosProgramados", attributes: ["idServicio", "nombre", "precio", "descripcion"], through: { attributes: [] } },
+        { model: db.Cliente, as: "cliente" },
+        { model: db.Usuario, as: "empleado", required: false },
+        { model: db.Estado, as: "estadoDetalle" },
+        { model: db.Servicio, as: "serviciosProgramados", through: { attributes: [] } },
       ],
       order: [["fechaHora", "ASC"]],
     });
@@ -179,39 +124,45 @@ const actualizarCita = async (idCita, datosActualizar) => {
   const transaction = await db.sequelize.transaction();
   try {
     const cita = await db.Cita.findByPk(idCita, { transaction });
-    if (!cita) {
-      throw new NotFoundError("Cita no encontrada para actualizar.");
-    }
-
-    // Aquí se realizarían todas las validaciones de negocio necesarias
-    // como verificar si la nueva fecha/hora está disponible, si el empleado es válido, etc.
-    // Esta es una implementación básica:
+    if (!cita) throw new NotFoundError("Cita no encontrada para actualizar.");
+    
     await cita.update(datosActualizar, { transaction });
 
-    // Si se envía una nueva lista de servicios, se actualiza la relación
     if (datosActualizar.servicios && Array.isArray(datosActualizar.servicios)) {
-        const serviciosConsultados = await db.Servicio.findAll({ where: { idServicio: datosActualizar.servicios, estado: true }, transaction });
-        if (serviciosConsultados.length !== datosActualizar.servicios.length) {
-            throw new BadRequestError("Uno o más servicios para actualizar no existen o están inactivos.");
-        }
-        await cita.setServiciosProgramados(serviciosConsultados, { transaction });
+        const serviciosDb = await db.Servicio.findAll({ where: { idServicio: datosActualizar.servicios, estado: true }, transaction });
+        if (serviciosDb.length !== datosActualizar.servicios.length) throw new BadRequestError("Uno o más servicios para actualizar no existen o están inactivos.");
+        await cita.setServiciosProgramados(serviciosDb, { transaction });
     }
 
     await transaction.commit();
     return await obtenerCitaCompletaPorIdInterno(idCita);
   } catch (error) {
     await transaction.rollback();
-    console.error("Error al actualizar la cita:", error);
     throw new CustomError(`Error al actualizar la cita: ${error.message}`, 500);
   }
 };
 
+// Helper para cambiar el estado de la cita buscando el estado por nombre
+const cambiarEstadoPorNombre = async (idCita, nombreEstado) => {
+    const estado = await db.Estado.findOne({ where: { nombreEstado } });
+    if (!estado) {
+        throw new BadRequestError(`El estado "${nombreEstado}" no es válido.`);
+    }
+    const cita = await db.Cita.findByPk(idCita);
+    if (!cita) {
+        throw new NotFoundError("Cita no encontrada.");
+    }
+    await cita.update({ idEstado: estado.idEstado });
+    return await obtenerCitaCompletaPorIdInterno(idCita);
+}
+
 const anularCita = async (idCita) => {
-  return cambiarEstadoCita(idCita, false, 'cancelada');
+  return cambiarEstadoPorNombre(idCita, 'Cancelada');
 };
 
 const habilitarCita = async (idCita) => {
-  return cambiarEstadoCita(idCita, true, 'reactivada');
+  // Habilitar generalmente significa volver al estado inicial o 'Pendiente'
+  return cambiarEstadoPorNombre(idCita, 'Pendiente');
 };
 
 const eliminarCitaFisica = async (idCita) => {
@@ -220,60 +171,32 @@ const eliminarCitaFisica = async (idCita) => {
     throw new NotFoundError("Cita no encontrada para eliminar.");
   }
   
-  // ✅ VALIDACIÓN AÑADIDA: Verificar si existen ventas asociadas a esta cita.
-  // La asociación se llama 'detallesVenta' en el modelo Cita (hasMany VentaXServicio).
   const ventasAsociadasCount = await cita.countDetallesVenta();
-  
   if (ventasAsociadasCount > 0) {
-    throw new ConflictError(
-      `No se puede eliminar la cita porque tiene ${ventasAsociadasCount} servicio(s) facturado(s) en una venta.`
-    );
+    throw new ConflictError(`No se puede eliminar la cita porque tiene ${ventasAsociadasCount} servicio(s) facturado(s).`);
   }
 
-  // Si no hay ventas asociadas, se procede con la eliminación.
   await cita.destroy();
   return { message: "Cita eliminada permanentemente." };
 };
 
 const agregarServiciosACita = async (idCita, idServicios) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    const cita = await db.Cita.findByPk(idCita, { transaction });
-    if (!cita) {
-      throw new NotFoundError("Cita no encontrada.");
-    }
+  const cita = await db.Cita.findByPk(idCita);
+  if (!cita) throw new NotFoundError("Cita no encontrada.");
 
-    const servicios = await db.Servicio.findAll({ where: { idServicio: idServicios, estado: true }, transaction });
-    if (servicios.length !== idServicios.length) {
-      throw new BadRequestError("Uno o más servicios no existen o están inactivos.");
-    }
+  const servicios = await db.Servicio.findAll({ where: { idServicio: idServicios, estado: true } });
+  if (servicios.length !== idServicios.length) throw new BadRequestError("Uno o más servicios no existen o están inactivos.");
 
-    await cita.addServiciosProgramados(servicios, { transaction });
-    await transaction.commit();
-    return await obtenerCitaCompletaPorIdInterno(idCita);
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error al agregar servicios a la cita:", error);
-    throw new CustomError(`Error al agregar servicios: ${error.message}`, 500);
-  }
+  await cita.addServiciosProgramados(servicios);
+  return await obtenerCitaCompletaPorIdInterno(idCita);
 };
 
 const quitarServiciosDeCita = async (idCita, idServicios) => {
-  const transaction = await db.sequelize.transaction();
-  try {
-    const cita = await db.Cita.findByPk(idCita, { transaction });
-    if (!cita) {
-      throw new NotFoundError("Cita no encontrada.");
-    }
-    // No es necesario buscar los servicios, Sequelize se encarga de la relación
-    await cita.removeServiciosProgramados(idServicios, { transaction });
-    await transaction.commit();
-    return await obtenerCitaCompletaPorIdInterno(idCita);
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error al quitar servicios de la cita:", error);
-    throw new CustomError(`Error al quitar servicios: ${error.message}`, 500);
-  }
+  const cita = await db.Cita.findByPk(idCita);
+  if (!cita) throw new NotFoundError("Cita no encontrada.");
+  
+  await cita.removeServiciosProgramados(idServicios);
+  return await obtenerCitaCompletaPorIdInterno(idCita);
 };
 
 module.exports = {
@@ -286,6 +209,5 @@ module.exports = {
   eliminarCitaFisica,
   agregarServiciosACita,
   quitarServiciosDeCita,
-  cambiarEstadoCita, 
 };
 
