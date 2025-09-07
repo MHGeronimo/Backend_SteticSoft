@@ -56,6 +56,12 @@ module.exports = (sequelize, DataTypes) => {
       otherKey: "id_permiso", // La otra clave foránea en la tabla de unión.
       as: "permisos",
     });
+
+    // Un rol puede tener un historial de cambios.
+    Rol.hasMany(models.HistorialCambiosRol, {
+      foreignKey: "idRol",
+      as: "historial",
+    });
   };
 
   return Rol;

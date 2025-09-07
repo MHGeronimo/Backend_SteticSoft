@@ -76,14 +76,6 @@ router.delete(
   rolController.eliminarRolFisico
 );
 
-router.get(
-  "/:idRol/permisos",
-  authMiddleware,
-  checkPermission(PERMISO_ASIGNAR_PERMISOS_A_ROL),
-  rolValidators.idRolValidator,
-  rolController.listarPermisosDeRol
-);
-
 router.post(
   "/:idRol/permisos",
   authMiddleware,

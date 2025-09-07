@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       idUsuarioModifico: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true, // CORREGIDO: La BD permite nulos (ON DELETE SET NULL)
         field: "id_usuario_modifico",
         references: {
           model: "usuario",
