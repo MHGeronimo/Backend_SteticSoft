@@ -93,7 +93,6 @@ const eliminarServicioFisico = async (req, res, next) => {
     }
 };
 
-
 module.exports = {
   crearServicio,
   listarServicios,

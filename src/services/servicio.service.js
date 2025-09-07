@@ -103,8 +103,6 @@ const obtenerServicioPorId = async (idServicio) => {
     }
     return servicio;
 };
-
-// ... (el resto de las funciones: actualizarServicio, cambiarEstadoServicio, etc., se mantienen como estaban)
 const actualizarServicio = async (idServicio, datosActualizar) => {
     const servicio = await db.Servicio.findByPk(idServicio);
     if (!servicio) {
