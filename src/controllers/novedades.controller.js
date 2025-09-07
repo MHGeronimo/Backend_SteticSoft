@@ -1,4 +1,3 @@
-//src/controllers/novedades.controller.js
 const novedadesService = require("../services/novedades.service.js");
 
 /**
