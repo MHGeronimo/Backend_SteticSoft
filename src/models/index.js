@@ -55,12 +55,10 @@ const nombresDeModelos = [
   "Venta",
   "Cita",
   "Servicio",
-  "ServicioXCita",
   "CompraXProducto",
   "ProductoXVenta",
   "VentaXServicio",
-  "Abastecimiento",
-  "NovedadEmpleado", // Modelo de unión para Novedades y Empleados (Usuarios)
+  "Abastecimiento", // Modelo de unión para Novedades y Empleados (Usuarios)
   "Novedades",
   "TokenRecuperacion",
   "HistorialCambiosRol",
