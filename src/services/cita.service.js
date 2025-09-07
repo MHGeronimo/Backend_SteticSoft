@@ -14,20 +14,6 @@ const { enviarCorreoCita } = require('../utils/CitaEmailTemplate.js');
 const { formatDateTime } = require('../utils/dateHelpers.js');
 
 
-const calcularDuracionTotalParaCorreo = (serviciosProgramados) => {
-  let duracionTotal = 0;
-  if (serviciosProgramados && serviciosProgramados.length > 0) {
-    duracionTotal = serviciosProgramados.reduce(
-      (sum, s) => {
-        const duracion = s.dataValues ? s.dataValues.duracionEstimadaMin : s.duracionEstimadaMin;
-        return sum + (Number(duracion) || 0);
-      },
-      0
-    );
-  }
-  return duracionTotal;
-};
-
 const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
   return db.Cita.findByPk(idCita, {
     include: [
@@ -55,7 +41,6 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
           "nombre",
           "precio",
           "descripcion",
-          "duracionEstimadaMin",
         ],
         through: { attributes: [] },
       },
@@ -79,7 +64,7 @@ const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
                 { model: db.Cliente, as: 'cliente', attributes: ['nombre', 'correo'] },
                 { model: db.Empleado, as: 'empleado', attributes: ['nombre'], required: false },
                 { model: db.Estado, as: 'estadoDetalle' },
-                { model: db.Servicio, as: 'serviciosProgramados', attributes: ["idServicio", "nombre", "precio", "descripcion", "duracionEstimadaMin"], through: { attributes: [] } }
+                { model: db.Servicio, as: 'serviciosProgramados', attributes: ["idServicio", "nombre", "precio", "descripcion"], through: { attributes: [] } }
             ],
             transaction
         });
@@ -114,7 +99,6 @@ const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
 
         if (citaActualizadaConDetalles && cita.cliente && cita.cliente.correo) {
             try {
-                const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
                 await enviarCorreoCita({
                     correo: cita.cliente.correo,
                     nombreCliente: cita.cliente.nombre || 'Cliente',
@@ -123,9 +107,8 @@ const cambiarEstadoCita = async (idCita, nuevoEstadoBooleano, accionCorreo) => {
                         fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
                         empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
                         estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : (nuevoEstadoBooleano ? 'Pendiente' : 'Cancelada'),
-                        servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })),
-                        total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-                        duracionTotalEstimada: duracionTotalParaCorreo,
+                        servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion })),
+                        total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0)
                     }
                 });
             } catch (emailError) {
@@ -251,60 +234,9 @@ const crearCita = async (datosCita) => {
   const transaction = await db.sequelize.transaction();
 
   try {
-    if (empleado && serviciosConsultados.length > 0) {
-        const fechaHoraInicioMoment = moment(fechaHora);
-        let duracionTotalCitaMinutos = 0;
-        serviciosConsultados.forEach((s) => {
-            duracionTotalCitaMinutos += s.duracionEstimadaMin || 0;
-        });
-        const fechaHoraFinMoment = fechaHoraInicioMoment
-            .clone()
-            .add(duracionTotalCitaMinutos, "minutes");
-
-        const citasSuperpuestas = await db.Cita.findAll({
-            where: {
-                empleadoId: empleado.idEmpleado,
-                estado: true,
-                [Op.and]: [
-                    {
-                        fechaHora: { [Op.lt]: fechaHoraFinMoment.toDate() },
-                    },
-                    {
-                        fechaHora: { [Op.gte]: fechaHoraInicioMoment.toDate() },
-                    },
-                    // La siguiente línea era redundante o incorrecta en tu código original
-                    // { }
-                ]
-            },
-            include: [{
-                model: db.Servicio,
-                as: "serviciosProgramados",
-                attributes: ["duracionEstimadaMin"],
-                through: { attributes: [] }
-            }],
-            transaction
-        });
-
-        const nuevaCitaStart = fechaHoraInicioMoment.toDate();
-        const nuevaCitaEnd = fechaHoraFinMoment.toDate();
-
-        for (const citaExistente of citasSuperpuestas) {
-            let duracionExistenteMinutos = 0;
-            if (citaExistente.serviciosProgramados && citaExistente.serviciosProgramados.length > 0) {
-                duracionExistenteMinutos = citaExistente.serviciosProgramados.reduce((sum, s) => sum + (Number(s.duracionEstimadaMin) || 0), 0);
-            }
-            const citaExistenteStart = moment(citaExistente.fechaHora).toDate();
-            const citaExistenteEnd = moment(citaExistente.fechaHora).add(duracionExistenteMinutos, 'minutes').toDate();
-
-            if (nuevaCitaStart < citaExistenteEnd && nuevaCitaEnd > citaExistenteStart) {
-                await transaction.rollback();
-                throw new ConflictError(
-                    `El empleado ${empleado.nombre} ya tiene una cita programada (${formatDateTime(citaExistenteStart)} - ${formatDateTime(citaExistenteEnd)}) que se superpone con el horario solicitado (${formatDateTime(nuevaCitaStart)} - ${formatDateTime(nuevaCitaEnd)}).`
-                );
-            }
-        }
-    }
-
+    // TODO: La validación de superposición de citas se realizará aquí,
+    // utilizando la nueva lógica de 'novedades' y slots disponibles.
+    // Esta validación debe ser atómica y segura contra condiciones de carrera.
 
     const nuevaCita = await db.Cita.create(
       {
@@ -334,9 +266,6 @@ const crearCita = async (datosCita) => {
       citaCreadaConDetalles.cliente.correo &&
       citaCreadaConDetalles.estado
     ) {
-      const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(
-        citaCreadaConDetalles.serviciosProgramados
-      );
       const citaInfoParaCorreo = {
         accion: 'agendada',
         fechaHora: formatDateTime(citaCreadaConDetalles.fechaHora),
@@ -345,11 +274,9 @@ const crearCita = async (datosCita) => {
         servicios: citaCreadaConDetalles.serviciosProgramados.map(s => ({
           nombre: s.nombre,
           precio: s.precio,
-          descripcion: s.descripcion,
-          duracion_estimada: s.duracionEstimadaMin
+          descripcion: s.descripcion
         })),
-        total: citaCreadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-        duracionTotalEstimada: duracionTotalParaCorreo,
+        total: citaCreadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0)
       };
       
       try {
@@ -401,7 +328,7 @@ const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
         { model: db.Cliente, as: "cliente", attributes: ["idCliente", "nombre", "apellido"] },
         { model: db.Empleado, as: "empleado", attributes: ["idEmpleado", "nombre"], required: false },
         { model: db.Estado, as: "estadoDetalle", attributes: ["idEstado", "nombreEstado"] },
-        { model: db.Servicio, as: "serviciosProgramados", attributes: ["idServicio", "nombre", "precio", "duracionEstimadaMin"], through: { attributes: [] } },
+        { model: db.Servicio, as: "serviciosProgramados", attributes: ["idServicio", "nombre", "precio", "descripcion"], through: { attributes: [] } },
       ],
       order: [["fechaHora", "ASC"]],
     });
@@ -530,7 +457,6 @@ const actualizarCita = async (idCita, datosActualizar) => {
     if (citaActualizadaConDetalles && clienteParaCorreo && clienteParaCorreo.correo && citaActualizadaConDetalles.estado) {
       if (datosActualizar.fechaHora || datosActualizar.empleadoId || datosActualizar.estadoCitaId) {
         try {
-          const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
           await enviarCorreoCita({
             correo: clienteParaCorreo.correo,
             nombreCliente: clienteParaCorreo.nombre || 'Cliente',
@@ -539,9 +465,8 @@ const actualizarCita = async (idCita, datosActualizar) => {
               fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
               empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
               estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-              servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })),
+              servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion })),
               total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-              duracionTotalEstimada: duracionTotalParaCorreo,
               mensajeAdicional: 'Los detalles de tu cita han sido actualizados.'
             }
           });
@@ -624,7 +549,6 @@ const agregarServiciosACita = async (idCita, idServicios) => {
 
     if (citaActualizadaConDetalles && cita.cliente && cita.cliente.correo && citaActualizadaConDetalles.estado) {
         try {
-            const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
             await enviarCorreoCita({
                 correo: cita.cliente.correo,
                 nombreCliente: cita.cliente.nombre || 'Cliente',
@@ -633,9 +557,8 @@ const agregarServiciosACita = async (idCita, idServicios) => {
                     fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
                     empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
                     estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })),
+                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion })),
                     total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-                    duracionTotalEstimada: duracionTotalParaCorreo,
                     mensajeAdicional: 'Se han añadido nuevos servicios a tu cita.'
                 }
             });
@@ -676,7 +599,6 @@ const quitarServiciosDeCita = async (idCita, idServicios) => {
 
     if (citaActualizadaConDetalles && cita.cliente && cita.cliente.correo && citaActualizadaConDetalles.estado) {
         try {
-            const duracionTotalParaCorreo = calcularDuracionTotalParaCorreo(citaActualizadaConDetalles.serviciosProgramados);
             await enviarCorreoCita({
                 correo: cita.cliente.correo,
                 nombreCliente: cita.cliente.nombre || 'Cliente',
@@ -685,9 +607,8 @@ const quitarServiciosDeCita = async (idCita, idServicios) => {
                     fechaHora: formatDateTime(citaActualizadaConDetalles.fechaHora),
                     empleado: citaActualizadaConDetalles.empleado ? citaActualizadaConDetalles.empleado.nombre : 'No asignado',
                     estado: citaActualizadaConDetalles.estadoDetalle ? citaActualizadaConDetalles.estadoDetalle.nombreEstado : 'Desconocido',
-                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion, duracion_estimada: s.duracionEstimadaMin })),
+                    servicios: citaActualizadaConDetalles.serviciosProgramados.map(s => ({ nombre: s.nombre, precio: s.precio, descripcion: s.descripcion })),
                     total: citaActualizadaConDetalles.serviciosProgramados.reduce((sum, s) => sum + Number(s.precio || 0), 0),
-                    duracionTotalEstimada: duracionTotalParaCorreo,
                     mensajeAdicional: 'Se han quitado servicios de tu cita.'
                 }
             });

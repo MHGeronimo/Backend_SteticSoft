@@ -15,11 +15,6 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
               s.precio || 0
             ).toFixed(2)}
               ${
-                s.duracionEstimadaMin // Corregido: Usar duracionEstimadaMin
-                  ? `<span style="font-size:0.9em; color: #777;"> (Duración: ${s.duracionEstimadaMin} min)</span>`
-                  : ""
-              }
-              ${
                 s.descripcion
                   ? `<br><em style="font-size: 0.9em; color: #555;">${s.descripcion}</em>`
                   : ""
@@ -38,29 +33,6 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
   }
 
   let duracionFormateadaHTML = "";
-
-  if (citaInfo.duracionTotalEstimada && citaInfo.duracionTotalEstimada > 0) {
-    const horas = Math.floor(citaInfo.duracionTotalEstimada / 60);
-    const minutos = citaInfo.duracionTotalEstimada % 60;
-    let duracionTexto = "";
-    if (horas > 0) {
-      duracionTexto += `${horas} hora${horas > 1 ? "s" : ""}`;
-    }
-    if (minutos > 0) {
-      if (horas > 0) duracionTexto += " y ";
-      duracionTexto += `${minutos} minuto${minutos > 1 ? "s" : ""}`;
-    }
-
-    if (duracionTexto) {
-      // Los estilos deben estar definidos ANTES de usarlos aquí
-      const localStyles = {
-        // Defino localStyles aquí para el ejemplo, idealmente styles está definido antes
-        detailItem: "font-size: 16px; margin-bottom: 8px; color: #333;",
-        strong: "font-weight: bold; color: #222;",
-      };
-      duracionFormateadaHTML = `<p style="${localStyles.detailItem}"><strong style="${localStyles.strong}">Duración Estimada Total:</strong> ${duracionTexto}</p>`;
-    } 
-  }
 
   const styles = {
     /* ... (tus estilos existentes como los tenías) ... */
@@ -102,7 +74,6 @@ const generarTemplateCita = ({ nombreCliente, citaInfo }) => {
         <p style="${styles.detailItem}"><strong style="${
     styles.strong
   }">Estado de la Cita:</strong> ${citaInfo.estado}</p>
-        ${duracionFormateadaHTML} 
       </div>
 
       <h3 style="color: #007bff; margin-top: 25px; margin-bottom: 10px;">Servicios Agendados:</h3>

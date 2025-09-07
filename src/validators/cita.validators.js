@@ -12,7 +12,7 @@ const crearCitaValidators = [
     .withMessage("La fecha y hora de la cita son obligatorias.")
     .isISO8601()
     .withMessage(
-      "La fecha y hora deben estar en formato ISO8601 (YYYY-MM-DDTHH:mm:ssZ)."
+      "La fecha y hora deben estar en formato (DD-MM-YYY HH-MM)."
     )
     .custom((value) => {
       if (moment(value).isBefore(moment())) {
@@ -96,7 +96,7 @@ const actualizarCitaValidators = [
     .optional()
     .isISO8601()
     .withMessage(
-      "La fecha y hora deben estar en formato ISO8601 si se actualizan."
+      "La fecha y hora deben estar en formato (DD-MM-YYY HH-MM) si se actualizan."
     )
     .custom((value) => {
       if (moment(value).isBefore(moment().subtract(1, "hour"))) {
