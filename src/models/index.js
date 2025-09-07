@@ -63,6 +63,7 @@ const nombresDeModelos = [
   "NovedadEmpleado", // Modelo de unión para Novedades y Empleados (Usuarios)
   "Novedades",
   "TokenRecuperacion",
+  "HistorialCambiosRol",
 ];
 
 // Inicia un bloque visual para la carga de modelos

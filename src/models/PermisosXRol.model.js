@@ -25,6 +25,16 @@ module.exports = (sequelize, DataTypes) => {
         },
         onDelete: "CASCADE",
       },
+      asignadoPor: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Permitir nulos si la asignación es automática o anónima
+        field: "asignado_por",
+        references: {
+          model: "usuario", // Referencia a la tabla de usuarios
+          key: "id_usuario",
+        },
+        onDelete: "SET NULL", // Si el usuario es eliminado, se setea a NULL
+      },
     },
     {
       tableName: "permisos_x_rol", // CORREGIDO: Nombre exacto de la tabla en snake_case.
@@ -40,6 +50,11 @@ module.exports = (sequelize, DataTypes) => {
     PermisosXRol.belongsTo(models.Permisos, {
       foreignKey: "idPermiso",
       as: "permiso",
+    });
+    // Nueva asociación para saber qué usuario asignó el permiso
+    PermisosXRol.belongsTo(models.Usuario, {
+      foreignKey: "asignadoPor",
+      as: "asignador",
     });
   };
 
