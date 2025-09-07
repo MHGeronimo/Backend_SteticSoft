@@ -6,7 +6,7 @@ const { NotFoundError } = require('../errors');
  * Asigna una lista de permisos a un rol.
  * Si el rol ya tiene permisos, se reemplazan por la nueva lista.
  */
-const asignarPermisosARol = async (idRol, idPermisos) => {
+const asignarPermisosARol = async (idRol, idPermisos, idUsuario) => {
     // CORRECCIÓN: La lógica completa para asignar permisos de forma segura.
     const rol = await db.Rol.findByPk(idRol);
     if (!rol) {
@@ -24,6 +24,7 @@ const asignarPermisosARol = async (idRol, idPermisos) => {
             const nuevosPermisos = idPermisos.map(idPermiso => ({
                 idRol,
                 idPermiso,
+                asignadoPor: idUsuario, // Guardamos quién asigna el permiso
             }));
             await db.PermisosXRol.bulkCreate(nuevosPermisos, { transaction: t });
         }

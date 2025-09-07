@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS permisos (
 CREATE TABLE IF NOT EXISTS permisos_x_rol (
     id_rol INT REFERENCES rol(id_rol) ON DELETE CASCADE,
     id_permiso INT REFERENCES permisos(id_permiso) ON DELETE CASCADE,
+    asignado_por INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     PRIMARY KEY (id_rol, id_permiso)
 );
 
@@ -93,6 +94,17 @@ CREATE TABLE IF NOT EXISTS usuario (
     contrasena TEXT NOT NULL,
     id_rol INT REFERENCES rol(id_rol) ON DELETE RESTRICT,
     estado BOOLEAN DEFAULT TRUE NOT NULL
+);
+
+-- Tabla de Auditoría para Roles
+CREATE TABLE IF NOT EXISTS historial_cambios_rol (
+    id_historial SERIAL PRIMARY KEY,
+    id_rol INT NOT NULL REFERENCES rol(id_rol) ON DELETE CASCADE,
+    id_usuario_modifico INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    campo_modificado VARCHAR(100) NOT NULL,
+    valor_anterior TEXT,
+    valor_nuevo TEXT,
+    fecha_cambio TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =================================================================================================

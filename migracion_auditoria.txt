@@ -1,0 +1,34 @@
+-- =================================================================================================
+-- MIGRACIÓN DE AUDITORÍA Y TRAZABILIDAD
+-- =================================================================================================
+
+-- 1. Añadir la columna `asignado_por` a la tabla `permisos_x_rol`
+ALTER TABLE permisos_x_rol
+ADD COLUMN asignado_por INTEGER,
+ADD CONSTRAINT fk_asignado_por
+    FOREIGN KEY (asignado_por)
+    REFERENCES usuario(id_usuario)
+    ON DELETE SET NULL;
+
+-- 2. Crear la nueva tabla `historial_cambios_rol` para la auditoría
+CREATE TABLE historial_cambios_rol (
+    id_historial SERIAL PRIMARY KEY,
+    id_rol INTEGER NOT NULL,
+    id_usuario_modifico INTEGER,
+    campo_modificado VARCHAR(100) NOT NULL,
+    valor_anterior TEXT,
+    valor_nuevo TEXT,
+    fecha_cambio TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_historial_rol
+        FOREIGN KEY (id_rol)
+        REFERENCES rol(id_rol)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_historial_usuario
+        FOREIGN KEY (id_usuario_modifico)
+        REFERENCES usuario(id_usuario)
+        ON DELETE SET NULL
+);
+
+-- =================================================================================================
+-- FIN DE LA MIGRACIÓN
+-- =================================================================================================

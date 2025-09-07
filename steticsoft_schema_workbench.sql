@@ -26,9 +26,11 @@ CREATE TABLE IF NOT EXISTS permisos (
 CREATE TABLE IF NOT EXISTS permisos_x_rol (
     id_rol INT,
     id_permiso INT,
+    asignado_por INT,
     PRIMARY KEY (id_rol, id_permiso),
     FOREIGN KEY (id_rol) REFERENCES rol(id_rol) ON DELETE CASCADE,
-    FOREIGN KEY (id_permiso) REFERENCES permisos(id_permiso) ON DELETE CASCADE
+    FOREIGN KEY (id_permiso) REFERENCES permisos(id_permiso) ON DELETE CASCADE,
+    FOREIGN KEY (asignado_por) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 
 -- Tabla: usuario
@@ -39,6 +41,19 @@ CREATE TABLE IF NOT EXISTS usuario (
     id_rol INT,
     estado TINYINT(1) DEFAULT 1 NOT NULL,
     FOREIGN KEY (id_rol) REFERENCES rol(id_rol) ON DELETE RESTRICT
+);
+
+-- Tabla de Auditoría para Roles
+CREATE TABLE IF NOT EXISTS historial_cambios_rol (
+    id_historial INT AUTO_INCREMENT PRIMARY KEY,
+    id_rol INT NOT NULL,
+    id_usuario_modifico INT,
+    campo_modificado VARCHAR(100) NOT NULL,
+    valor_anterior TEXT,
+    valor_nuevo TEXT,
+    fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_rol) REFERENCES rol(id_rol) ON DELETE CASCADE,
+    FOREIGN KEY (id_usuario_modifico) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 
 -- Tabla: dashboard

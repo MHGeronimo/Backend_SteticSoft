@@ -74,36 +74,29 @@ const obtenerRolPorId = async (req, res, next) => {
  */
 const actualizarRol = async (req, res, next) => {
   try {
-    // --- INICIO DE MODIFICACIÓN ---
-    // Cambiamos req.params.id a req.params.idRol para que coincida con la definición de la ruta.
     const { idRol } = req.params;
     const datosActualizar = req.body;
+    const idUsuario = req.usuario.idUsuario; // Capturamos el ID del usuario
 
-    // Llamamos al servicio que ya devuelve un JSON limpio.
     const rolActualizado = await rolService.actualizarRol(
-      idRol, // Pasamos el idRol
-      datosActualizar
+      Number(idRol),
+      datosActualizar,
+      idUsuario // Pasamos el ID del usuario al servicio
     );
 
-    // [Depuración] Imprimimos en la consola del servidor.
     console.log(
       "Objeto a enviar como respuesta (Actualizar):",
       JSON.stringify(rolActualizado, null, 2)
     );
 
-    // Verificamos si se encontró el rol antes de enviar.
     if (!rolActualizado) {
-      // Este es el error que estabas viendo, pero ahora debería funcionar.
       return res
         .status(404)
         .json({ message: "Rol no encontrado para actualizar." });
     }
 
-    // Enviamos la respuesta.
     res.status(200).json(rolActualizado);
-    // --- FIN DE MODIFICACIÓN ---
   } catch (error) {
-    // Mejoramos el log de errores para ver la causa real.
     console.error("Error detallado en rol.controller al actualizar:", error);
     next(error);
   }
@@ -183,6 +176,7 @@ const asignarPermisosARol = async (req, res, next) => {
   try {
     const { idRol } = req.params;
     const { idPermisos } = req.body;
+    const idUsuario = req.usuario.idUsuario; // Capturamos el ID del usuario logueado
 
     if (!Array.isArray(idPermisos) || idPermisos.length === 0) {
       return res.status(400).json({
@@ -194,7 +188,8 @@ const asignarPermisosARol = async (req, res, next) => {
 
     const permisosActualizados = await permisosXRolService.asignarPermisosARol(
       Number(idRol),
-      idPermisos
+      idPermisos,
+      idUsuario // Pasamos el ID del usuario al servicio
     );
     res.status(200).json({
       success: true,
