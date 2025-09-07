@@ -106,6 +106,22 @@ const cambiarEstadoNovedad = async (req, res, next) => {
 };
 
 /**
+ * ✅ NUEVA FUNCIÓN: Obtiene solo las novedades activas para el módulo de citas.
+ */
+const listarNovedadesAgendables = async (req, res, next) => {
+  try {
+    // Llama a una nueva función en el servicio que filtra solo las activas
+    const novedades = await novedadesService.obtenerNovedadesActivas();
+    res.status(200).json({
+      success: true,
+      data: novedades,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Elimina físicamente una novedad por su ID.
  */
 const eliminarNovedadFisica = async (req, res, next) => {
@@ -127,4 +143,5 @@ module.exports = {
   actualizarNovedad,
   cambiarEstadoNovedad,
   eliminarNovedadFisica,
+  listarNovedadesAgendables, // Nueva función exportada
 };

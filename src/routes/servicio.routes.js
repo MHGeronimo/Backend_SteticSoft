@@ -3,17 +3,25 @@ const express = require("express");
 const router = express.Router();
 const servicioController = require("../controllers/servicio.controller.js");
 const servicioValidators = require("../validators/servicio.validators.js");
-
 const authMiddleware = require("../middlewares/auth.middleware.js");
-const {
-  checkPermission,
-} = require("../middlewares/authorization.middleware.js");
+const { checkPermission } = require("../middlewares/authorization.middleware.js");
 
+const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR"; // Permiso para agendar
 const PERMISO_MODULO_SERVICIOS = "MODULO_SERVICIOS_GESTIONAR";
 
 // --- RUTAS DE LA API ---
 
 const { uploadServicioImage } = require("../middlewares/upload.middleware.js");
+
+// --- ✅ NUEVA RUTA PARA EL MÓDULO DE CITAS ---
+// Devuelve solo los servicios activos (estado=true) para ser usados en el agendamiento.
+// No necesita validador.
+router.get(
+  "/disponibles",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  servicioController.listarServiciosDisponibles // Necesitaremos crear esta función
+);
 
 router.get("/public", servicioController.listarServiciosPublicos);
 

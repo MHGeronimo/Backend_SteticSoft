@@ -115,6 +115,24 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   }
 };
 
+
+
+  /**
+ * ✅ NUEVA FUNCIÓN: Obtiene solo las novedades activas para el módulo de citas.
+ */
+const obtenerNovedadesActivas = async () => {
+    try {
+        return await db.Novedad.findAll({
+            where: { estado: true },
+            order: [["fechaInicio", "DESC"]],
+        });
+    } catch (error) {
+        console.error("Error al obtener novedades activas:", error);
+        throw new CustomError(`Error al obtener novedades activas: ${error.message}`, 500);
+    }
+};
+
+
 /**
  * Obtiene una novedad por su ID, incluyendo los empleados asignados.
  */
@@ -204,4 +222,5 @@ module.exports = {
   actualizarNovedad,
   cambiarEstadoNovedad,
   eliminarNovedadFisica,
+  obtenerNovedadesActivas, // <-- ✅ Exportar la nueva función
 };

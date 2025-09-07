@@ -6,9 +6,15 @@ const novedadesValidators = require("../validators/novedades.validators.js");
 const authMiddleware = require("../middlewares/auth.middleware.js");
 const { checkPermission } = require("../middlewares/authorization.middleware.js");
 
+const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR"; // Usamos el permiso de citas
 const PERMISO_MODULO_NOVEDADES = "MODULO_NOVEDADES_EMPLEADOS_GESTIONAR";
-
 // --- RUTAS CRUD PARA NOVEDADES ---
+router.get(
+  "/agendables",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS), // Quien agenda citas necesita ver esto
+  novedadesController.listarNovedadesAgendables // Necesitaremos crear esta función
+);
 
 // Crear una nueva novedad y asignarla a empleados
 router.post(

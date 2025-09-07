@@ -10,6 +10,14 @@ const {
 } = require("../middlewares/authorization.middleware.js");
 
 const PERMISO_MODULO_CLIENTES = "MODULO_CLIENTES_GESTIONAR";
+const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR"; // Quien agenda citas necesita buscar clientes
+
+router.get(
+  "/buscar",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  clienteController.buscarClientes // Necesitaremos crear esta función en el controlador
+);
 
 router.post(
   "/",

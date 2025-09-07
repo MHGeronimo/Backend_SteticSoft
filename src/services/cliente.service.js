@@ -12,6 +12,31 @@ const {
 const saltRounds = 10; // Para hashear contraseñas
 
 /**
+ * ✅ NUEVA FUNCIÓN: Busca clientes activos por un término de búsqueda.
+ * Usado por el módulo de citas para el autocompletado.
+ */
+const buscarClientesPorTermino = async (termino) => {
+  try {
+    const searchTerm = `%${termino}%`;
+    return await db.Cliente.findAll({
+      where: {
+        estado: true, // Solo buscar clientes activos
+        [Op.or]: [
+          { nombre: { [Op.iLike]: searchTerm } },
+          { apellido: { [Op.iLike]: searchTerm } },
+          { numeroDocumento: { [Op.iLike]: searchTerm } },
+          { correo: { [Op.iLike]: searchTerm } },
+        ],
+      },
+      limit: 10, // Limitar resultados para performance
+    });
+  } catch (error) {
+    console.error("Error al buscar clientes por término:", error);
+    throw new CustomError(`Error al buscar clientes: ${error.message}`, 500);
+  }
+};
+
+/**
  * Helper interno para cambiar el estado de un cliente.
  * Considerar si esto también debe afectar el estado del Usuario asociado.
  */
@@ -370,4 +395,5 @@ module.exports = {
   habilitarCliente,
   eliminarClienteFisico,
   cambiarEstadoCliente,
+  buscarClientesPorTermino,
 };

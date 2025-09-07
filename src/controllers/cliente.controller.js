@@ -4,6 +4,25 @@ const clienteService = require("../services/cliente.service.js");
 const db = require("../models"); 
 
 /**
+ * ✅ NUEVA FUNCIÓN: Busca clientes por un término de búsqueda.
+ */
+const buscarClientes = async (req, res, next) => {
+  try {
+    const { termino } = req.query; // El front-end enviará el término aquí
+    if (!termino || termino.length < 3) {
+      // Evitamos búsquedas vacías o demasiado cortas
+      return res.status(200).json({ success: true, data: [] });
+    }
+    
+    // Llamamos a una nueva función en el servicio que hará la búsqueda
+    const clientes = await clienteService.buscarClientesPorTermino(termino);
+    res.status(200).json({ success: true, data: clientes });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Crea un nuevo cliente.
  */
 const crearCliente = async (req, res, next) => {
@@ -225,4 +244,5 @@ module.exports = {
   eliminarClienteFisico,
   cambiarEstadoCliente,
   obtenerTodosLosClientes,
+    buscarClientes, 
 };
