@@ -1,116 +1,47 @@
-// src/controllers/novedades.controller.js
+//src/controllers/novedades.controller.js
 const novedadesService = require("../services/novedades.service.js");
 
 /**
- * Crea una nueva novedad y la asigna a uno o varios empleados.
- */
+ * Crea una nueva novedad y la asigna a uno o varios empleados.
+ */
 const crearNovedad = async (req, res, next) => {
-  try {
-    // Separamos los IDs de los empleados del resto de los datos de la novedad
-    const { empleadosIds, ...datosNovedad } = req.body;
-
-    const nuevaNovedad = await novedadesService.crearNovedad(datosNovedad, empleadosIds);
-    res.status(201).json({
-      success: true,
-      message: "Novedad creada y asignada exitosamente.",
-      data: nuevaNovedad,
-    });
-  } catch (error) {
-    next(error);
-  }
+  try {
+    const { empleadosIds, ...datosNovedad } = req.body;
+    const nuevaNovedad = await novedadesService.crearNovedad(datosNovedad, empleadosIds);
+    res.status(201).json({
+      success: true,
+      message: "Novedad creada y asignada exitosamente.",
+      data: nuevaNovedad,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * Obtiene una lista de todas las novedades, con opción de filtrar por estado o empleado.
- */
+ * Obtiene una lista de todas las novedades, con opción de filtrar.
+ */
 const listarNovedades = async (req, res, next) => {
-  try {
-      const opcionesDeFiltro = {
-          estado: req.query.estado !== undefined ? req.query.estado === "true" : undefined,
-          empleadoId: req.query.empleadoId ? Number(req.query.empleadoId) : undefined
-    };
-
-    const novedades = await novedadesService.obtenerTodasLasNovedades(opcionesDeFiltro);
-    res.status(200).json({
-      success: true,
-      data: novedades,
-    });
-  } catch (error) {
-    next(error);
-  }
+  try {
+      const opcionesDeFiltro = {
+          estado: req.query.estado !== undefined ? req.query.estado === "true" : undefined,
+          empleadoId: req.query.empleadoId ? Number(req.query.empleadoId) : undefined
+    };
+    const novedades = await novedadesService.obtenerTodasLasNovedades(opcionesDeFiltro);
+    res.status(200).json({
+      success: true,
+      data: novedades,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * Obtiene una novedad específica por su ID.
- */
-const obtenerNovedadPorId = async (req, res, next) => {
-  try {
-    // CORREGIDO: Parámetro en singular
-    const { idNovedad } = req.params;
-    const novedad = await novedadesService.obtenerNovedadPorId(Number(idNovedad));
-    res.status(200).json({
-      success: true,
-      data: novedad,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Actualiza una novedad existente y/o sus empleados asignados.
- */
-const actualizarNovedad = async (req, res, next) => {
-  try {
-    // CORREGIDO: Parámetro en singular
-    const { idNovedad } = req.params;
-    // Separamos los IDs de los empleados de los datos a actualizar
-    const { empleadosIds, ...datosActualizar } = req.body;
-
-    const novedadActualizada = await novedadesService.actualizarNovedad(
-      Number(idNovedad),
-      datosActualizar,
-      empleadosIds // Se pasan los empleados para actualizar la tabla de unión
-    );
-    res.status(200).json({
-      success: true,
-      message: "Novedad actualizada exitosamente.",
-      data: novedadActualizada,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Cambia el estado (activo/inactivo) de una novedad.
- */
-const cambiarEstadoNovedad = async (req, res, next) => {
-  try {
-    // CORREGIDO: Parámetro en singular
-    const { idNovedad } = req.params;
-    const { estado } = req.body;
-
-    const novedadActualizada = await novedadesService.cambiarEstadoNovedad(
-      Number(idNovedad),
-      estado
-    );
-    res.status(200).json({
-      success: true,
-      message: `Estado de la novedad cambiado exitosamente.`,
-      data: novedadActualizada,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * ✅ NUEVA FUNCIÓN: Obtiene solo las novedades activas para el módulo de citas.
+ * ✅ FUNCIÓN AÑADIDA: Obtiene solo las novedades activas para el módulo de citas.
  */
 const listarNovedadesAgendables = async (req, res, next) => {
   try {
-    // Llama a una nueva función en el servicio que filtra solo las activas
     const novedades = await novedadesService.obtenerNovedadesActivas();
     res.status(200).json({
       success: true,
@@ -122,26 +53,129 @@ const listarNovedadesAgendables = async (req, res, next) => {
 };
 
 /**
- * Elimina físicamente una novedad por su ID.
+ * ✅ FUNCIÓN AÑADIDA: Obtiene los días disponibles para una novedad.
  */
+const listarDiasDisponibles = async (req, res, next) => {
+    try {
+        const { idNovedad } = req.params;
+        const { anio, mes } = req.query;
+        const dias = await novedadesService.obtenerDiasDisponibles(Number(idNovedad), anio, mes);
+        res.status(200).json({ success: true, data: dias });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * ✅ FUNCIÓN AÑADIDA: Obtiene las horas disponibles para una novedad y fecha.
+ */
+const listarHorasDisponibles = async (req, res, next) => {
+    try {
+        const { idNovedad } = req.params;
+        const { fecha } = req.query;
+        const horas = await novedadesService.obtenerHorasDisponibles(Number(idNovedad), fecha);
+        res.status(200).json({ success: true, data: horas });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * ✅ FUNCIÓN AÑADIDA: Obtiene los empleados asociados a una novedad.
+ */
+const listarEmpleadosPorNovedad = async (req, res, next) => {
+    try {
+        const { idNovedad } = req.params;
+        const empleados = await novedadesService.obtenerEmpleadosPorNovedad(Number(idNovedad));
+        res.status(200).json({ success: true, data: empleados });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Obtiene una novedad específica por su ID.
+ */
+const obtenerNovedadPorId = async (req, res, next) => {
+  try {
+    const { idNovedad } = req.params;
+    const novedad = await novedadesService.obtenerNovedadPorId(Number(idNovedad));
+    res.status(200).json({
+      success: true,
+      data: novedad,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Actualiza una novedad existente.
+ */
+const actualizarNovedad = async (req, res, next) => {
+  try {
+    const { idNovedad } = req.params;
+    const { empleadosIds, ...datosActualizar } = req.body;
+    const novedadActualizada = await novedadesService.actualizarNovedad(
+      Number(idNovedad),
+      datosActualizar,
+      empleadosIds
+    );
+    res.status(200).json({
+      success: true,
+      message: "Novedad actualizada exitosamente.",
+      data: novedadActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cambia el estado de una novedad.
+ */
+const cambiarEstadoNovedad = async (req, res, next) => {
+  try {
+    const { idNovedad } = req.params;
+    const { estado } = req.body;
+    const novedadActualizada = await novedadesService.cambiarEstadoNovedad(
+      Number(idNovedad),
+      estado
+    );
+    res.status(200).json({
+      success: true,
+      message: `Estado de la novedad cambiado exitosamente.`,
+      data: novedadActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Elimina físicamente una novedad.
+ */
 const eliminarNovedadFisica = async (req, res, next) => {
-  try {
-    // CORREGIDO: Parámetro en singular
-    const { idNovedad } = req.params;
-    await novedadesService.eliminarNovedadFisica(Number(idNovedad));
-    // Se envía 204 No Content, que es el estándar para eliminaciones exitosas.
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
+  try {
+    const { idNovedad } = req.params;
+    await novedadesService.eliminarNovedadFisica(Number(idNovedad));
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
-  crearNovedad,
-  listarNovedades,
-  obtenerNovedadPorId,
-  actualizarNovedad,
-  cambiarEstadoNovedad,
-  eliminarNovedadFisica,
-  listarNovedadesAgendables, // Nueva función exportada
+  crearNovedad,
+  listarNovedades,
+  obtenerNovedadPorId,
+  actualizarNovedad,
+  cambiarEstadoNovedad,
+  eliminarNovedadFisica,
+  listarNovedadesAgendables,
+  // ✅ Se exportan las nuevas funciones
+  listarDiasDisponibles,
+  listarHorasDisponibles,
+  listarEmpleadosPorNovedad
 };
+

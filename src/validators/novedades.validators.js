@@ -5,7 +5,7 @@ const moment = require("moment");
 
 // Lista de días válidos en minúsculas.
 // Aceptamos "miércoles" con y sin tilde para evitar errores.
-const DIAS_VALIDOS = ['lunes','Lunes', 'martes','Martes', 'miercoles', 'miércoles', 'Miercoles', 'Miércoles', 'jueves', 'Jueves', 'viernes', 'Viernes', 'sabado', 'Sabado', 'domingo', 'Domingo'];
+const DIAS_VALIDOS = ['lunes','Lunes', 'martes','Martes', 'miercoles', 'miércoles', 'Miercoles', 'Miércoles', 'jueves', 'Jueves', 'viernes', 'Viernes', 'sabado', 'Sabado', 'sábado', 'Sábado','domingo', 'Domingo'];
 
 const crearNovedadValidators = [
   body("fechaInicio")
@@ -28,8 +28,6 @@ const crearNovedadValidators = [
     .notEmpty().withMessage("Escoger los días es obligatorio.")
     .isArray({ min: 1 }).withMessage("El campo 'dias' debe ser un array con al menos un día."),
   
-  // ✅ --- LA MAGIA ESTÁ AQUÍ ---
-  // Se sanea cada día (lo convierte a minúsculas) y LUEGO se valida.
   body("dias.*")
     .trim()               // Quita espacios en blanco inútiles.
     .isIn(DIAS_VALIDOS)   // Ahora sí, compara "lunes" contra la lista de días válidos.

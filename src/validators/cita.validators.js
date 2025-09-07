@@ -1,212 +1,107 @@
 // src/validators/cita.validators.js
-const { body, param } = require("express-validator");
-const {
-  handleValidationErrors,
-} = require("../middlewares/validation.middleware.js");
+const { body, param, query } = require("express-validator");
+const { handleValidationErrors } = require("../middlewares/validation.middleware.js");
 const db = require("../models");
 const moment = require("moment-timezone");
 
 const crearCitaValidators = [
   body("fechaHora")
-    .notEmpty()
-    .withMessage("La fecha y hora de la cita son obligatorias.")
-    .isISO8601()
-    .withMessage(
-      "La fecha y hora deben estar en formato (DD-MM-YYY HH-MM)."
-    )
+    .notEmpty().withMessage("La fecha y hora son obligatorias.")
+    .isISO8601().withMessage("El formato de fecha y hora debe ser ISO8601.")
     .custom((value) => {
       if (moment(value).isBefore(moment())) {
-        throw new Error(
-          "La fecha y hora de la cita no pueden ser en el pasado."
-        );
+        throw new Error("La fecha y hora de la cita no pueden ser en el pasado.");
       }
       return true;
     })
     .toDate(),
-  body("clienteId")
-    .notEmpty()
-    .withMessage("El ID del cliente es obligatorio.")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del cliente debe ser un entero positivo.")
+
+  body("idCliente")
+    .notEmpty().withMessage("El ID del cliente es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID del cliente debe ser un entero positivo.")
     .custom(async (value) => {
-      const cliente = await db.Cliente.findOne({
-        where: { idCliente: value, estado: true },
-      });
-      if (!cliente) {
-        return Promise.reject(
-          "El cliente especificado no existe o no está activo."
-        );
-      }
+      const cliente = await db.Cliente.findOne({ where: { idCliente: value, estado: true } });
+      if (!cliente) throw new Error("El cliente no existe o está inactivo.");
     }),
-  body("usuarioId")
-    .optional({ nullable: true })
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID del usuario (empleado) debe ser un entero positivo si se proporciona."
-    )
+
+  body("idUsuario")
+    .notEmpty().withMessage("El ID del empleado es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID del empleado debe ser un entero positivo.")
     .custom(async (value) => {
-      if (value) {
-        const usuario = await db.Usuario.findOne({
-          where: { idUsuario: value, estado: true },
-        });
-        if (!usuario) {
-          return Promise.reject(
-            "El usuario (empleado) especificado no existe o no está activo."
-          );
-        }
-      }
+      const usuario = await db.Usuario.findOne({ where: { idUsuario: value, estado: true } });
+      if (!usuario) throw new Error("El empleado no existe o no está activo.");
     }),
-  body("estadoCitaId")
-    .notEmpty()
-    .withMessage("El ID del estado de la cita es obligatorio.")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del estado de la cita debe ser un entero positivo.")
+
+  body("idNovedad")
+    .notEmpty().withMessage("El ID de la novedad es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID de la novedad debe ser un entero positivo.")
+    .custom(async (value) => {
+      const novedad = await db.Novedad.findOne({ where: { idNovedad: value, estado: true }});
+      if (!novedad) throw new Error("La novedad no existe o está inactiva.");
+    }),
+
+  // ✅ CORRECCIÓN: Se añade la validación para el campo obligatorio 'idEstado'.
+  body("idEstado")
+    .notEmpty().withMessage("El ID del estado de la cita es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID del estado debe ser un entero positivo.")
     .custom(async (value) => {
       const estado = await db.Estado.findByPk(value);
-      if (!estado) {
-        return Promise.reject("El estado de la cita especificado no existe.");
-      }
+      if (!estado) throw new Error("El estado de la cita especificado no existe.");
     }),
+
   body("servicios")
-    .optional()
-    .isArray()
-    .withMessage("Los servicios deben ser un array de IDs.")
+    .isArray({ min: 1 }).withMessage("Debe seleccionar al menos un servicio.")
     .custom((servicios) => {
-      if (servicios && servicios.length > 0) {
-        if (!servicios.every((id) => Number.isInteger(id) && id > 0)) {
-          throw new Error(
-            "Cada ID de servicio en el array debe ser un entero positivo."
-          );
-        }
+      if (!servicios.every((id) => Number.isInteger(id) && id > 0)) {
+        throw new Error("Cada ID de servicio debe ser un entero positivo.");
       }
       return true;
     }),
-  body("estado")
-    .optional()
-    .isBoolean()
-    .withMessage("El estado de la cita (registro) debe ser un valor booleano."),
+
   handleValidationErrors,
 ];
 
 const actualizarCitaValidators = [
-  param("idCita")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la cita debe ser un entero positivo."),
-  body("fechaHora")
-    .optional()
-    .isISO8601()
-    .withMessage(
-      "La fecha y hora deben estar en formato (DD-MM-YYY HH-MM) si se actualizan."
-    )
-    .custom((value) => {
-      if (moment(value).isBefore(moment().subtract(1, "hour"))) {
-        // Permite un pequeño margen para ajustes
-        throw new Error(
-          "La nueva fecha y hora de la cita no pueden ser en el pasado."
-        );
-      }
-      return true;
-    })
-    .toDate(),
-  body("clienteId")
-    .optional()
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID del cliente debe ser un entero positivo si se actualiza."
-    )
-    .custom(async (value) => {
-      if (value) {
-        const cliente = await db.Cliente.findOne({
-          where: { idCliente: value, estado: true },
-        });
-        if (!cliente)
-          return Promise.reject(
-            "El nuevo cliente especificado no existe o no está activo."
-          );
-      }
-    }),
-  body("usuarioId")
-    .optional({ nullable: true })
-    .custom(async (value) => {
-      if (value !== null && value !== undefined) {
-        if (!(Number.isInteger(value) && value > 0)) {
-          throw new Error(
-            "El ID del usuario (empleado) debe ser un entero positivo o null."
-          );
-        }
-        const usuario = await db.Usuario.findOne({
-          where: { idUsuario: value, estado: true },
-        });
-        if (!usuario)
-          return Promise.reject(
-            "El nuevo usuario (empleado) especificado no existe o no está activo."
-          );
-      }
-      return true;
-    }),
-  body("estadoCitaId")
-    .optional()
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID del estado de la cita debe ser un entero positivo si se actualiza."
-    )
-    .custom(async (value) => {
-      if (value) {
-        const estado = await db.Estado.findByPk(value);
-        if (!estado)
-          return Promise.reject(
-            "El nuevo estado de cita especificado no existe."
-          );
-      }
-    }),
-  body("estado") // Validador para el estado booleano general de la Cita
-    .optional()
-    .isBoolean()
-    .withMessage(
-      "El estado (activo/inactivo) de la cita debe ser un valor booleano si se actualiza."
-    ),
+  param("idCita").isInt({ gt: 0 }).withMessage("El ID de la cita debe ser un entero positivo."),
+  body("fechaHora").optional().isISO8601().toDate(),
+  body("idCliente").optional().isInt({ gt: 0 }),
+  body("idUsuario").optional().isInt({ gt: 0 }),
+  body("idNovedad").optional().isInt({ gt: 0 }),
+  body("servicios").optional().isArray(),
+  body("idEstado").optional().isInt({ gt: 0 }),
   handleValidationErrors,
 ];
 
 const idCitaValidator = [
-  param("idCita")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la cita debe ser un entero positivo."),
+  param("idCita").isInt({ gt: 0 }).withMessage("El ID de la cita debe ser un entero positivo."),
   handleValidationErrors,
 ];
 
 const gestionarServiciosCitaValidator = [
-  param("idCita")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la cita debe ser un entero positivo."),
+  param("idCita").isInt({ gt: 0 }).withMessage("El ID de la cita debe ser un entero positivo."),
   body("idServicios")
-    .isArray({ min: 1 })
-    .withMessage(
-      "Se requiere un array de idServicios con al menos un elemento."
-    )
+    .isArray({ min: 1 }).withMessage("Se requiere un array 'idServicios' con al menos un elemento.")
     .custom((idServicios) => {
       if (!idServicios.every((id) => Number.isInteger(id) && id > 0)) {
-        throw new Error(
-          "Cada ID de servicio en el array debe ser un entero positivo."
-        );
+        throw new Error("Cada ID de servicio en el array debe ser un entero positivo.");
       }
       return true;
     }),
   handleValidationErrors,
 ];
 
-// Nuevo validador para cambiar el estado booleano general
-const cambiarEstadoCitaValidators = [
-  param("idCita")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la cita debe ser un entero positivo."),
-  body("estado")
-    .exists({ checkFalsy: false })
-    .withMessage(
-      "El campo 'estado' es obligatorio en el cuerpo de la solicitud."
-    )
-    .isBoolean()
-    .withMessage("El valor de 'estado' debe ser un booleano (true o false)."),
+const buscarClientesValidators = [
+    query("termino")
+        .notEmpty().withMessage("El término de búsqueda es obligatorio.")
+        .isLength({ min: 2 }).withMessage("El término de búsqueda debe tener al menos 2 caracteres."),
+    handleValidationErrors,
+];
+
+const obtenerDisponibilidadNovedadValidators = [
+  param("idNovedad").isInt({ gt: 0 }).withMessage("El ID de la novedad debe ser un entero positivo."),
+  query("mes").optional().isInt({ min: 1, max: 12 }).withMessage("El mes debe ser un número entre 1 y 12."),
+  query("anio").optional().isInt({ min: 2020, max: 2030 }).withMessage("El año debe ser válido."),
+  query("fecha").optional().isISO8601().withMessage("La fecha debe estar en formato YYYY-MM-DD."),
   handleValidationErrors,
 ];
 
@@ -215,5 +110,8 @@ module.exports = {
   actualizarCitaValidators,
   idCitaValidator,
   gestionarServiciosCitaValidator,
-  cambiarEstadoCitaValidators, // <-- Exportar nuevo validador
+  buscarClientesValidators,
+  obtenerDiasDisponiblesValidators: obtenerDisponibilidadNovedadValidators,
+  obtenerHorariosDisponiblesValidators: obtenerDisponibilidadNovedadValidators,
 };
+

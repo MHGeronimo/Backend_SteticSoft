@@ -44,11 +44,11 @@ router.put(
 
 // NUEVA RUTA: Cambiar el estado general de una cita
 router.patch(
-  "/:idCita/estado",
+  "/:idCita/estado-proceso",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.cambiarEstadoCitaValidators, // Usa el validador específico para el booleano 'estado'
-  citaController.cambiarEstadoCita // Llama a la función del controlador
+  citaValidators.actualizarCitaValidators, // Reutilizar validador
+  citaController.cambiarEstadoProcesoCita
 );
 
 router.patch(
@@ -90,5 +90,46 @@ router.delete(
   citaValidators.gestionarServiciosCitaValidator,
   citaController.quitarServiciosDeCita
 );
+
+// 1. Obtener días disponibles por novedad (Paso 2 del frontend)
+router.get(
+  "/novedad/:idNovedad/dias-disponibles",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.obtenerDiasDisponiblesValidators,
+  citaController.obtenerDiasDisponiblesPorNovedad
+);
+
+router.get(
+  "/novedad/:idNovedad/horarios-disponibles",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.obtenerHorariosDisponiblesValidators,
+  citaController.obtenerHorariosDisponiblesPorNovedad
+);
+
+router.get(
+  "/clientes/buscar",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.buscarClientesValidators,
+  citaController.buscarClientes
+);
+
+router.get(
+  "/novedad/:idNovedad/empleados",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaValidators.obtenerDiasDisponiblesValidators,
+  citaController.obtenerEmpleadosPorNovedad
+);
+
+router.get(
+  "/servicios/disponibles",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaController.obtenerServiciosDisponibles
+);
+
 
 module.exports = router;

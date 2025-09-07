@@ -1,4 +1,4 @@
-// src/routes/novedades.routes.js
+//src/routes/novedades.routes.js
 const express = require("express");
 const router = express.Router();
 const novedadesController = require("../controllers/novedades.controller.js");
@@ -31,6 +31,15 @@ router.get(
   authMiddleware,
   checkPermission(PERMISO_MODULO_NOVEDADES),
   novedadesController.listarNovedades
+);
+
+// --- ✅ NUEVA RUTA DE SOPORTE PARA EL FORMULARIO DE NOVEDADES ---
+// Devuelve una lista de todos los usuarios activos que tienen el rol de "Empleado".
+router.get(
+  "/empleados-disponibles",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_NOVEDADES),
+  novedadesController.listarEmpleadosParaAsignar
 );
 
 // Obtener una novedad específica por su ID

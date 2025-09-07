@@ -1,4 +1,4 @@
-// src/models/Cita.model.js 
+// src/models/Cita.model.js
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -18,19 +18,18 @@ module.exports = (sequelize, DataTypes) => {
         field: 'estado'
       },
       fechaHora: {
-        type: DataTypes.DATE, // Se mapea a TIMESTAMP WITH TIME ZONE en PostgreSQL
+        type: DataTypes.DATE,
         allowNull: false,
         field: 'fecha_hora' 
       },
       idCliente: { 
         type: DataTypes.INTEGER,
-        allowNull: false, // Una cita debe tener un cliente. Ajustado a NOT NULL.
+        allowNull: false,
         field: 'id_cliente', 
         references: {
           model: 'cliente',
           key: 'id_cliente' 
-        },
-        onDelete: 'CASCADE'
+        }
       },
       idUsuario: {
         type: DataTypes.INTEGER,
@@ -39,28 +38,25 @@ module.exports = (sequelize, DataTypes) => {
         references: {
           model: 'usuario',
           key: 'id_usuario'
-        },
-        onDelete: 'SET NULL'
+        }
       },
       idEstado: { 
         type: DataTypes.INTEGER,
-        allowNull: false, // Una cita debe tener un estado.
+        allowNull: false,
         field: 'id_estado', 
         references: {
           model: 'estado',
           key: 'id_estado' 
-        },
-        onDelete: 'RESTRICT' 
+        }
       },
       idNovedad: {
         type: DataTypes.INTEGER,
         allowNull: true,
         field: 'id_novedad',
         references: {
-          model: 'novedades',
+          model: 'novedades', // Asegúrate que este nombre coincida con tu tabla
           key: 'id_novedad'
-        },
-        onDelete: 'SET NULL'
+        }
       }
     },
     {
@@ -70,25 +66,26 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Cita.associate = (models) => {
-    // Una Cita pertenece a un Cliente.
     Cita.belongsTo(models.Cliente, {
       foreignKey: 'idCliente',
       as: 'cliente'
     });
 
-    // Una Cita es atendida por un Usuario (Empleado).
     Cita.belongsTo(models.Usuario, {
       foreignKey: 'idUsuario',
       as: 'empleado'
     });
 
-    // Una Cita tiene un Estado.
     Cita.belongsTo(models.Estado, {
       foreignKey: 'idEstado',
       as: 'estadoDetalle'
     });
 
-    // Una Cita puede incluir muchos Servicios.
+    Cita.belongsTo(models.Novedad, { // ✅ AGREGAR esta asociación
+      foreignKey: 'idNovedad',
+      as: 'novedad'
+    });
+
     Cita.belongsToMany(models.Servicio, {
       through: 'servicio_x_cita', 
       foreignKey: 'id_cita',      
@@ -96,10 +93,9 @@ module.exports = (sequelize, DataTypes) => {
       as: 'serviciosProgramados'
     });
     
-    // La Cita puede tener detalles de Venta asociados.
     Cita.hasMany(models.VentaXServicio, {
-        foreignKey: 'idCita', // Se refiere al atributo en VentaXServicio
-        as: 'detallesVenta'
+      foreignKey: 'idCita',
+      as: 'detallesVenta'
     });
   };
 
