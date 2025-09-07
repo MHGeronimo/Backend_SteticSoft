@@ -1,13 +1,5 @@
 const productoService = require("../services/producto.service.js");
 
-/** 🧩 Helper: Procesa imagen si existe */
-const procesarImagenProducto = (req) =>
-  req.file ? `/uploads/productos/${req.file.filename}` : undefined;
-
-/** 🧩 Helper: Filtra productos activos */
-const filtrarProductosActivos = (productos) =>
-  Array.isArray(productos) ? productos.filter(p => p.estado === true) : [];
-
 /**
  * Crea un nuevo producto.
  */
@@ -16,11 +8,16 @@ const crearProducto = async (req, res, next) => {
   try {
     const datosProducto = { ...req.body };
 
+    // ✅ Mapear idCategoriaProducto → categoriaProductoId
     if (datosProducto.idCategoriaProducto && !datosProducto.categoriaProductoId) {
       datosProducto.categoriaProductoId = Number(datosProducto.idCategoriaProducto);
     }
 
-    datosProducto.imagen = procesarImagenProducto(req);
+    // Si se subió un archivo, multer nos deja la info en req.file
+    if (req.file) {
+      // Guardamos solo la ruta relativa
+      datosProducto.imagen = `/uploads/productos/${req.file.filename}`;
+    }
 
     const nuevoProducto = await productoService.crearProducto(datosProducto);
     res.status(201).json({
@@ -54,7 +51,9 @@ const listarProductos = async (req, res, next) => {
 const obtenerProductoPorId = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
-    const producto = await productoService.obtenerProductoPorId(Number(idProducto));
+    const producto = await productoService.obtenerProductoPorId(
+      Number(idProducto)
+    );
     res.status(200).json({
       success: true,
       data: producto,
@@ -64,9 +63,6 @@ const obtenerProductoPorId = async (req, res, next) => {
   }
 };
 
-/**
- * Actualiza un producto existente.
- */
 const actualizarProducto = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
@@ -76,7 +72,9 @@ const actualizarProducto = async (req, res, next) => {
       datosActualizar.categoriaProductoId = Number(datosActualizar.idCategoriaProducto);
     }
 
-    datosActualizar.imagen = procesarImagenProducto(req);
+    if (req.file) {
+      datosActualizar.imagen = `/uploads/productos/${req.file.filename}`;
+    }
 
     const productoActualizado = await productoService.actualizarProducto(
       Number(idProducto),
@@ -115,15 +113,17 @@ const cambiarEstadoProducto = async (req, res, next) => {
 };
 
 /**
- * Anula un producto (borrado lógico).
+ * Anula un producto (borrado lógico, estado = false).
  */
 const anularProducto = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
-    const productoAnulado = await productoService.anularProducto(Number(idProducto));
+    const productoAnulado = await productoService.anularProducto(
+      Number(idProducto)
+    );
     res.status(200).json({
       success: true,
-      message: "Producto anulado exitosamente.",
+      message: "Producto anulado (deshabilitado) exitosamente.",
       data: productoAnulado,
     });
   } catch (error) {
@@ -132,12 +132,14 @@ const anularProducto = async (req, res, next) => {
 };
 
 /**
- * Habilita un producto.
+ * Habilita un producto (estado = true).
  */
 const habilitarProducto = async (req, res, next) => {
   try {
     const { idProducto } = req.params;
-    const productoHabilitado = await productoService.habilitarProducto(Number(idProducto));
+    const productoHabilitado = await productoService.habilitarProducto(
+      Number(idProducto)
+    );
     res.status(200).json({
       success: true,
       message: "Producto habilitado exitosamente.",
@@ -149,7 +151,7 @@ const habilitarProducto = async (req, res, next) => {
 };
 
 /**
- * Elimina físicamente un producto.
+ * Elimina físicamente un producto por su ID.
  */
 const eliminarProductoFisico = async (req, res, next) => {
   try {
@@ -162,7 +164,7 @@ const eliminarProductoFisico = async (req, res, next) => {
 };
 
 /**
- * Lista productos para uso interno.
+ * Obtiene una lista de productos para uso interno.
  */
 const listarProductosInternos = async (req, res, next) => {
   try {
@@ -177,7 +179,7 @@ const listarProductosInternos = async (req, res, next) => {
 };
 
 /**
- * Lista productos activos para la landing pública.
+ * Obtiene una lista de productos activos para mostrar en la landing pública.
  */
 const listarProductosPublicos = async (req, res, next) => {
   try {
@@ -186,19 +188,30 @@ const listarProductosPublicos = async (req, res, next) => {
     const resultado = await productoService.obtenerTodosLosProductos({
       tipoUso: "Externo",
     });
+    console.log("📥 Resultado crudo de productoService:", resultado);
 
+    // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
     const listaProductos = Array.isArray(resultado)
       ? resultado
       : resultado?.productos || [];
 
-    const productosPublicos = filtrarProductosActivos(listaProductos).map(p => ({
-      id: p.idProducto,
-      nombre: p.nombre || "Sin nombre",
-      description: p.descripcion || "Sin descripción",
-      categoria: p.categoria || "Sin categoría",
-      price: p.precio ?? 0,
-      imagenURL: p.imagen || "/img/default-producto.png"
-    }));
+    console.log("📦 Lista de productos procesada:", listaProductos.length, "items");
+
+    // 🔍 Filtrar productos cuyo estado sea `true` (activo).
+    const productosPublicos = listaProductos
+      .filter(p => {
+        const esActivo = p.estado === true;
+        console.log(`🔎 Producto ID ${p.idProducto} estado: ${p.estado} → ${esActivo ? "✅ incluido" : "❌ excluido"}`);
+        return esActivo;
+      })
+      .map(p => ({
+        id: p.idProducto,
+        nombre: p.nombre,
+        description: p.descripcion,
+        categoria: p.categoria,
+        price: p.precio,
+        imagenURL: p.imagen
+      }));
 
     console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
 
@@ -212,30 +225,6 @@ const listarProductosPublicos = async (req, res, next) => {
   }
 };
 
-/**
- * Lista productos activos para el flujo de compra.
- */
-const listarProductosParaCompra = async (req, res, next) => {
-  try {
-    const productos = await productoService.obtenerTodosLosProductos();
-    const productosActivos = filtrarProductosActivos(productos);
-
-    const resultado = productosActivos.map(p => ({
-      idProducto: p.idProducto,
-      nombre: p.nombre,
-      precio: p.precio,
-      descuento: p.descuento,
-      categoria: p.categoriaProducto?.nombre || "Sin categoría"
-    }));
-
-    res.status(200).json({
-      success: true,
-      data: resultado
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 module.exports = {
   crearProducto,
@@ -247,6 +236,5 @@ module.exports = {
   eliminarProductoFisico,
   cambiarEstadoProducto,
   listarProductosInternos,
-  listarProductosPublicos,
-  listarProductosParaCompra
+  listarProductosPublicos
 };

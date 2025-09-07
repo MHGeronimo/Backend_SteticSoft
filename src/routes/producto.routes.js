@@ -14,9 +14,6 @@ const { uploadProductoImage } = require("../middlewares/upload.middleware.js");
 
 const PERMISO_MODULO_PRODUCTOS = "MODULO_PRODUCTOS_GESTIONAR";
 
-// productos para las compras
-router.get("/para-compra", productoController.listarProductosParaCompra);
-
 // Ruta pública para obtener productos activos
 router.get(
   "/public",
