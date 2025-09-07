@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS novedad_empleado (
 CREATE TABLE IF NOT EXISTS cita (
     id_cita SERIAL PRIMARY KEY,
     fecha_hora TIMESTAMP WITH TIME ZONE NOT NULL,
-    id_estado BOOLEAN DEFAULT TRUE NOT NULL,
+    estado BOOLEAN DEFAULT TRUE NOT NULL,
     id_novedad INT REFERENCES novedades(id_novedad) ON DELETE SET NULL,
     id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
     id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
