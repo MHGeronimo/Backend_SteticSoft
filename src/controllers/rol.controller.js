@@ -1,6 +1,5 @@
 // src/controllers/rol.controller.js
 const rolService = require("../services/rol.service.js");
-const permisosXRolService = require("../services/permisosXRol.service.js");
 
 /**
  * Crea un nuevo rol.
@@ -176,25 +175,24 @@ const asignarPermisosARol = async (req, res, next) => {
   try {
     const { idRol } = req.params;
     const { idPermisos } = req.body;
-    const idUsuario = req.usuario.idUsuario; // Capturamos el ID del usuario logueado
+    const idUsuario = req.usuario.idUsuario;
 
-    if (!Array.isArray(idPermisos) || idPermisos.length === 0) {
+    if (!Array.isArray(idPermisos)) {
       return res.status(400).json({
-        success: false,
-        message:
-          "Se requiere un array 'idPermisos' con al menos un ID de permiso.",
+        message: "Se requiere un array 'idPermisos'.",
       });
     }
 
-    const permisosActualizados = await permisosXRolService.asignarPermisosARol(
+    // Se centraliza la lógica en rolService.actualizarRol para garantizar la auditoría
+    const rolActualizado = await rolService.actualizarRol(
       Number(idRol),
-      idPermisos,
-      idUsuario // Pasamos el ID del usuario al servicio
+      { idPermisos }, // Solo pasamos los permisos para actualizar
+      idUsuario
     );
+
     res.status(200).json({
-      success: true,
       message: `Permisos asignados/actualizados para el rol ID ${idRol}.`,
-      data: permisosActualizados,
+      data: rolActualizado,
     });
   } catch (error) {
     next(error);
@@ -204,39 +202,34 @@ const asignarPermisosARol = async (req, res, next) => {
 const quitarPermisosDeRol = async (req, res, next) => {
   try {
     const { idRol } = req.params;
-    const { idPermisos } = req.body;
+    const { idPermisos: permisosAQuitar } = req.body;
+    const idUsuario = req.usuario.idUsuario;
 
-    if (!Array.isArray(idPermisos) || idPermisos.length === 0) {
+    if (!Array.isArray(permisosAQuitar) || permisosAQuitar.length === 0) {
       return res.status(400).json({
-        success: false,
-        message:
-          "Se requiere un array 'idPermisos' con al menos un ID de permiso.",
+        message: "Se requiere un array 'idPermisos' con al menos un ID de permiso a quitar.",
       });
     }
 
-    const permisosRestantes = await permisosXRolService.quitarPermisosDeRol(
-      Number(idRol),
-      idPermisos
-    );
-    res.status(200).json({
-      success: true,
-      message: `Permisos quitados del rol ID ${idRol}.`,
-      data: permisosRestantes,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+    // 1. Obtener el estado actual del rol
+    const rolActual = await rolService.obtenerRolPorId(Number(idRol));
+    const idPermisosActuales = rolActual.permisos.map(p => p.idPermiso);
 
-const listarPermisosDeRol = async (req, res, next) => {
-  try {
-    const { idRol } = req.params;
-    const permisos = await permisosXRolService.obtenerPermisosDeRol(
-      Number(idRol)
+    // 2. Calcular la nueva lista de permisos
+    const idPermisosNuevos = idPermisosActuales.filter(
+      id => !permisosAQuitar.includes(id)
     );
+
+    // 3. Llamar al servicio centralizado para actualizar
+    const rolActualizado = await rolService.actualizarRol(
+      Number(idRol),
+      { idPermisos: idPermisosNuevos },
+      idUsuario
+    );
+
     res.status(200).json({
-      success: true,
-      data: permisos,
+      message: `Permisos quitados del rol ID ${idRol}.`,
+      data: rolActualizado,
     });
   } catch (error) {
     next(error);
@@ -253,6 +246,5 @@ module.exports = {
   eliminarRolFisico,
   asignarPermisosARol,
   quitarPermisosDeRol,
-  listarPermisosDeRol,
   cambiarEstadoRol,
 };
