@@ -171,7 +171,7 @@ const obtenerRolPorId = async (idRol) => {
  * @param {object} datosActualizar - Datos a actualizar, incluyendo 'idPermisos'.
  * @returns {Promise<object>} El rol actualizado con sus permisos.
  */
-const actualizarRol = async (idRol, datosActualizar) => {
+const actualizarRol = async (idRol, datosActualizar, idUsuario) => {
   const { idPermisos, ...datosPrincipalesRol } = datosActualizar;
 
   // Se utiliza una única transacción para toda la operación
@@ -179,10 +179,15 @@ const actualizarRol = async (idRol, datosActualizar) => {
 
   try {
     // 1. Buscar el rol que se va a actualizar
-    const rol = await db.Rol.findByPk(idRol, { transaction: t });
+    const rol = await db.Rol.findByPk(idRol, {
+      include: [{ model: db.Permisos, as: "permisos" }],
+      transaction: t,
+    });
     if (!rol) {
       throw new NotFoundError("Rol no encontrado para actualizar.");
     }
+
+    const valorAnterior = rol.toJSON(); // Guardamos el estado anterior
 
     // 2. Si se está cambiando el nombre, verificar que no entre en conflicto con otro existente
     if (
@@ -202,22 +207,63 @@ const actualizarRol = async (idRol, datosActualizar) => {
         );
       }
     }
-    
-    // 3. Actualizar los datos principales del rol (nombre, descripción, estado, tipoPerfil)
-    // datosPrincipalesRol ya contiene tipoPerfil si fue enviado en datosActualizar
+
+    // 3. Registrar cambios en el historial para campos principales
+    const camposAuditables = ["nombre", "descripcion", "estado", "tipoPerfil"];
+    const cambios = [];
+    for (const campo of camposAuditables) {
+      if (
+        datosPrincipalesRol[campo] !== undefined &&
+        datosPrincipalesRol[campo] !== valorAnterior[campo]
+      ) {
+        cambios.push({
+          idRol,
+          idUsuarioModifico: idUsuario,
+          campoModificado: campo,
+          valorAnterior: valorAnterior[campo],
+          valorNuevo: datosPrincipalesRol[campo],
+        });
+      }
+    }
+
+    // 4. Actualizar los datos principales del rol
     await rol.update(datosPrincipalesRol, { transaction: t });
 
-    // 4. Actualizar los permisos si el array 'idPermisos' fue proporcionado
+    // 5. Actualizar los permisos si el array 'idPermisos' fue proporcionado
     if (idPermisos !== undefined) {
+      const idPermisosAnteriores = valorAnterior.permisos
+        .map((p) => p.idPermiso)
+        .sort();
+      const idPermisosNuevos = [...idPermisos].sort();
+
+      if (
+        JSON.stringify(idPermisosAnteriores) !==
+        JSON.stringify(idPermisosNuevos)
+      ) {
+        cambios.push({
+          idRol,
+          idUsuarioModifico: idUsuario,
+          campoModificado: "permisos",
+          valorAnterior: JSON.stringify(idPermisosAnteriores),
+          valorNuevo: JSON.stringify(idPermisosNuevos),
+        });
+      }
+
       await db.PermisosXRol.destroy({ where: { idRol }, transaction: t });
 
       if (idPermisos.length > 0) {
         const nuevosPermisos = idPermisos.map((idPermiso) => ({
           idRol,
           idPermiso,
+          asignadoPor: idUsuario,
         }));
         await db.PermisosXRol.bulkCreate(nuevosPermisos, { transaction: t });
       }
+    }
+
+    // 6. Guardar todos los cambios en el historial
+    if (cambios.length > 0) {
+      await db.HistorialCambiosRol.bulkCreate(cambios, { transaction: t });
     }
 
     // 5. Si todo fue exitoso, confirmar la transacción

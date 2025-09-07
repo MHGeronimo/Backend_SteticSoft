@@ -86,6 +86,18 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'idUsuario',
       as: 'abastecimientos'
     });
+
+    // Un usuario puede modificar roles, quedando registrado en el historial.
+    Usuario.hasMany(models.HistorialCambiosRol, {
+      foreignKey: "idUsuarioModifico",
+      as: "modificacionesDeRol",
+    });
+
+    // Un usuario puede asignar permisos, quedando registrado en la tabla de unión.
+    Usuario.hasMany(models.PermisosXRol, {
+      foreignKey: "asignadoPor",
+      as: "asignacionesDePermisos",
+    });
   };
 
   return Usuario;
