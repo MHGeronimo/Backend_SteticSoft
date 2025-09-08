@@ -11,7 +11,7 @@ const crearVentaValidators = [
     .isISO8601()
     .withMessage("La fecha debe ser válida (YYYY-MM-DD).")
     .toDate(),
-  body("clienteId")
+  body("idCliente")
     .notEmpty()
     .withMessage("El ID del cliente es obligatorio.")
     .isInt({ gt: 0 })
@@ -40,7 +40,7 @@ const crearVentaValidators = [
         }
       }
     }),
-  body("estadoVentaId")
+  body("idEstado")
     .notEmpty()
     .withMessage("El ID del estado de la venta es obligatorio.")
     .isInt({ gt: 0 })
@@ -67,13 +67,13 @@ const crearVentaValidators = [
         }
         for (const p of productos) {
           if (
-            !p.productoId ||
-            typeof p.productoId !== "number" ||
-            p.productoId <= 0 ||
-            !Number.isInteger(p.productoId)
+            !p.idProducto ||
+            typeof p.idProducto !== "number" ||
+            p.idProducto <= 0 ||
+            !Number.isInteger(p.idProducto)
           ) {
             throw new Error(
-              'Cada producto vendido debe tener un "productoId" (entero positivo) válido.'
+              'Cada producto vendido debe tener un "idProducto" (entero positivo) válido.'
             );
           }
           if (
@@ -82,7 +82,7 @@ const crearVentaValidators = [
             !Number.isInteger(p.cantidad)
           ) {
             throw new Error(
-              `La cantidad para el producto ID ${p.productoId} debe ser un entero positivo.`
+              `La cantidad para el producto ID ${p.idProducto} debe ser un entero positivo.`
             );
           }
         }
@@ -105,22 +105,22 @@ const crearVentaValidators = [
         }
         for (const s of servicios) {
           if (
-            !s.servicioId ||
-            typeof s.servicioId !== "number" ||
-            s.servicioId <= 0 ||
-            !Number.isInteger(s.servicioId)
+            !s.idServicio ||
+            typeof s.idServicio !== "number" ||
+            s.idServicio <= 0 ||
+            !Number.isInteger(s.idServicio)
           ) {
             throw new Error(
-              'Cada servicio vendido debe tener un "servicioId" (entero positivo) válido.'
+              'Cada servicio vendido debe tener un "idServicio" (entero positivo) válido.'
             );
           }
           if (
-            s.citaId !== undefined &&
-            s.citaId !== null &&
-            (!Number.isInteger(s.citaId) || s.citaId <= 0)
+            s.idCita !== undefined &&
+            s.idCita !== null &&
+            (!Number.isInteger(s.idCita) || s.idCita <= 0)
           ) {
             throw new Error(
-              `El citaId para el servicio ID ${s.servicioId}, si se proporciona, debe ser un entero positivo.`
+              `El idCita para el servicio ID ${s.idServicio}, si se proporciona, debe ser un entero positivo.`
             );
           }
         }
