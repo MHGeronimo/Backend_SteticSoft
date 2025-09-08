@@ -1,5 +1,6 @@
-// src/controllers/venta.controller.js 
+// src/controllers/venta.controller.js
 const ventaService = require("../services/venta.service.js");
+const { BadRequestError } = require("../errors");
 
 /**
  * Crea una nueva venta.
@@ -23,27 +24,22 @@ const crearVenta = async (req, res, next) => {
 const listarVentas = async (req, res, next) => {
   try {
     const opcionesDeFiltro = {};
-    if (req.query.estado === "true") {
-      opcionesDeFiltro.estado = true;
-    } else if (req.query.estado === "false") {
-      opcionesDeFiltro.estado = false;
+    if (req.query.idEstado) {
+      const idEstado = Number(req.query.idEstado);
+      if (!isNaN(idEstado) && idEstado > 0) {
+        opcionesDeFiltro.idEstado = idEstado;
+      }
     }
     if (req.query.clienteId) {
       const idCliente = Number(req.query.clienteId);
       if (!isNaN(idCliente) && idCliente > 0) {
-        opcionesDeFiltro.clienteId = idCliente;
+        opcionesDeFiltro.idCliente = idCliente;
       }
     }
     if (req.query.dashboardId) {
       const idDashboard = Number(req.query.dashboardId);
       if (!isNaN(idDashboard) && idDashboard > 0) {
-        opcionesDeFiltro.dashboardId = idDashboard;
-      }
-    }
-    if (req.query.estadoVentaId) {
-      const idEstadoVenta = Number(req.query.estadoVentaId);
-      if (!isNaN(idEstadoVenta) && idEstadoVenta > 0) {
-        opcionesDeFiltro.estadoVentaId = idEstadoVenta;
+        opcionesDeFiltro.idDashboard = idDashboard;
       }
     }
     const ventas = await ventaService.obtenerTodasLasVentas(opcionesDeFiltro);
@@ -73,14 +69,15 @@ const obtenerVentaPorId = async (req, res, next) => {
 };
 
 /**
- * Actualiza el estado del PROCESO de una venta y/o su estado booleano (activo/inactivo).
+ * Actualiza el estado del PROCESO de una venta.
  */
 const actualizarEstadoVenta = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
+    const { idEstado } = req.body;
     const ventaActualizada = await ventaService.actualizarEstadoProcesoVenta(
       Number(idVenta),
-      req.body // Puede contener estadoVentaId y/o estado (booleano)
+      { idEstado }
     );
     res.status(200).json({
       success: true,
@@ -93,41 +90,15 @@ const actualizarEstadoVenta = async (req, res, next) => {
 };
 
 /**
- * Cambia el estado booleano general (activo/inactivo) de una venta.
- * Esta función llamará a la lógica de servicio que también maneja el inventario.
- */
-const cambiarEstadoGeneralVenta = async (req, res, next) => {
-  try {
-    const { idVenta } = req.params;
-    const { estado } = req.body; // Se espera un booleano para el estado general
-
-    // Se usa actualizarEstadoProcesoVenta, ya que maneja ambos tipos de estado y el inventario.
-    // Aquí solo nos interesa cambiar el estado booleano general.
-    const ventaActualizada = await ventaService.actualizarEstadoProcesoVenta(
-      Number(idVenta),
-      { estado } // Solo pasamos el campo 'estado' booleano
-    );
-    res.status(200).json({
-      success: true,
-      message: `Estado general de la venta ID ${idVenta} cambiado a ${estado} exitosamente. Inventario ajustado si aplica.`,
-      data: ventaActualizada,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Anula una venta (estado booleano = false y ajusta inventario).
+ * Anula una venta.
  */
 const anularVenta = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
-    const ventaAnulada = await ventaService.anularVenta(Number(idVenta)); // Llama a la función de servicio específica
+    const ventaAnulada = await ventaService.anularVenta(Number(idVenta));
     res.status(200).json({
       success: true,
-      message:
-        "Venta anulada exitosamente. El inventario ha sido ajustado si aplica.",
+      message: "Venta anulada exitosamente. El inventario ha sido ajustado si aplica.",
       data: ventaAnulada,
     });
   } catch (error) {
@@ -136,16 +107,15 @@ const anularVenta = async (req, res, next) => {
 };
 
 /**
- * Habilita una venta (estado booleano = true y ajusta inventario).
+ * Habilita una venta.
  */
 const habilitarVenta = async (req, res, next) => {
   try {
     const { idVenta } = req.params;
-    const ventaHabilitada = await ventaService.habilitarVenta(Number(idVenta)); // Llama a la función de servicio específica
+    const ventaHabilitada = await ventaService.habilitarVenta(Number(idVenta));
     res.status(200).json({
       success: true,
-      message:
-        "Venta habilitada exitosamente. El inventario ha sido ajustado si aplica.",
+      message: "Venta habilitada exitosamente. El inventario ha sido ajustado si aplica.",
       data: ventaHabilitada,
     });
   } catch (error) {
@@ -166,13 +136,42 @@ const eliminarVentaFisica = async (req, res, next) => {
   }
 };
 
+/**
+ * Maneja el cambio del estado general (booleano) de una venta.
+ * @param {import("express").Request} req - La solicitud de Express.
+ * @param {import("express").Response} res - La respuesta de Express.
+ * @param {import("express").NextFunction} next - La función next.
+ */
+const cambiarEstadoGeneralVenta = async (req, res, next) => {
+  try {
+    const { idVenta } = req.params;
+    const { estado } = req.body;
+    if (estado === undefined) {
+      throw new BadRequestError("El campo 'estado' es requerido.");
+    }
+
+    const nuevoIdEstado = estado ? 1 : 2; // Asume 1=Activa/EnProceso, 2=Anulada
+    const ventaActualizada = await ventaService.actualizarEstadoProcesoVenta(
+      Number(idVenta),
+      { idEstado: nuevoIdEstado }
+    );
+    res.status(200).json({
+      success: true,
+      message: "Estado general de la venta actualizado exitosamente.",
+      data: ventaActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearVenta,
   listarVentas,
   obtenerVentaPorId,
-  actualizarEstadoVenta, // Para actualizar estado de proceso y/o general
+  actualizarEstadoVenta,
   anularVenta,
   habilitarVenta,
   eliminarVentaFisica,
-  cambiarEstadoGeneralVenta, // <-- Nueva función exportada para cambiar solo el estado booleano
+  cambiarEstadoGeneralVenta
 };

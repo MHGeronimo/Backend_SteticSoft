@@ -34,7 +34,7 @@ router.get(
   ventaController.obtenerVentaPorId
 );
 
-// Ruta para actualizar estado del proceso y/o estado booleano general
+// Ruta para actualizar estado del proceso
 router.put(
   "/:idVenta/estado-proceso",
   authMiddleware,
@@ -48,8 +48,8 @@ router.patch(
   "/:idVenta/estado",
   authMiddleware,
   checkPermission(PERMISO_MODULO_VENTAS),
-  ventaValidators.cambiarEstadoVentaValidators, // Validador específico para el body {"estado": boolean}
-  ventaController.cambiarEstadoGeneralVenta // Controlador que llama a actualizarEstadoProcesoVenta con solo el estado booleano
+  ventaValidators.cambiarEstadoVentaValidators,
+  ventaController.cambiarEstadoGeneralVenta
 );
 
 router.patch(
