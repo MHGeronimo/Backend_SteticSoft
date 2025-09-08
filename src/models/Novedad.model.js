@@ -11,15 +11,6 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         field: 'id_novedad'
       },
-      nombre: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        field: 'nombre'
-      },
-      descripcion: {
-        type: DataTypes.TEXT,
-        field: 'descripcion'
-      },
       fechaInicio: {
         type: DataTypes.DATEONLY,
         allowNull: false,
