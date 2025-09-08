@@ -283,12 +283,10 @@ const obtenerEmpleadosParaAsignar = async () => {
 
     return usuarios.map((usuario) => {
       const plainUsuario = usuario.get({ plain: true });
+      const info = plainUsuario.empleadoInfo;
       return {
-        ...plainUsuario,
-        nombre: plainUsuario.empleadoInfo?.nombre,
-        apellido: plainUsuario.empleadoInfo?.apellido,
-        telefono: plainUsuario.empleadoInfo?.telefono,
-        empleadoInfo: undefined,
+        idUsuario: plainUsuario.idUsuario,
+        nombreCompleto: `${info?.nombre || ""} ${info?.apellido || ""}`.trim(),
       };
     });
   } catch (error) {
