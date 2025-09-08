@@ -37,59 +37,71 @@ const listarNovedades = async (req, res, next) => {
 };
 
 /**
- * ✅ FUNCIÓN AÑADIDA: Obtiene solo las novedades activas para el módulo de citas.
- */
+ * Obtiene solo las novedades activas para el módulo de citas.
+ */
 const listarNovedadesAgendables = async (req, res, next) => {
+  try {
+    const novedades = await novedadesService.obtenerNovedadesActivas();
+    res.status(200).json({
+      success: true,
+      data: novedades,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Obtiene los días disponibles para una novedad.
+ */
+const listarDiasDisponibles = async (req, res, next) => {
+    try {
+        const { idNovedad } = req.params;
+        const { anio, mes } = req.query;
+        const dias = await novedadesService.obtenerDiasDisponibles(Number(idNovedad), anio, mes);
+        res.status(200).json({ success: true, data: dias });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Obtiene las horas disponibles para una novedad y fecha.
+ */
+const listarHorasDisponibles = async (req, res, next) => {
+    try {
+        const { idNovedad } = req.params;
+        const { fecha } = req.query;
+        const horas = await novedadesService.obtenerHorasDisponibles(Number(idNovedad), fecha);
+        res.status(200).json({ success: true, data: horas });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Obtiene los empleados asociados a una novedad.
+ */
+const listarEmpleadosPorNovedad = async (req, res, next) => {
+    try {
+        const { idNovedad } = req.params;
+        const empleados = await novedadesService.obtenerEmpleadosPorNovedad(Number(idNovedad));
+        res.status(200).json({ success: true, data: empleados });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * ✅ FUNCIÓN AÑADIDA: Expone la lista de usuarios con rol "Empleado" para los formularios.
+ */
+const listarEmpleadosParaAsignar = async (req, res, next) => {
   try {
-    const novedades = await novedadesService.obtenerNovedadesActivas();
-    res.status(200).json({
-      success: true,
-      data: novedades,
-    });
+    const empleados = await novedadesService.obtenerEmpleadosParaAsignar();
+    res.status(200).json({ success: true, data: empleados });
   } catch (error) {
     next(error);
   }
-};
-
-/**
- * ✅ FUNCIÓN AÑADIDA: Obtiene los días disponibles para una novedad.
- */
-const listarDiasDisponibles = async (req, res, next) => {
-    try {
-        const { idNovedad } = req.params;
-        const { anio, mes } = req.query;
-        const dias = await novedadesService.obtenerDiasDisponibles(Number(idNovedad), anio, mes);
-        res.status(200).json({ success: true, data: dias });
-    } catch (error) {
-        next(error);
-    }
-};
-
-/**
- * ✅ FUNCIÓN AÑADIDA: Obtiene las horas disponibles para una novedad y fecha.
- */
-const listarHorasDisponibles = async (req, res, next) => {
-    try {
-        const { idNovedad } = req.params;
-        const { fecha } = req.query;
-        const horas = await novedadesService.obtenerHorasDisponibles(Number(idNovedad), fecha);
-        res.status(200).json({ success: true, data: horas });
-    } catch (error) {
-        next(error);
-    }
-};
-
-/**
- * ✅ FUNCIÓN AÑADIDA: Obtiene los empleados asociados a una novedad.
- */
-const listarEmpleadosPorNovedad = async (req, res, next) => {
-    try {
-        const { idNovedad } = req.params;
-        const empleados = await novedadesService.obtenerEmpleadosPorNovedad(Number(idNovedad));
-        res.status(200).json({ success: true, data: empleados });
-    } catch (error) {
-        next(error);
-    }
 };
 
 /**
@@ -172,9 +184,9 @@ module.exports = {
   cambiarEstadoNovedad,
   eliminarNovedadFisica,
   listarNovedadesAgendables,
-  // ✅ Se exportan las nuevas funciones
-  listarDiasDisponibles,
-  listarHorasDisponibles,
-  listarEmpleadosPorNovedad
+  listarDiasDisponibles,
+  listarHorasDisponibles,
+  listarEmpleadosPorNovedad,
+  listarEmpleadosParaAsignar, // ✅ Se exporta la nueva función
 };
 

@@ -340,6 +340,28 @@ const obtenerEmpleadosPorNovedad = async (idNovedad) => {
   }));
 };
 
+const obtenerEmpleadosParaAsignar = async () => {
+  try {
+    const rolEmpleado = await db.Rol.findOne({ where: { nombre: 'Empleado' } });
+    if (!rolEmpleado) {
+      throw new CustomError("El rol 'Empleado' no está configurado en el sistema.", 500);
+    }
+    
+    return await db.Usuario.findAll({
+      where: {
+        idRol: rolEmpleado.idRol,
+        estado: true
+      },
+      attributes: ['idUsuario', 'nombre', 'apellido', 'correo'],
+      order: [['nombre', 'ASC']]
+    });
+  } catch (error) {
+    console.error("Error al obtener empleados para asignar:", error);
+    if (error instanceof CustomError) throw error;
+    throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearNovedad,
   obtenerTodasLasNovedades,
@@ -350,5 +372,6 @@ module.exports = {
   obtenerNovedadesActivas,
   obtenerDiasDisponibles,
   obtenerHorasDisponibles,
-  obtenerEmpleadosPorNovedad
+  obtenerEmpleadosPorNovedad,
+  obtenerEmpleadosParaAsignar,
 };
