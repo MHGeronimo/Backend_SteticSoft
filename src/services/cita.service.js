@@ -200,6 +200,12 @@ const actualizarCita = async (idCita, datosActualizar) => {
   try {
     const cita = await db.Cita.findByPk(idCita, { transaction });
     if (!cita) throw new NotFoundError("Cita no encontrada para actualizar.");
+
+    // ✅ FIX: Prevenir el intento de actualizar el campo 'estado' que no existe en la BD.
+    // El modelo puede tenerlo definido, pero la migración final no lo incluyó.
+    if (datosActualizar.estado !== undefined) {
+      delete datosActualizar.estado;
+    }
     
     await cita.update(datosActualizar, { transaction });
 
