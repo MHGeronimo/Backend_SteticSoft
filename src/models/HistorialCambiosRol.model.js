@@ -66,6 +66,10 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "idUsuarioModifico",
       as: "usuario",
     });
+    HistorialCambiosRol.belongsTo(models.Usuario, {
+      foreignKey: "id_usuario_modifico",
+      as: "usuarioModificador", // Este es el alias correcto que usaremos
+    });
   };
 
   return HistorialCambiosRol;
