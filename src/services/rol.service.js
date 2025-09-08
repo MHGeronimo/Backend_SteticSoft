@@ -350,6 +350,37 @@ const eliminarRolFisico = async (idRol) => {
   }
 };
 
+/**
+ * Obtiene el historial de cambios de un rol por su ID.
+ * @param {number} idRol - ID del rol.
+ * @returns {Promise<Array<object>>} - Una lista del historial de cambios.
+ */
+const obtenerHistorialPorRolId = async (idRol) => {
+  try {
+    const historial = await db.HistorialCambiosRol.findAll({
+      where: { id_rol: idRol },
+      include: [
+        {
+          model: db.Usuario,
+          as: "usuarioModificador",
+          attributes: ["correo"],
+        },
+      ],
+      order: [["fecha_cambio", "DESC"]],
+    });
+    return historial;
+  } catch (error) {
+    console.error(
+      `Error al obtener el historial del rol con ID ${idRol}:`,
+      error.message
+    );
+    throw new CustomError(
+      `Error al obtener el historial del rol: ${error.message}`,
+      500
+    );
+  }
+};
+
 module.exports = {
   crearRol,
   obtenerTodosLosRoles,
@@ -359,4 +390,5 @@ module.exports = {
   habilitarRol,
   eliminarRolFisico,
   cambiarEstadoRol,
+  obtenerHistorialPorRolId,
 };
