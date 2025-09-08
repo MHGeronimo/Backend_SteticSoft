@@ -1,4 +1,6 @@
+// src/controllers/venta.controller.js
 const ventaService = require("../services/venta.service.js");
+const { BadRequestError } = require("../errors");
 
 /**
  * Crea una nueva venta.
@@ -134,6 +136,35 @@ const eliminarVentaFisica = async (req, res, next) => {
   }
 };
 
+/**
+ * Maneja el cambio del estado general (booleano) de una venta.
+ * @param {import("express").Request} req - La solicitud de Express.
+ * @param {import("express").Response} res - La respuesta de Express.
+ * @param {import("express").NextFunction} next - La función next.
+ */
+const cambiarEstadoGeneralVenta = async (req, res, next) => {
+  try {
+    const { idVenta } = req.params;
+    const { estado } = req.body;
+    if (estado === undefined) {
+      throw new BadRequestError("El campo 'estado' es requerido.");
+    }
+
+    const nuevoIdEstado = estado ? 1 : 2; // Asume 1=Activa/EnProceso, 2=Anulada
+    const ventaActualizada = await ventaService.actualizarEstadoProcesoVenta(
+      Number(idVenta),
+      { idEstado: nuevoIdEstado }
+    );
+    res.status(200).json({
+      success: true,
+      message: "Estado general de la venta actualizado exitosamente.",
+      data: ventaActualizada,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearVenta,
   listarVentas,
@@ -142,4 +173,5 @@ module.exports = {
   anularVenta,
   habilitarVenta,
   eliminarVentaFisica,
+  cambiarEstadoGeneralVenta
 };
