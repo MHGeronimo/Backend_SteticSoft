@@ -276,6 +276,7 @@ const obtenerEmpleadosParaAsignar = async () => {
           model: db.Empleado,
           as: "empleadoInfo",
           attributes: ["nombre", "apellido", "telefono"],
+          required: true
         },
       ],
       order: [[{ model: db.Empleado, as: "empleadoInfo" }, "nombre", "ASC"]],
