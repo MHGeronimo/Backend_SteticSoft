@@ -279,7 +279,8 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
         {
           model: db.Servicio,
           as: "servicios",
-          attributes: ["idServicio", "nombre", "duracionEstimadaMin"],
+          // ✅ CAMBIO: Eliminar la referencia a una columna que no existe
+          attributes: ["idServicio", "nombre"], // Se eliminó 'duracionEstimadaMin'
           through: {
             model: db.VentaXServicio,
             as: "detalleServicioVenta",
@@ -317,6 +318,7 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
   try {
     let venta = await db.Venta.findByPk(idVenta, {
       include: [
+        { model: db.Estado, as: "estadoDetalle" },
         {
           model: db.Producto,
           as: "productos",
