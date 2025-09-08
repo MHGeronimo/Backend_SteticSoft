@@ -46,11 +46,13 @@ const obtenerVentaCompletaPorId = async (idVenta, transaction = null) => {
       {
         model: db.Servicio,
         as: "servicios",
-        attributes: ["idServicio", "nombre", "descripcion", "precio", "duracionEstimadaMin"],
+        // ✅ CORRECCIÓN: La columna `duracionEstimadaMin` no existe en la base de datos para `Servicio`.
+        attributes: ["idServicio", "nombre", "descripcion", "precio"],
         through: {
           model: db.VentaXServicio,
           as: "detalleServicioVenta",
-          attributes: ["valorServicio", "citaId"],
+          // ✅ CORRECCIÓN: La columna `citaId` no existe en la tabla intermedia `VentaXServicio`.
+          attributes: ["valorServicio"],
         },
       },
     ],
@@ -279,12 +281,13 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
         {
           model: db.Servicio,
           as: "servicios",
-          // ✅ CAMBIO: Eliminar la referencia a una columna que no existe
-          attributes: ["idServicio", "nombre"], // Se eliminó 'duracionEstimadaMin'
+          // ✅ CORRECCIÓN: La columna `duracionEstimadaMin` no existe en la base de datos para `Servicio`.
+          attributes: ["idServicio", "nombre"],
           through: {
             model: db.VentaXServicio,
             as: "detalleServicioVenta",
-            attributes: ["valorServicio", "citaId"],
+            // ✅ CORRECCIÓN: La columna `citaId` no existe en la tabla intermedia `VentaXServicio`.
+            attributes: ["valorServicio"],
           },
         },
       ],
