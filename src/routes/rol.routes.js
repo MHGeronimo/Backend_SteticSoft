@@ -35,6 +35,14 @@ router.get(
   rolController.obtenerRolPorId
 );
 
+router.get(
+  '/:idRol/historial',
+  authMiddleware,
+  checkPermission('MODULO_ROLES_GESTIONAR'), // O el permiso que consideres adecuado
+  rolValidators.idRolValidator, // Reutilizamos el validador de ID
+  rolController.obtenerHistorialDeRol // Nueva función que crearás en el controlador
+);
+
 router.put(
   "/:idRol",
   authMiddleware,

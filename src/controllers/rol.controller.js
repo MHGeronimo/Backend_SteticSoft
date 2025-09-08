@@ -236,6 +236,22 @@ const quitarPermisosDeRol = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtiene el historial de cambios de un rol.
+ */
+const obtenerHistorialDeRol = async (req, res, next) => {
+  try {
+    const { idRol } = req.params;
+    const historial = await rolService.obtenerHistorialPorRolId(Number(idRol));
+    res.status(200).json({
+      success: true,
+      data: historial,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearRol,
   listarRoles,
@@ -247,4 +263,5 @@ module.exports = {
   asignarPermisosARol,
   quitarPermisosDeRol,
   cambiarEstadoRol,
+  obtenerHistorialDeRol,
 };
