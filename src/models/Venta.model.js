@@ -1,4 +1,3 @@
-// src/models/Venta.model.js
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
@@ -11,12 +10,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         field: 'id_venta' 
       },
-      estado: { 
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false,
-        field: 'estado'
-      },
+      // ✅ Se eliminó la columna 'estado' para resolver el error 'column Venta.estado does not exist'.
       fecha: {
         type: DataTypes.DATEONLY,
         defaultValue: DataTypes.NOW,
@@ -91,16 +85,16 @@ module.exports = (sequelize, DataTypes) => {
     // Una Venta puede tener muchos Productos.
     Venta.belongsToMany(models.Producto, {
       through: models.ProductoXVenta,
-      foreignKey: 'id_venta',      
-      otherKey: 'id_producto',     
+      foreignKey: 'id_venta',     
+      otherKey: 'id_producto',    
       as: 'productos'
     });
     
     // Una Venta puede tener muchos Servicios.
     Venta.belongsToMany(models.Servicio, {
       through: models.VentaXServicio,
-      foreignKey: 'id_venta',      
-      otherKey: 'id_servicio',     
+      foreignKey: 'id_venta',     
+      otherKey: 'id_servicio',    
       as: 'servicios'
     });
   };
