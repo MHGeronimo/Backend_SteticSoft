@@ -53,7 +53,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     {
-      tableName: 'novedad',
+      tableName: 'novedades',
       timestamps: false
     }
   );
