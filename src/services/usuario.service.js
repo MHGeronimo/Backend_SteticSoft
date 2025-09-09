@@ -308,26 +308,34 @@ const verificarCorreoExistente = async (correo) => {
  */
 const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
   try {
+    const { rol, ...filtrosUsuario } = opcionesDeFiltro;
+
+    const includeOptions = [
+      {
+        model: db.Rol,
+        as: "rol",
+        attributes: ["idRol", "nombre", "tipoPerfil"],
+      },
+      {
+        model: db.Cliente,
+        as: "clienteInfo",
+        required: false,
+      },
+      {
+        model: db.Empleado,
+        as: "empleadoInfo",
+        required: false,
+      },
+    ];
+
+    if (rol) {
+      includeOptions[0].where = { nombre: rol };
+    }
+
     const usuarios = await db.Usuario.findAll({
-      where: opcionesDeFiltro,
+      where: filtrosUsuario,
       attributes: ["idUsuario", "correo", "estado", "idRol"],
-      include: [
-        {
-          model: db.Rol,
-          as: "rol",
-          attributes: ["idRol", "nombre", "tipoPerfil"],
-        },
-        {
-          model: db.Cliente,
-          as: "clienteInfo",
-          required: false,
-        },
-        {
-          model: db.Empleado,
-          as: "empleadoInfo",
-          required: false,
-        },
-      ],
+      include: includeOptions,
       order: [["idUsuario", "ASC"]],
     });
     return usuarios;

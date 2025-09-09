@@ -35,6 +35,10 @@ const listarUsuarios = async (req, res, next) => {
         opcionesDeFiltro.idRol = idRol;
       }
     }
+    // Añadido para poder filtrar por el nombre del rol.
+    if (req.query.rol) {
+      opcionesDeFiltro.rol = req.query.rol;
+    }
     const usuarios =
       await usuarioService.obtenerTodosLosUsuarios(opcionesDeFiltro);
     res.status(200).json({
@@ -162,8 +166,8 @@ const verificarCorreo = async (req, res, next) => {
   try {
     const { correo } = req.query;
     // El servicio ahora devuelve true si está en uso, false si no.
-    const enUso = await usuarioService.verificarCorreoExistente(correo); 
-    
+    const enUso = await usuarioService.verificarCorreoExistente(correo);
+
     // La respuesta al frontend es la misma que antes, solo cambia cómo se obtiene 'enUso'
     return res.status(200).json({
       success: true,
@@ -173,7 +177,11 @@ const verificarCorreo = async (req, res, next) => {
         : "El correo electrónico está disponible.",
     });
   } catch (error) {
-    console.error(`[usuario.controller.js] Error en verificarCorreo para el correo "${req.query.correo}":`, error.message, error.stack);
+    console.error(
+      `[usuario.controller.js] Error en verificarCorreo para el correo "${req.query.correo}":`,
+      error.message,
+      error.stack
+    );
     next(error);
   }
 };
@@ -183,9 +191,9 @@ module.exports = {
   listarUsuarios,
   obtenerUsuarioPorId,
   actualizarUsuario,
-  anularUsuario, 
-  habilitarUsuario, 
-  eliminarUsuarioFisico, 
-  cambiarEstadoUsuario, 
+  anularUsuario,
+  habilitarUsuario,
+  eliminarUsuarioFisico,
+  cambiarEstadoUsuario,
   verificarCorreo,
 };

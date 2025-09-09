@@ -364,6 +364,15 @@ const obtenerHistorialPorRolId = async (idRol) => {
           model: db.Usuario,
           as: "usuarioModificador",
           attributes: ["correo"],
+          // --- INICIO DE LA MODIFICACIÓN ---
+          include: [
+            {
+              model: db.Rol,
+              as: "rol", // Este alias viene de la asociación en Usuario.model.js
+              attributes: ["nombre"], // Solo necesitamos el nombre del rol
+            },
+          ],
+          // --- FIN DE LA MODIFICACIÓN ---
         },
       ],
       order: [["fecha_cambio", "DESC"]],

@@ -29,9 +29,32 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
       await nuevaNovedad.setEmpleados(empleadosIds, { transaction: t });
     }
     await t.commit();
-    return await db.Novedad.findByPk(nuevaNovedad.idNovedad, {
-      include: [{ model: db.Usuario, as: 'empleados', attributes: ['idUsuario', 'nombre', 'apellido', 'correo'] }],
+    const novedadCreada = await db.Novedad.findByPk(nuevaNovedad.idNovedad, {
+      include: [
+        {
+          model: db.Usuario,
+          as: "empleados",
+          attributes: ["idUsuario", "correo"],
+          through: { attributes: [] },
+          include: [
+            {
+              model: db.Empleado,
+              as: "empleadoInfo",
+              attributes: ["nombre", "apellido"],
+            },
+          ],
+        },
+      ],
     });
+
+    const plainNovedad = novedadCreada.get({ plain: true });
+    plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
+      ...empleado,
+      nombre: empleado.empleadoInfo?.nombre,
+      apellido: empleado.empleadoInfo?.apellido,
+      empleadoInfo: undefined,
+    }));
+    return plainNovedad;
   } catch (error) {
     await t.rollback();
     console.error("Error al crear la novedad en el servicio:", error);
@@ -45,14 +68,21 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
 
   const includeOptions = {
     model: db.Usuario,
-    as: 'empleados',
-    attributes: ['idUsuario', 'nombre', 'apellido', 'correo'],
+    as: "empleados",
+    attributes: ["idUsuario", "correo"],
     through: { attributes: [] },
-    required: false
+    required: false,
+    include: [
+      {
+        model: db.Empleado,
+        as: "empleadoInfo",
+        attributes: ["nombre", "apellido"],
+      },
+    ],
   };
 
-  if (estado === 'true' || estado === 'false') {
-    whereClause.estado = estado === 'true';
+  if (estado === "true" || estado === "false") {
+    whereClause.estado = estado === "true";
   }
 
   if (empleadoId) {
@@ -62,19 +92,29 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
 
   if (busqueda) {
     const searchTerm = `%${busqueda}%`;
-    // Se eliminó la búsqueda por nombre de novedad
     whereClause[Op.or] = [
-      { '$empleados.nombre$': { [Op.iLike]: searchTerm } },
-      { '$empleados.apellido$': { [Op.iLike]: searchTerm } },
-      { '$empleados.correo$': { [Op.iLike]: searchTerm } },
+      { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
+      { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+      { "$empleados.correo$": { [Op.iLike]: searchTerm } },
     ];
   }
 
   try {
-    return await db.Novedad.findAll({
+    const novedades = await db.Novedad.findAll({
       where: whereClause,
       include: [includeOptions],
       order: [["fechaInicio", "DESC"]],
+    });
+
+    return novedades.map((novedad) => {
+      const plainNovedad = novedad.get({ plain: true });
+      plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
+        ...empleado,
+        nombre: empleado.empleadoInfo?.nombre,
+        apellido: empleado.empleadoInfo?.apellido,
+        empleadoInfo: undefined,
+      }));
+      return plainNovedad;
     });
   } catch (error) {
     console.error("Error al obtener todas las novedades:", error);
@@ -96,12 +136,34 @@ const obtenerNovedadesActivas = async () => {
 
 const obtenerNovedadPorId = async (idNovedad) => {
   const novedad = await db.Novedad.findByPk(idNovedad, {
-    include: [{ model: db.Usuario, as: 'empleados', attributes: ['idUsuario', 'nombre', 'apellido'] }],
+    include: [
+      {
+        model: db.Usuario,
+        as: "empleados",
+        attributes: ["idUsuario", "correo"],
+        through: { attributes: [] },
+        include: [
+          {
+            model: db.Empleado,
+            as: "empleadoInfo",
+            attributes: ["nombre", "apellido"],
+          },
+        ],
+      },
+    ],
   });
   if (!novedad) {
     throw new NotFoundError("Novedad no encontrada.");
   }
-  return novedad;
+
+  const plainNovedad = novedad.get({ plain: true });
+  plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
+    ...empleado,
+    nombre: empleado.empleadoInfo?.nombre,
+    apellido: empleado.empleadoInfo?.apellido,
+    empleadoInfo: undefined,
+  }));
+  return plainNovedad;
 };
 
 const actualizarNovedad = async (idNovedad, datosActualizar, empleadosIds) => {
@@ -157,52 +219,84 @@ const obtenerHorasDisponibles = async (idNovedad, fecha) => {
     // ... (Tu lógica existente es correcta)
 };
 
-/**
- * ✅ CORREGIDO: Obtiene los empleados de una novedad con todos los datos necesarios.
- */
 const obtenerEmpleadosPorNovedad = async (idNovedad) => {
-  const novedad = await db.Novedad.findByPk(idNovedad, {
-    include: [{
-      model: db.Usuario,
-      as: 'empleados',
-      // Se piden todos los datos desde el modelo Usuario
-      attributes: ['idUsuario', 'nombre', 'apellido', 'correo', 'telefono'],
-      where: { estado: true },
-      through: { attributes: [] }
-    }]
-  });
+  const novedad = await db.Novedad.findByPk(idNovedad, {
+    include: [
+      {
+        model: db.Usuario,
+        as: "empleados",
+        attributes: ["idUsuario", "correo"],
+        where: { estado: true },
+        through: { attributes: [] },
+        include: [
+          {
+            model: db.Empleado,
+            as: "empleadoInfo",
+            attributes: ["nombre", "apellido", "telefono"],
+          },
+        ],
+      },
+    ],
+  });
 
-  if (!novedad) {
-    throw new NotFoundError('Novedad no encontrada');
-  }
+  if (!novedad) {
+    throw new NotFoundError("Novedad no encontrada");
+  }
 
-  // El mapeo ya no es necesario si el modelo Usuario tiene todos los campos
-  return novedad.empleados;
+  return novedad.empleados.map((empleado) => {
+    const plainEmpleado = empleado.get({ plain: true });
+    return {
+      ...plainEmpleado,
+      nombre: plainEmpleado.empleadoInfo?.nombre,
+      apellido: plainEmpleado.empleadoInfo?.apellido,
+      telefono: plainEmpleado.empleadoInfo?.telefono,
+      empleadoInfo: undefined,
+    };
+  });
 };
 
-/**
- * ✅ CORREGIDO: Obtiene todos los usuarios con rol de empleado y sus datos completos.
- */
 const obtenerEmpleadosParaAsignar = async () => {
   try {
-    const rolEmpleado = await db.Rol.findOne({ where: { nombre: 'Empleado' } });
+    const rolEmpleado = await db.Rol.findOne({ where: { nombre: "Empleado" } });
     if (!rolEmpleado) {
-      throw new CustomError("El rol 'Empleado' no está configurado en el sistema.", 500);
+      throw new CustomError(
+        "El rol 'Empleado' no está configurado en el sistema.",
+        500
+      );
     }
-    
-    return await db.Usuario.findAll({
+
+    const usuarios = await db.Usuario.findAll({
       where: {
         idRol: rolEmpleado.idRol,
-        estado: true
+        estado: true,
       },
-      // Se piden todos los datos necesarios para el front-end
-      attributes: ['idUsuario', 'nombre', 'apellido', 'correo', 'telefono'],
-      order: [['nombre', 'ASC']]
+      attributes: ["idUsuario", "correo"],
+      include: [
+        {
+          model: db.Empleado,
+          as: "empleadoInfo",
+          attributes: ["nombre", "apellido", "telefono"],
+          required: true
+        },
+      ],
+      order: [[{ model: db.Empleado, as: "empleadoInfo" }, "nombre", "ASC"]],
+    });
+
+    return usuarios.map((usuario) => {
+      const plainUsuario = usuario.get({ plain: true });
+      const info = plainUsuario.empleadoInfo;
+      return {
+        idUsuario: plainUsuario.idUsuario,
+        nombreCompleto: `${info?.nombre || ""} ${info?.apellido || ""}`.trim(),
+      };
     });
   } catch (error) {
     console.error("Error al obtener empleados para asignar:", error);
     if (error instanceof CustomError) throw error;
-    throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
+    throw new CustomError(
+      `Error al obtener la lista de empleados: ${error.message}`,
+      500
+    );
   }
 };
 
