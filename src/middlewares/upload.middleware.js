@@ -1,4 +1,4 @@
-// src/shared/src_api/middlewares/upload.middleware.js
+// src/middlewares/upload.middleware.js (o shared/src_api/middlewares/upload.middleware.js)
 
 const multer = require("multer");
 const path = require("path");
@@ -10,11 +10,10 @@ const fs = require("fs");
  * @returns {multer} - Una instancia de Multer lista para ser usada como middleware.
  */
 const createUploader = (entityName) => {
-  // Construye la ruta de destino de forma segura.
-  // Ejemplo: /ruta/a/tu/proyecto/src_api/public/uploads/productos
+  // 🚨 Forzar a que siempre use la carpeta del backend real: src/public/uploads
   const uploadPath = path.join(
     __dirname,
-    "..",
+    "..",   // desde src/middlewares → vuelve a src/
     "public",
     "uploads",
     entityName
@@ -60,7 +59,6 @@ const createUploader = (entityName) => {
 };
 
 // Se exportan middlewares específicos para cada caso de uso.
-// .single('imagen') indica que se esperará un solo archivo en el campo 'imagen' del FormData.
 module.exports = {
   uploadServicioImage: createUploader("servicios").single("imagen"),
   uploadProductoImage: createUploader("productos").single("imagen"),
