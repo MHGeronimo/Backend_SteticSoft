@@ -64,43 +64,57 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
 
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   const { estado, empleadoId, busqueda } = opcionesDeFiltro;
- let whereClause = {};
+  let whereClause = {};
+
+  // Este objeto define cómo se deben unir las tablas
   const includeOptions = {
     model: db.Usuario,
     as: "empleados",
     attributes: ["idUsuario", "correo"],
     through: { attributes: [] },
+    // Inicia como 'false'. Esto es un LEFT JOIN, trae todas las novedades
+    // incluso si no tienen empleados asignados.
     required: false,
     include: [
       {
         model: db.Empleado,
         as: "empleadoInfo",
         attributes: ["nombre", "apellido"],
+        // 'required: true' aquí asegura que solo traiga Usuarios que
+        // efectivamente tengan un registro en la tabla Empleado.
+        required: true,
       },
     ],
   };
 
-
-  if (estado !== undefined && estado !== null && estado !== '') {
+  // 1. Filtro por estado (funciona como estaba)
+  if (estado !== undefined && estado !== null && estado !== "") {
     whereClause.estado = String(estado) === "true";
   }
 
-  if (empleadoId) {
-    includeOptions.where = { idUsuario: empleadoId };
-    includeOptions.required = true;
-  }
-
-  if (busqueda) {
+  // 2. Búsqueda de texto libre (LÓGICA FINAL Y CORRECTA)
+  if (busqueda && busqueda.trim() !== "") {
     const searchTerm = `%${String(busqueda)}%`;
+
+    // ¡LA CLAVE ESTÁ AQUÍ!
+    // Al buscar, forzamos a que la relación sea obligatoria (INNER JOIN).
+    // Esto significa: "Solo búscame en las novedades que SÍ tengan empleados".
+    // Esto resuelve el error lógico que causaba que la búsqueda no devolviera nada.
+    includeOptions.required = true;
+
     const busquedaConditions = {
       [Op.or]: [
-        db.where(db.cast(db.col('hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
-        db.where(db.cast(db.col('hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
-        db.where(db.cast(db.col('dias'), 'text'), { [Op.iLike]: searchTerm }),
+        // Búsqueda en la tabla Novedad
+        db.where(db.cast(db.col("Novedad.dias"), "text"), { [Op.iLike]: searchTerm }),
+        db.where(db.cast(db.col("Novedad.hora_inicio"), "text"), { [Op.iLike]: searchTerm }),
+        db.where(db.cast(db.col("Novedad.hora_fin"), "text"), { [Op.iLike]: searchTerm }),
+        
+        // Búsqueda en la tabla relacionada Empleado
         { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
         { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
       ],
     };
+
     whereClause = { ...whereClause, ...busquedaConditions };
   }
 
@@ -109,23 +123,25 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
       where: whereClause,
       include: [includeOptions],
       order: [["fechaInicio", "DESC"]],
+      // Esta opción ayuda a Sequelize a construir la consulta compleja correctamente
+      subQuery: false,
     });
 
+    // El resto de la función para procesar los datos ya era correcto.
     return novedades.map((novedad) => {
       const plainNovedad = novedad.get({ plain: true });
-      plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
-        ...empleado,
-        nombre: empleado.empleadoInfo?.nombre,
-        apellido: empleado.empleadoInfo?.apellido,
-        empleadoInfo: undefined,
-      }));
+      if (plainNovedad.empleados) {
+        plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
+          ...empleado,
+          nombre: empleado.empleadoInfo?.nombre,
+          apellido: empleado.empleadoInfo?.apellido,
+          empleadoInfo: undefined,
+        }));
+      }
       return plainNovedad;
     });
   } catch (error) {
     console.error("Error al obtener todas las novedades:", error);
-    if (error.name === 'SequelizeDatabaseError') {
-      throw new BadRequestError(`Error en la consulta de búsqueda: ${error.message}`);
-    }
     throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
 };
