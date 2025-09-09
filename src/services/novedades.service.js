@@ -93,9 +93,9 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     const searchTerm = `%${String(busqueda)}%`;
     const busquedaConditions = {
       [Op.or]: [
-        db.where(db.cast(db.col('hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
-        db.where(db.cast(db.col('hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
-        db.where(db.cast(db.col('dias'), 'text'), { [Op.iLike]: searchTerm }),
+        db.sequelize.where(db.sequelize.cast(db.sequelize.col('hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
+        db.sequelize.where(db.sequelize.cast(db.sequelize.col('hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
+        db.sequelize.where(db.sequelize.cast(db.sequelize.col('dias'), 'text'), { [Op.iLike]: searchTerm }),
         { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
         { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
       ],
@@ -122,11 +122,11 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
       return plainNovedad;
     });
   } catch (error) {
-    console.error("Error detallado al obtener todas las novedades:", error);
-    throw new CustomError(
-      `Error en el servidor al buscar novedades. Tipo: ${error.name}. Mensaje: ${error.message}`,
-      500
-    );
+    console.error("Error al obtener todas las novedades:", error);
+    if (error.name === 'SequelizeDatabaseError') {
+      throw new BadRequestError(`Error en la consulta de búsqueda: ${error.message}`);
+    }
+    throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
 };
 
