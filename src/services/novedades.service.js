@@ -64,8 +64,7 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
 
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   const { estado, empleadoId, busqueda } = opcionesDeFiltro;
-  const whereClause = {};
-
+ let whereClause = {};
   const includeOptions = {
     model: db.Usuario,
     as: "empleados",
@@ -81,8 +80,8 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     ],
   };
 
-  if (estado === "true" || estado === "false") {
-    whereClause.estado = estado === "true";
+  if (estado !== undefined && estado !== null && estado !== '') {
+    whereClause.estado = String(estado) === "true";
   }
 
   if (empleadoId) {
@@ -92,11 +91,16 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
 
   if (busqueda) {
     const searchTerm = `%${busqueda}%`;
-    whereClause[Op.or] = [
-      { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
-      { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
-      { "$empleados.correo$": { [Op.iLike]: searchTerm } },
-    ];
+    const busquedaConditions = {
+      [Op.or]: [
+        db.where(db.cast(db.col('Novedad.hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
+        db.where(db.cast(db.col('Novedad.hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
+        db.where(db.cast(db.col('Novedad.dias'), 'text'), { [Op.iLike]: searchTerm }),
+        { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
+        { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+      ],
+    };
+    whereClause = { ...whereClause, ...busquedaConditions };
   }
 
   try {
