@@ -104,21 +104,6 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     whereClause = { ...whereClause, ...busquedaConditions };
   }
 
-  if (busqueda) {
-    const searchTerm = `%${busqueda}%`;
-    const busquedaConditions = {
-      [Op.or]: [
-        db.where(db.cast(db.col('Novedad.hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
-        db.where(db.cast(db.col('Novedad.hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
-        db.where(db.cast(db.col('Novedad.dias'), 'text'), { [Op.iLike]: searchTerm }),
-        { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
-        { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
-        { "$empleados.empleadoInfo.correo$": { [Op.iLike]: searchTerm } },
-      ],
-    };
-    whereClause = { ...whereClause, ...busquedaConditions };
-  }
-
   try {
     const novedades = await db.Novedad.findAll({
       where: whereClause,
