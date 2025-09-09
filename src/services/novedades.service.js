@@ -64,8 +64,7 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
 
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   const { estado, empleadoId, busqueda } = opcionesDeFiltro;
-  const whereClause = {};
-
+  let whereClause = {};
   const includeOptions = {
     model: db.Usuario,
     as: "empleados",
@@ -81,8 +80,8 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     ],
   };
 
-  if (estado === "true" || estado === "false") {
-    whereClause.estado = estado === "true";
+  if (estado !== undefined && estado !== null && estado !== '') {
+    whereClause.estado = String(estado) === "true";
   }
 
   if (empleadoId) {
@@ -91,12 +90,17 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   }
 
   if (busqueda) {
-    const searchTerm = `%${busqueda}%`;
-    whereClause[Op.or] = [
-      { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
-      { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
-      { "$empleados.correo$": { [Op.iLike]: searchTerm } },
-    ];
+    const searchTerm = `%${String(busqueda)}%`;
+    const busquedaConditions = {
+      [Op.or]: [
+        db.sequelize.where(db.sequelize.cast(db.sequelize.col('hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
+        db.sequelize.where(db.sequelize.cast(db.sequelize.col('hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
+        db.sequelize.where(db.sequelize.cast(db.sequelize.col('dias'), 'text'), { [Op.iLike]: searchTerm }),
+        { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
+        { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+      ],
+    };
+    whereClause = { ...whereClause, ...busquedaConditions };
   }
 
   try {
@@ -118,6 +122,9 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     });
   } catch (error) {
     console.error("Error al obtener todas las novedades:", error);
+    if (error.name === 'SequelizeDatabaseError') {
+      throw new BadRequestError(`Error en la consulta de búsqueda: ${error.message}`);
+    }
     throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
 };
