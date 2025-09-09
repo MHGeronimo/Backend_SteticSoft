@@ -3,8 +3,11 @@ const path = require("path");
 const fs = require("fs");
 
 const createUploader = (entityName) => {
-  // 🚨 CORRECCIÓN: Usar la carpeta 'public' en la raíz del proyecto
-  const uploadPath = path.join(process.cwd(), "public", "uploads", entityName);
+  // 🚨 CORRECCIÓN: Apuntar a src/public/uploads/ (con src)
+  const uploadPath = path.join(process.cwd(), "src", "public", "uploads", entityName);
+
+  console.log(`🔧 Configurando uploader para: ${entityName}`);
+  console.log(`📁 Ruta de destino: ${uploadPath}`);
 
   // Crear la carpeta si no existe
   if (!fs.existsSync(uploadPath)) {
@@ -16,7 +19,8 @@ const createUploader = (entityName) => {
 
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      console.log(`➡️ Guardando archivo en: ${uploadPath}`);
+      console.log(`➡️ Multer intentando guardar en: ${uploadPath}`);
+      console.log(`📄 Archivo recibido: ${file.originalname}`);
       cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
@@ -29,23 +33,28 @@ const createUploader = (entityName) => {
   });
 
   const fileFilter = (req, file, cb) => {
+    console.log(`🔍 Verificando tipo de archivo: ${file.mimetype}`);
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     if (allowedTypes.test(file.mimetype)) {
+      console.log(`✅ Tipo de archivo permitido: ${file.mimetype}`);
       cb(null, true);
     } else {
+      console.log(`❌ Tipo de archivo NO permitido: ${file.mimetype}`);
       cb(new Error("Tipo de archivo no permitido. Solo se aceptan imágenes."), false);
     }
   };
 
-  return multer({
+  const upload = multer({
     storage,
     fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 },
   });
+
+  return upload.single("imagen");
 };
 
 module.exports = {
-  uploadServicioImage: createUploader("servicios").single("imagen"),
-  uploadProductoImage: createUploader("productos").single("imagen"),
-  uploadPerfilImage: createUploader("perfiles").single("foto_perfil"),
+  uploadServicioImage: createUploader("servicios"),
+  uploadProductoImage: createUploader("productos"), 
+  uploadPerfilImage: createUploader("perfiles"),
 };

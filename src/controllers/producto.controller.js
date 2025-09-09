@@ -15,7 +15,7 @@ const crearProducto = async (req, res, next) => {
 
     // Si se subió un archivo, multer nos deja la info en req.file
     if (req.file) {
-      // Guardamos solo la ruta relativa
+      // 🚨 SOLUCIÓN OPCIÓN 5: Guardar ruta simple que coincida con la ruta de servidor
       datosProducto.imagen = `/uploads/productos/${req.file.filename}`;
     }
 
@@ -73,6 +73,7 @@ const actualizarProducto = async (req, res, next) => {
     }
 
     if (req.file) {
+      // 🚨 SOLUCIÓN OPCIÓN 5: Guardar ruta simple que coincida con la ruta de servidor
       datosActualizar.imagen = `/uploads/productos/${req.file.filename}`;
     }
 
