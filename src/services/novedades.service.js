@@ -113,6 +113,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
         db.where(db.cast(db.col('Novedad.dias'), 'text'), { [Op.iLike]: searchTerm }),
         { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
         { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+        { "$empleados.empleadoInfo.correo$": { [Op.iLike]: searchTerm } },
       ],
     };
     whereClause = { ...whereClause, ...busquedaConditions };
