@@ -3,8 +3,8 @@ const path = require("path");
 const fs = require("fs");
 
 const createUploader = (entityName) => {
-  // 🚨 Forzar siempre la carpeta del backend real
-  const uploadPath = path.join(process.cwd(), "src", "public", "uploads", entityName);
+  // 🚨 CORRECCIÓN: Usar la carpeta 'public' en la raíz del proyecto
+  const uploadPath = path.join(process.cwd(), "public", "uploads", entityName);
 
   // Crear la carpeta si no existe
   if (!fs.existsSync(uploadPath)) {

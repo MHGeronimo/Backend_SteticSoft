@@ -108,6 +108,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
       where: whereClause,
       include: [includeOptions],
       order: [["fechaInicio", "DESC"]],
+      logging: console.log,
     });
 
     return novedades.map((novedad) => {
