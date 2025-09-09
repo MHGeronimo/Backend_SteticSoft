@@ -80,6 +80,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     ],
   };
 
+
   if (estado !== undefined && estado !== null && estado !== '') {
     whereClause.estado = String(estado) === "true";
   }
@@ -87,6 +88,20 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   if (empleadoId) {
     includeOptions.where = { idUsuario: empleadoId };
     includeOptions.required = true;
+  }
+
+  if (busqueda) {
+    const searchTerm = `%${String(busqueda)}%`;
+    const busquedaConditions = {
+      [Op.or]: [
+        db.where(db.cast(db.col('hora_inicio'), 'text'), { [Op.iLike]: searchTerm }),
+        db.where(db.cast(db.col('hora_fin'), 'text'), { [Op.iLike]: searchTerm }),
+        db.where(db.cast(db.col('dias'), 'text'), { [Op.iLike]: searchTerm }),
+        { "$empleados.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
+        { "$empleados.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+      ],
+    };
+    whereClause = { ...whereClause, ...busquedaConditions };
   }
 
   if (busqueda) {
@@ -122,6 +137,9 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     });
   } catch (error) {
     console.error("Error al obtener todas las novedades:", error);
+    if (error.name === 'SequelizeDatabaseError') {
+      throw new BadRequestError(`Error en la consulta de búsqueda: ${error.message}`);
+    }
     throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
 };
