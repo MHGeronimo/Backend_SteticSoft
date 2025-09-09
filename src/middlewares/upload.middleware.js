@@ -1,24 +1,30 @@
-// src/middlewares/upload.middleware.js
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
 const createUploader = (entityName) => {
-  // 🚨 Forzar a que siempre guarde en src/public/uploads/[entityName]
+  // 🚨 Forzar siempre la carpeta del backend real
   const uploadPath = path.join(process.cwd(), "src", "public", "uploads", entityName);
 
+  // Crear la carpeta si no existe
   if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath, { recursive: true });
+    console.log(`📂 Carpeta creada: ${uploadPath}`);
+  } else {
+    console.log(`📂 Carpeta ya existe: ${uploadPath}`);
   }
 
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+      console.log(`➡️ Guardando archivo en: ${uploadPath}`);
       cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const extension = path.extname(file.originalname);
-      cb(null, `${entityName}-${uniqueSuffix}${extension}`);
+      const filename = `${entityName}-${uniqueSuffix}${extension}`;
+      console.log(`📝 Nombre final del archivo: ${filename}`);
+      cb(null, filename);
     },
   });
 
