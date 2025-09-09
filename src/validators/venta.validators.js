@@ -144,40 +144,24 @@ const actualizarEstadoProcesoVentaValidators = [
   param("idVenta")
     .isInt({ gt: 0 })
     .withMessage("El ID de la venta debe ser un entero positivo."),
-  body("estadoVentaId") // Valida el estado del PROCESO de la venta
-    .optional() // Hacer opcional para que se pueda actualizar solo el estado booleano general
+
+  // 👇 CAMBIO IMPORTANTE AQUÍ
+  body("idEstado") // Cambiamos "estadoVentaId" por "idEstado"
+    .notEmpty()
+    .withMessage("El campo 'idEstado' es obligatorio.")
     .isInt({ gt: 0 })
-    .withMessage(
-      "El nuevo ID del estado de la venta debe ser un entero positivo si se proporciona."
-    )
+    .withMessage("El nuevo ID del estado de la venta debe ser un entero positivo.")
     .custom(async (value) => {
-      if (value) {
-        // Solo si se provee
-        const estado = await db.Estado.findByPk(value);
-        if (!estado) {
-          return Promise.reject(
-            "El nuevo estado de venta especificado no existe."
-          );
-        }
+      const estado = await db.Estado.findByPk(value);
+      if (!estado) {
+        return Promise.reject("El nuevo estado de venta especificado no existe.");
       }
     }),
-  body("estado") // Valida el estado BOOLEANO general de la Venta (activo/inactivo)
-    .optional()
-    .isBoolean()
-    .withMessage(
-      "El estado (activo/inactivo) de la venta debe ser un valor booleano si se proporciona."
-    ),
-  // Asegurarse que al menos uno de los dos (estadoVentaId o estado booleano) se envíe
-  body().custom((value, { req }) => {
-    if (req.body.estadoVentaId === undefined && req.body.estado === undefined) {
-      throw new Error(
-        "Debe proporcionar 'estadoVentaId' o 'estado' para actualizar."
-      );
-    }
-    return true;
-  }),
   handleValidationErrors,
 ];
+
+// Nota: He simplificado un poco este validador para que sea más claro y directo
+// para la ruta PUT que se encarga de actualizar el estado del proceso.
 
 const idVentaValidator = [
   param("idVenta")
