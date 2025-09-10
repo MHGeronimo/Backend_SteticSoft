@@ -274,6 +274,7 @@ CREATE TABLE IF NOT EXISTS cita (
     estado VARCHAR(255) NOT NULL DEFAULT 'Activa',
     id_cliente INTEGER NOT NULL REFERENCES cliente (id_cliente),
     id_usuario INTEGER REFERENCES usuario (id_usuario),
+    id_estado INTEGER REFERENCES estado (id_estado),
     id_novedad INTEGER NOT NULL REFERENCES novedades (id_novedad)
 );
 
