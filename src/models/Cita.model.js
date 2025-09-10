@@ -25,14 +25,19 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'precio_total'
       },
-      estado: {
-        type: DataTypes.STRING,
+      // --- INICIO DE MODIFICACIÓN ---
+      // REEMPLAZAMOS el campo 'estado' de tipo STRING
+      // por una clave foránea 'idEstado' que se relaciona con la tabla 'estado'.
+      idEstado: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: 'Activa',
-        validate: {
-          isIn: [['Activa', 'En Proceso', 'Finalizada', 'Cancelada']]
+        field: 'id_estado',
+        references: {
+          model: 'estado', // Nombre de la tabla de estados
+          key: 'id_estado'
         }
       },
+      // --- FIN DE MODIFICACIÓN ---
       idCliente: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -68,6 +73,15 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Cita.associate = (models) => {
+    // --- INICIO DE NUEVA ASOCIACIÓN ---
+    // Definimos la relación: Una Cita pertenece a un Estado.
+    // Usamos el alias 'estadoDetalle' para ser consistentes con el servicio.
+    Cita.belongsTo(models.Estado, {
+      foreignKey: 'idEstado',
+      as: 'estadoDetalle'
+    });
+    // --- FIN DE NUEVA ASOCIACIÓN ---
+    
     Cita.belongsTo(models.Cliente, {
       foreignKey: 'idCliente',
       as: 'cliente'
