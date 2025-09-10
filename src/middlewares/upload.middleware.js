@@ -3,8 +3,8 @@ const path = require("path");
 const fs = require("fs");
 
 const createUploader = (entityName) => {
-  // 🚨 CORRECCIÓN: Apuntar a src/public/uploads/ (con src)
-  const uploadPath = path.join(process.cwd(), "src", "public", "uploads", entityName);
+   // Construir la ruta de forma robusta usando __dirname para evitar problemas en distintos entornos
+  const uploadPath = path.join(__dirname, "..", "public", "uploads", entityName);
 
   console.log(`🔧 Configurando uploader para: ${entityName}`);
   console.log(`📁 Ruta de destino: ${uploadPath}`);

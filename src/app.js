@@ -50,11 +50,12 @@ app.use(sessionMiddleware);
 
 // --- Rutas Estáticas y de Bienvenida ---
 
-// 🚨 SOLUCIÓN OPCIÓN 5: Servir archivos estáticos desde 'src/public/uploads'
-app.use("/uploads", express.static(path.join(__dirname, "src", "public", "uploads")));
+// Servir archivos estáticos desde el directorio 'public/uploads'
+// Esta ruta es la que se usará en la URL para acceder a las imágenes
+app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 
-// También mantener la ruta de API para compatibilidad
-app.use("/api/uploads", express.static(path.join(__dirname, "src", "public", "uploads")));
+// Mantener la ruta de API para compatibilidad, apuntando al mismo directorio
+app.use("/api/uploads", express.static(path.join(__dirname, "public", "uploads")));
 
 // Servir otros archivos estáticos desde 'src/public'
 app.use(express.static(path.join(__dirname, "public")));
