@@ -154,6 +154,13 @@ const obtenerServiciosDisponibles = async (req, res, next) => {
   }
 };
 
+const obtenerEstadosCita = (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: ["Activa", "En Proceso", "Finalizada", "Cancelada"],
+  });
+};
+
 module.exports = {
   crearCita,
   listarCitas,
@@ -166,4 +173,5 @@ module.exports = {
   buscarClientes,
   obtenerEmpleadosPorNovedad,
   obtenerServiciosDisponibles,
+  obtenerEstadosCita,
 };

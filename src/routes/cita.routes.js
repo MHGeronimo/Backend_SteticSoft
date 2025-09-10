@@ -66,6 +66,13 @@ router.delete(
   citaController.eliminarCitaFisica
 );
 
+router.get(
+  "/estados",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaController.obtenerEstadosCita
+);
+
 // Endpoints de Consulta para el Formulario
 router.get(
   "/novedades/:id/dias-disponibles",
