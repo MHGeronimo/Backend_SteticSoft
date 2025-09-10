@@ -21,7 +21,7 @@ const obtenerVentaCompletaPorId = async (idVenta, transaction = null) => {
             {
                 model: db.Cliente,
                 as: "cliente",
-                // ✅ CORRECCIÓN DEFINITIVA CON ALIASING:
+                // ✅ SOLUCIÓN FINAL CON ALIASING:
                 // Le decimos a Sequelize el nombre exacto de la columna en la BD y el nombre que queremos en el resultado.
                 attributes: [
                     "idCliente", 
@@ -82,7 +82,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
                 {
                     model: db.Cliente,
                     as: "cliente",
-                    // ✅ CORRECCIÓN DEFINITIVA CON ALIASING:
+                    // ✅ SOLUCIÓN FINAL CON ALIASING:
                     attributes: [
                         "idCliente", 
                         "nombre", 
@@ -100,8 +100,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
                     as: "estadoDetalle",
                     attributes: ["idEstado", "nombreEstado"],
                 },
-                 // ... (los 'include' de Producto y Servicio se mantienen igual)
-                 {
+                {
                     model: db.Producto,
                     as: "productos",
                     attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
