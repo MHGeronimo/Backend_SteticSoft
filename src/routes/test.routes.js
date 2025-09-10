@@ -14,7 +14,7 @@ router.post("/test-upload", uploadProductoImage, (req, res) => {
   }
 
   // Verificar si el archivo realmente existe en el disco
-  const filePath = path.join(process.cwd(), "public", "uploads", "productos", req.file.filename);
+  const filePath = path.join(__dirname, "..", "public", "uploads", "productos", req.file.filename);
   const exists = fs.existsSync(filePath);
 
   return res.json({
