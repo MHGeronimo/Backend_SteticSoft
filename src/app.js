@@ -4,8 +4,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const path = require("path");
-const testRoutes = require("./routes/test.routes");
-app.use("/api", testRoutes);
 
 // Importar configuraciones
 const {
@@ -70,6 +68,13 @@ app.get("/", (req, res) => {
 
 // --- Rutas Principales de la API ---
 app.use("/api", apiRoutes);
+
+// --- Rutas de Test (solo en desarrollo) ---
+if (NODE_ENV === "development") {
+  const testRoutes = require("./routes/test.routes.js");
+  app.use("/api/test", testRoutes);
+  console.log("🛠️  Rutas de test montadas en /api/test");
+}
 
 // --- Manejo de Errores ---
 
