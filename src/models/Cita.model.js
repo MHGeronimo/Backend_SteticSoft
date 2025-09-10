@@ -9,26 +9,37 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
-        field: 'id_cita' 
+        field: 'id_cita'
+      },
+      fecha: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+      },
+      horaInicio: {
+        type: DataTypes.TIME,
+        allowNull: false,
+        field: 'hora_inicio'
+      },
+      precioTotal: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        field: 'precio_total'
       },
       estado: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
+        type: DataTypes.STRING,
         allowNull: false,
-        field: 'estado'
+        defaultValue: 'Activa',
+        validate: {
+          isIn: [['Activa', 'En Proceso', 'Finalizada', 'Cancelada']]
+        }
       },
-      fechaHora: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        field: 'fecha_hora' 
-      },
-      idCliente: { 
+      idCliente: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'id_cliente', 
+        field: 'id_cliente',
         references: {
           model: 'cliente',
-          key: 'id_cliente' 
+          key: 'id_cliente'
         }
       },
       idUsuario: {
@@ -40,21 +51,12 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id_usuario'
         }
       },
-      idEstado: { 
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'id_estado', 
-        references: {
-          model: 'estado',
-          key: 'id_estado' 
-        }
-      },
       idNovedad: {
         type: DataTypes.INTEGER,
-        allowNull: true,
+        allowNull: false,
         field: 'id_novedad',
         references: {
-          model: 'novedades', // Asegúrate que este nombre coincida con tu tabla
+          model: 'novedades',
           key: 'id_novedad'
         }
       }
@@ -76,21 +78,16 @@ module.exports = (sequelize, DataTypes) => {
       as: 'empleado'
     });
 
-    Cita.belongsTo(models.Estado, {
-      foreignKey: 'idEstado',
-      as: 'estadoDetalle'
-    });
-
-    Cita.belongsTo(models.Novedad, { // ✅ AGREGAR esta asociación
+    Cita.belongsTo(models.Novedad, {
       foreignKey: 'idNovedad',
       as: 'novedad'
     });
 
     Cita.belongsToMany(models.Servicio, {
-      through: 'servicio_x_cita', 
-      foreignKey: 'id_cita',      
-      otherKey: 'id_servicio',    
-      as: 'serviciosProgramados'
+      through: 'servicio_x_cita',
+      foreignKey: 'id_cita',
+      otherKey: 'id_servicio',
+      as: 'servicios'
     });
     
     Cita.hasMany(models.VentaXServicio, {
