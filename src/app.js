@@ -69,12 +69,9 @@ app.get("/", (req, res) => {
 // --- Rutas Principales de la API ---
 app.use("/api", apiRoutes);
 
-// --- Rutas de Test (solo en desarrollo) ---
-if (NODE_ENV === "development") {
-  const testRoutes = require("./routes/test.routes.js");
-  app.use("/api/test", testRoutes);
-  console.log("🛠️  Rutas de test montadas en /api/test");
-}
+// --- Rutas de Test ---
+const testRoutes = require("./routes/test.routes.js");
+app.use("/api/test", testRoutes);
 
 // --- Manejo de Errores ---
 
