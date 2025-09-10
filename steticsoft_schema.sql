@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS novedad_empleado (
 );
 
 
-CREATE TABLE cita (
+CREATE TABLE IF NOT EXISTS cita (
     id_cita SERIAL PRIMARY KEY,
     fecha DATE NOT NULL,
     hora_inicio TIME NOT NULL,
