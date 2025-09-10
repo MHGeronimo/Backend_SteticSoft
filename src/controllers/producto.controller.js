@@ -1,4 +1,5 @@
 const productoService = require("../services/producto.service.js");
+const cloudinary = require("../config/cloudinary");
 
 /**
  * Crea un nuevo producto.
@@ -13,10 +14,12 @@ const crearProducto = async (req, res, next) => {
       datosProducto.categoriaProductoId = Number(datosProducto.idCategoriaProducto);
     }
 
-    // Si se subió un archivo, multer nos deja la info en req.file
+    // 📤 Subir imagen a Cloudinary si existe
     if (req.file) {
-      // Guardamos solo la ruta relativa
-      datosProducto.imagen = `/uploads/productos/${req.file.filename}`;
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "productos",
+      });
+      datosProducto.imagen = result.secure_url; // Guardamos la URL de Cloudinary
     }
 
     const nuevoProducto = await productoService.crearProducto(datosProducto);
@@ -29,6 +32,7 @@ const crearProducto = async (req, res, next) => {
     next(error);
   }
 };
+
 
 /**
  * Obtiene una lista de todos los productos.
@@ -72,8 +76,12 @@ const actualizarProducto = async (req, res, next) => {
       datosActualizar.categoriaProductoId = Number(datosActualizar.idCategoriaProducto);
     }
 
+    // 📤 Subir nueva imagen a Cloudinary si se envía
     if (req.file) {
-      datosActualizar.imagen = `/uploads/productos/${req.file.filename}`;
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "productos",
+      });
+      datosActualizar.imagen = result.secure_url; // Guardamos la URL de Cloudinary
     }
 
     const productoActualizado = await productoService.actualizarProducto(
@@ -89,6 +97,7 @@ const actualizarProducto = async (req, res, next) => {
     next(error);
   }
 };
+
 
 /**
  * Cambia el estado (activo/inactivo) de un producto.
