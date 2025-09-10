@@ -4,7 +4,7 @@ const fs = require("fs");
 
 const createUploader = (entityName) => {
    // Construir la ruta de forma robusta usando __dirname para evitar problemas en distintos entornos
-  const uploadPath = path.join(__dirname, "..", "public", "uploads", entityName);
+  const uploadPath = path.join(process.cwd(), "public", "uploads", entityName);
 
   console.log(`🔧 Configurando uploader para: ${entityName}`);
   console.log(`📁 Ruta de destino: ${uploadPath}`);
