@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS producto (
     precio DECIMAL(12, 2) DEFAULT 0.00,
     stock_minimo INT DEFAULT 0,
     stock_maximo INT DEFAULT 0,
-    imagen TEXT,
+    imagen VARCHAR(255),
     estado BOOLEAN DEFAULT TRUE NOT NULL,
     vida_util_dias INT,
     tipo_uso VARCHAR(10) NOT NULL CHECK (tipo_uso IN ('Interno', 'Externo')),
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS servicio (
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
     precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    imagen_url VARCHAR(255),
+    imagen VARCHAR(255),
     id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );
