@@ -132,9 +132,20 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
 
 const obtenerNovedadesActivas = async () => {
     try {
+        // Se usa moment().tz para asegurar que la fecha actual se evalúe en la zona horaria correcta (ej. America/Bogota).
+        // Esto previene problemas si el servidor está en una zona horaria diferente.
+        const hoy = moment().tz("America/Bogota").startOf('day').toDate();
+
         return await db.Novedad.findAll({
-            where: { estado: true },
-            order: [["fechaInicio", "DESC"]],
+            where: {
+                estado: true,
+                fechaInicio: {
+                    [Op.lte]: hoy,
+                },
+                fechaFin: {
+                    [Op.gte]: hoy,
+                },
+            },
         });
     } catch (error) {
         console.error("Error al obtener novedades activas:", error);
