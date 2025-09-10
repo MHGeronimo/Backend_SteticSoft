@@ -4,6 +4,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const path = require("path");
+const testRoutes = require("./routes/test.routes");
+app.use("/api", testRoutes);
 
 // Importar configuraciones
 const {
