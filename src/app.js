@@ -69,9 +69,9 @@ app.get("/", (req, res) => {
 // --- Rutas Principales de la API ---
 app.use("/api", apiRoutes);
 
-// --- Rutas de Test ---
-const testRoutes = require("./routes/test.routes.js");
-app.use("/api/test", testRoutes);
+// --- Rutas de Subida de Archivos ---
+const uploadRoutes = require("./routes/upload.routes.js");
+app.use("/api/upload", uploadRoutes);
 
 // --- Manejo de Errores ---
 

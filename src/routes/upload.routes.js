@@ -5,9 +5,9 @@ const { uploadProductoImage } = require("../middlewares/upload.middleware");
 
 const router = express.Router();
 
-// 📌 Ruta para subir archivo de prueba
-router.post("/test-upload", uploadProductoImage, (req, res) => {
-  console.log("📤 Archivo recibido en test-upload:", req.file);
+// 📌 Ruta para subir un archivo
+router.post("/", uploadProductoImage, (req, res) => {
+  console.log("📤 Archivo recibido:", req.file);
 
   if (!req.file) {
     return res.status(400).json({ success: false, message: "No se recibió archivo" });
