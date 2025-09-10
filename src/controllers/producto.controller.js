@@ -1,5 +1,4 @@
 const productoService = require("../services/producto.service.js");
-const cloudinary = require("../config/cloudinary");
 
 /**
  * Crea un nuevo producto.
@@ -12,14 +11,6 @@ const crearProducto = async (req, res, next) => {
     // ✅ Mapear idCategoriaProducto → categoriaProductoId
     if (datosProducto.idCategoriaProducto && !datosProducto.categoriaProductoId) {
       datosProducto.categoriaProductoId = Number(datosProducto.idCategoriaProducto);
-    }
-
-    // 📤 Subir imagen a Cloudinary si existe
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "productos",
-      });
-      datosProducto.imagen = result.secure_url; // Guardamos la URL de Cloudinary
     }
 
     const nuevoProducto = await productoService.crearProducto(datosProducto);
@@ -74,14 +65,6 @@ const actualizarProducto = async (req, res, next) => {
 
     if (datosActualizar.idCategoriaProducto && !datosActualizar.categoriaProductoId) {
       datosActualizar.categoriaProductoId = Number(datosActualizar.idCategoriaProducto);
-    }
-
-    // 📤 Subir nueva imagen a Cloudinary si se envía
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "productos",
-      });
-      datosActualizar.imagen = result.secure_url; // Guardamos la URL de Cloudinary
     }
 
     const productoActualizado = await productoService.actualizarProducto(
