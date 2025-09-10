@@ -154,12 +154,20 @@ const obtenerServiciosDisponibles = async (req, res, next) => {
   }
 };
 
+/**
+ * Obtiene los posibles valores para el estado de una cita.
+ * Devuelve una lista estática definida en el modelo para poblar selects en el frontend.
+ */
 const obtenerEstadosCita = (req, res) => {
+  // Estos valores vienen directamente de la definición del modelo Cita.model.js
+  const estadosPosibles = ["Activa", "En Proceso", "Finalizada", "Cancelada"];
   res.status(200).json({
     success: true,
-    data: ["Activa", "En Proceso", "Finalizada", "Cancelada"],
+    data: estadosPosibles,
   });
 };
+
+
 
 module.exports = {
   crearCita,

@@ -34,6 +34,14 @@ router.get(
   citaController.listarCitas
 );
 
+// Endpoint para obtener los estados posibles de una cita
+router.get(
+  "/estados", // La URL final será /api/citas/estados
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  citaController.obtenerEstadosCita
+);
+
 router.get(
   "/:id",
   authMiddleware,
