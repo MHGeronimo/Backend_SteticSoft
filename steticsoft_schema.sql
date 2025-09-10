@@ -268,13 +268,14 @@ CREATE TABLE IF NOT EXISTS novedad_empleado (
 
 CREATE TABLE IF NOT EXISTS cita (
     id_cita SERIAL PRIMARY KEY,
-    fecha_hora TIMESTAMP WITH TIME ZONE NOT NULL,
-    estado BOOLEAN DEFAULT TRUE NOT NULL,
-    id_novedad INT REFERENCES novedades(id_novedad) ON DELETE SET NULL,
-    id_cliente INT REFERENCES cliente(id_cliente) ON DELETE CASCADE,
-    id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    id_estado INT REFERENCES estado(id_estado) ON DELETE RESTRICT,
-    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE set NULL
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    precio_total DECIMAL(10, 2),
+    estado VARCHAR(255) NOT NULL DEFAULT 'Activa',
+    id_cliente INTEGER NOT NULL REFERENCES cliente (id_cliente),
+    id_usuario INTEGER REFERENCES usuario (id_usuario),
+    id_estado INTEGER REFERENCES estado (id_estado),
+    id_novedad INTEGER NOT NULL REFERENCES novedades (id_novedad)
 );
 
 

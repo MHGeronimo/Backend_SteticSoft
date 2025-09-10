@@ -10,7 +10,8 @@ const {
   IS_PRODUCTION,
   DATABASE_URL,
   NODE_ENV,
-} = require("./env.config"); //
+  DB_STORAGE,
+} = require("./env.config");
 
 const commonOptions = {
   dialect: DB_DIALECT || "postgres",
@@ -32,13 +33,11 @@ if (IS_PRODUCTION && DATABASE_URL) {
     ...commonOptions,
     dialectOptions: {
       ssl: {
-        // SE ELIMINÓ 'require: true' de aquí
-        rejectUnauthorized: false, // Crucial para los certificados autofirmados de Render
+        rejectUnauthorized: false,
       },
     },
   });
 } else if (IS_PRODUCTION) {
-  // Fallback si DATABASE_URL no está pero es producción
   console.log(
     "🟡 Configurando Sequelize para PostgreSQL (Producción con variables individuales) desde sequelize.config.js"
   );
@@ -54,32 +53,51 @@ if (IS_PRODUCTION && DATABASE_URL) {
     ...commonOptions,
     dialectOptions: {
       ssl: {
-        // SE ELIMINÓ 'require: true' de aquí también por consistencia
-        rejectUnauthorized: false, // Crucial para los certificados autofirmados de Render
+        rejectUnauthorized: false,
       },
     },
   });
 } else {
   // Desarrollo o Prueba
+  const dialect = DB_DIALECT || "sqlite";
   console.log(
-    `🟢 Configurando Sequelize para PostgreSQL (${
+    `🟢 Configurando Sequelize para ${dialect} (${
       NODE_ENV || "Local"
     }) desde sequelize.config.js`
   );
-  if (!DB_NAME || !DB_USER || !DB_PASS || !DB_HOST || !DB_PORT) {
-    console.error(
-      `❌ Faltan variables de entorno de base de datos para ${
-        NODE_ENV || "desarrollo/prueba"
-      } en Sequelize.`
-    );
-    process.exit(1);
+
+  if (dialect === "sqlite") {
+    if (!DB_STORAGE) {
+      console.error("❌ Falta la variable de entorno DB_STORAGE para SQLite.");
+      process.exit(1);
+    }
+    sequelize = new Sequelize({
+      dialect: "sqlite",
+      storage: DB_STORAGE,
+      ...commonOptions,
+    });
+  } else {
+    if (
+      !DB_NAME ||
+      typeof DB_USER === "undefined" ||
+      typeof DB_PASS === "undefined" ||
+      !DB_HOST ||
+      !DB_PORT
+    ) {
+      console.error(
+        `❌ Faltan variables de entorno de base de datos para ${dialect} en ${
+          NODE_ENV || "desarrollo/prueba"
+        }.`
+      );
+      process.exit(1);
+    }
+    sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
+      host: DB_HOST,
+      port: DB_PORT,
+      ...commonOptions,
+      dialect: dialect,
+    });
   }
-  sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
-    host: DB_HOST,
-    port: DB_PORT,
-    ...commonOptions,
-    // No se necesitan opciones SSL para el desarrollo local típico sin SSL
-  });
 }
 
 module.exports = sequelize;

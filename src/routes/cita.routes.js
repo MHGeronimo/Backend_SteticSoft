@@ -2,7 +2,14 @@
 const express = require("express");
 const router = express.Router();
 const citaController = require("../controllers/cita.controller.js");
-const citaValidators = require("../validators/cita.validators.js");
+const {
+  idValidator,
+  crearCitaValidators,
+  actualizarCitaValidators,
+  cambiarEstadoCitaValidators,
+  buscarValidators,
+  obtenerDisponibilidadValidators,
+} = require("../validators/cita.validators.js");
 
 const authMiddleware = require("../middlewares/auth.middleware.js");
 const {
@@ -11,11 +18,12 @@ const {
 
 const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR";
 
+// Endpoints de Gestión de Citas (CRUD)
 router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.crearCitaValidators,
+  crearCitaValidators,
   citaController.crearCita
 );
 
@@ -26,110 +34,85 @@ router.get(
   citaController.listarCitas
 );
 
+// Endpoint para obtener los estados posibles de una cita
 router.get(
-  "/:idCita",
+  "/estados", // La URL final será /api/citas/estados
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.idCitaValidator,
+  citaController.obtenerEstadosCita
+);
+
+router.get(
+  "/:id",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  idValidator,
   citaController.obtenerCitaPorId
 );
 
-router.put(
-  "/:idCita",
+router.patch(
+  "/:id",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.actualizarCitaValidators,
+  actualizarCitaValidators,
   citaController.actualizarCita
 );
 
-// NUEVA RUTA: Cambiar el estado general de una cita
 router.patch(
-  "/:idCita/estado-proceso",
+  "/:id/estado",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.actualizarCitaValidators, // Reutilizar validador
-  citaController.cambiarEstadoProcesoCita
-);
-
-router.patch(
-  "/:idCita/anular",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.idCitaValidator,
-  citaController.anularCita
-);
-
-router.patch(
-  "/:idCita/habilitar",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.idCitaValidator,
-  citaController.habilitarCita
+  cambiarEstadoCitaValidators,
+  citaController.cambiarEstadoCita
 );
 
 router.delete(
-  "/:idCita",
+  "/:id",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.idCitaValidator,
+  idValidator,
   citaController.eliminarCitaFisica
 );
 
-router.post(
-  "/:idCita/servicios",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.gestionarServiciosCitaValidator,
-  citaController.agregarServiciosACita
-);
-
-router.delete(
-  "/:idCita/servicios",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.gestionarServiciosCitaValidator,
-  citaController.quitarServiciosDeCita
-);
-
-// 1. Obtener días disponibles por novedad (Paso 2 del frontend)
+// Endpoints de Consulta para el Formulario
 router.get(
-  "/novedad/:idNovedad/dias-disponibles",
+  "/novedades/:id/dias-disponibles",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.obtenerDiasDisponiblesValidators,
+  obtenerDisponibilidadValidators,
   citaController.obtenerDiasDisponiblesPorNovedad
 );
 
 router.get(
-  "/novedad/:idNovedad/horarios-disponibles",
+  "/novedades/:id/horas-disponibles",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.obtenerHorariosDisponiblesValidators,
+  obtenerDisponibilidadValidators,
   citaController.obtenerHorariosDisponiblesPorNovedad
 );
 
 router.get(
-  "/clientes/buscar",
+  "/novedades/:id/empleados",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.buscarClientesValidators,
-  citaController.buscarClientes
-);
-
-router.get(
-  "/novedad/:idNovedad/empleados",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS),
-  citaValidators.obtenerDiasDisponiblesValidators,
+  idValidator,
   citaController.obtenerEmpleadosPorNovedad
 );
 
 router.get(
-  "/servicios/disponibles",
+  "/clientes",
   authMiddleware,
   checkPermission(PERMISO_MODULO_CITAS),
-  citaController.obtenerServiciosDisponibles
+  buscarValidators,
+  citaController.buscarClientes
 );
 
+router.get(
+  "/servicios",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_CITAS),
+  buscarValidators,
+  citaController.obtenerServiciosDisponibles
+);
 
 module.exports = router;

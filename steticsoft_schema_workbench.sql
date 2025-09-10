@@ -177,17 +177,17 @@ CREATE TABLE IF NOT EXISTS novedades (
 );
 
 -- Tabla: cita
-CREATE TABLE IF NOT EXISTS cita (
-    id_cita INT AUTO_INCREMENT PRIMARY KEY,
-    id_novedad INT,
-    id_cliente INT,
-    id_usuario INT,
-    id_estado INT,
-    FOREIGN KEY (id_novedad) REFERENCES novedades(id_novedad) ON DELETE SET NULL,
-    FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON DELETE CASCADE,
-    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    FOREIGN KEY (id_estado) REFERENCES estado(id_estado) ON DELETE RESTRICT
+CREATE TABLE cita (
+    id_cita SERIAL PRIMARY KEY,
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    precio_total DECIMAL(10, 2),
+    estado VARCHAR(255) NOT NULL DEFAULT 'Activa',
+    id_cliente INTEGER NOT NULL REFERENCES cliente (id_cliente),
+    id_usuario INTEGER REFERENCES usuario (id_usuario),
+    id_novedad INTEGER NOT NULL REFERENCES novedades (id_novedad)
 );
+
 
 -- Tabla: servicio
 CREATE TABLE IF NOT EXISTS servicio (

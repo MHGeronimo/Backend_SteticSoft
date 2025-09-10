@@ -1,4 +1,4 @@
-//src/services/cita.service.js
+// src/services/cita.service.js
 "use strict";
 
 const db = require("../models");
@@ -10,356 +10,449 @@ const {
   BadRequestError,
 } = require("../errors");
 const moment = require("moment-timezone");
-const { enviarCorreoCita } = require('../utils/CitaEmailTemplate.js');
-const { formatDateTime } = require('../utils/dateHelpers.js');
+const { enviarCorreoCita } = require("../utils/CitaEmailTemplate.js");
+const { formatDateTime } = require("../utils/dateHelpers.js");
 
-// Helper para obtener la información completa de una cita
-const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
+/**
+ * @typedef {import('../models').Cita} Cita
+ * @typedef {import('../models').Usuario} Usuario
+ * @typedef {import('../models').Cliente} Cliente
+ * @typedef {import('../models').Servicio} Servicio
+ */
+
+/**
+ * Función auxiliar para obtener los detalles completos de una cita.
+ * @param {number} idCita - El ID de la cita.
+ * @param {import('sequelize').Transaction} [transaction=null] - Transacción de Sequelize opcional.
+ * @returns {Promise<Cita|null>} La instancia de la cita con sus asociaciones.
+ */
+const obtenerCitaCompletaPorId = async (idCita, transaction = null) => {
   return db.Cita.findByPk(idCita, {
     include: [
-      { model: db.Cliente, as: "cliente" },
-      { model: db.Usuario, as: "empleado", required: false },
-      { model: db.Estado, as: "estadoDetalle" },
-      { model: db.Servicio, as: "serviciosProgramados", through: { attributes: [] } },
+      {
+        model: db.Cliente,
+        as: "cliente",
+        attributes: ["idCliente", "nombre", "apellido", "correo"],
+      },
+      {
+        model: db.Usuario,
+        as: "empleado",
+        required: false,
+        attributes: ["idUsuario", "correo"],
+        include: [
+          {
+            model: db.Empleado,
+            as: "empleadoInfo",
+            attributes: ["nombre", "apellido"],
+          },
+        ],
+      },
+      {
+        model: db.Servicio,
+        as: "servicios",
+        attributes: ["idServicio", "nombre", "descripcion", "precio"],
+        through: { attributes: [] },
+      },
+      {
+        model: db.Estado,
+        as: "estadoDetalle",
+        attributes: ["idEstado", "nombreEstado"],
+      },
     ],
     transaction,
   });
 };
 
-// Crea una cita, con validaciones robustas
+/**
+ * Crea una nueva cita, valida la disponibilidad y envía una notificación por correo.
+ * @param {object} datosCita - Datos para la nueva cita.
+ * @returns {Promise<Cita>} La instancia de la cita recién creada.
+ */
 const crearCita = async (datosCita) => {
-  const { fechaHora, idCliente, idUsuario, servicios = [], idNovedad } = datosCita;
-
-  const novedad = await db.Novedad.findByPk(idNovedad, { 
-    include: [{ model: db.Usuario, as: 'empleados', attributes: ['idUsuario'] }] 
-  });
-  if (!novedad) throw new BadRequestError(`La novedad con ID ${idNovedad} no fue encontrada.`);
-  
-  const empleadoValido = novedad.empleados.some(emp => emp.idUsuario === idUsuario);
-  if (!empleadoValido) throw new BadRequestError(`El empleado con ID ${idUsuario} no está asociado a la novedad.`);
-
-  const estadoPendiente = await db.Estado.findOne({ where: { nombreEstado: 'Pendiente' } });
-  if (!estadoPendiente) throw new BadRequestError('El estado inicial "Pendiente" no está configurado.');
+  const {
+    fecha,
+    horaInicio,
+    idCliente,
+    idUsuario,
+    servicios = [],
+    idNovedad,
+    idEstado,
+  } = datosCita;
 
   const transaction = await db.sequelize.transaction();
   try {
-    // ✅ CORRECCIÓN: Se añade una validación de concurrencia.
-    // Se verifica si ya existe una cita en el mismo slot justo antes de crearla.
-    const citaExistente = await db.Cita.findOne({
-      where: {
-        fechaHora: fechaHora,
-        idNovedad: idNovedad,
-      },
-      transaction
-    });
-
-    if (citaExistente) {
-      throw new ConflictError("Este horario acaba de ser reservado. Por favor, selecciona otro.");
+    // --- Validaciones de Negocio ---
+    const cliente = await db.Cliente.findByPk(idCliente, { transaction });
+    if (!cliente || !cliente.estado) {
+      throw new BadRequestError(
+        "El cliente especificado no existe o está inactivo."
+      );
     }
 
-    const nuevaCita = await db.Cita.create({
-        fechaHora,
-        idCliente,
-        idUsuario,
-        idEstado: estadoPendiente.idEstado,
-        idNovedad,
-        estado: true,
-      }, { transaction }
+    const estado = await db.Estado.findByPk(idEstado, { transaction });
+    if (!estado) {
+      throw new BadRequestError("El estado especificado no es válido.");
+    }
+
+    const novedad = await db.Novedad.findByPk(idNovedad, {
+      include: [
+        { model: db.Usuario, as: "empleados", attributes: ["idUsuario"] },
+      ],
+      transaction,
+    });
+    if (!novedad || !novedad.estado) {
+      throw new BadRequestError(
+        "La novedad (horario) seleccionada no existe o no está activa."
+      );
+    }
+
+    // Validar si el empleado pertenece a la novedad
+    if (idUsuario) {
+      const esEmpleadoValido = novedad.empleados.some(
+        (emp) => emp.idUsuario === idUsuario
+      );
+      if (!esEmpleadoValido) {
+        throw new BadRequestError(
+          "El empleado seleccionado no está disponible en este horario."
+        );
+      }
+    }
+
+    // Validar si la hora ya está ocupada
+    const citaExistente = await db.Cita.findOne({
+      where: { fecha, horaInicio, idNovedad },
+      transaction,
+    });
+    if (citaExistente) {
+      throw new ConflictError(
+        "Este horario ya ha sido reservado. Por favor, selecciona otro."
+      );
+    }
+
+    // Validar y calcular el precio total de los servicios
+    const serviciosDb = await db.Servicio.findAll({
+      where: { idServicio: servicios, estado: true },
+      transaction,
+    });
+    if (serviciosDb.length !== servicios.length) {
+      throw new BadRequestError(
+        "Uno o más de los servicios seleccionados no existen o están inactivos."
+      );
+    }
+    const precioTotal = serviciosDb.reduce(
+      (total, s) => total + parseFloat(s.precio),
+      0
     );
 
-    if (servicios.length > 0) {
-        const serviciosDb = await db.Servicio.findAll({ where: { idServicio: servicios, estado: true }});
-        if (serviciosDb.length !== servicios.length) throw new BadRequestError("Uno o más servicios no existen o están inactivos.");
-        await nuevaCita.addServiciosProgramados(serviciosDb, { transaction });
+    // --- Creación de la Cita ---
+    const nuevaCita = await db.Cita.create(
+      {
+        fecha,
+        horaInicio,
+        idCliente,
+        idUsuario: idUsuario || null,
+        idNovedad,
+        idEstado,
+        precioTotal,
+      },
+      { transaction }
+    );
+
+    await nuevaCita.setServicios(serviciosDb, { transaction });
+    await transaction.commit();
+
+    // --- Notificación por Correo (Post-transacción) ---
+    const citaCompleta = await obtenerCitaCompletaPorId(nuevaCita.idCita);
+    if (citaCompleta && cliente.correo) {
+      const empleadoInfo = citaCompleta.empleado?.empleadoInfo;
+      const nombreEmpleado = empleadoInfo
+        ? `${empleadoInfo.nombre} ${empleadoInfo.apellido}`
+        : "Por confirmar";
+
+      enviarCorreoCita({
+        correo: cliente.correo,
+        nombreCliente: cliente.nombre,
+        citaInfo: {
+          accion: "registrada",
+          fechaHora: formatDateTime(
+            `${citaCompleta.fecha} ${citaCompleta.horaInicio}`
+          ),
+          estado: citaCompleta.estadoDetalle.nombreEstado,
+          empleado: nombreEmpleado,
+          servicios: citaCompleta.servicios.map((s) => s.toJSON()),
+          total: citaCompleta.precioTotal,
+        },
+      }).catch((err) =>
+        console.error("Error al enviar correo de confirmación de cita:", err)
+      );
     }
 
-    await transaction.commit();
-    return await obtenerCitaCompletaPorIdInterno(nuevaCita.idCita);
+    return citaCompleta;
   } catch (error) {
     await transaction.rollback();
-    if (error instanceof BadRequestError || error instanceof ConflictError) throw error;
-    console.error("Error al crear la cita en el servicio:", error.stack);
+    if (error instanceof BadRequestError || error instanceof ConflictError)
+      throw error;
+    console.error("Error en el servicio al crear la cita:", error);
     throw new CustomError(`Error al crear la cita: ${error.message}`, 500);
   }
 };
 
-
-// Obtiene todas las citas, permitiendo filtrar por el ID del estado
-const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
+/**
+ * Obtiene todas las citas con opciones de filtrado y búsqueda.
+ * @param {object} opciones - Opciones de filtrado.
+ * @returns {Promise<Cita[]>} Una lista de citas.
+ */
+const obtenerTodasLasCitas = async (opciones = {}) => {
+  const { idCliente, idUsuario, idEstado, fecha, busqueda } = opciones;
   const whereClause = {};
-  
-  // ✅ LÓGICA RESTAURADA: Se filtra por 'idEstado' (FK) en lugar del booleano.
-  if (opcionesDeFiltro.idEstado) whereClause.idEstado = opcionesDeFiltro.idEstado;
-  if (opcionesDeFiltro.idCliente) whereClause.idCliente = opcionesDeFiltro.idCliente;
-  if (opcionesDeFiltro.idUsuario) whereClause.idUsuario = opcionesDeFiltro.idUsuario;
+  const includeWhereClause = {};
 
-  if (opcionesDeFiltro.fecha) {
-    const fechaInicio = moment(opcionesDeFiltro.fecha).startOf("day").toDate();
-    const fechaFin = moment(opcionesDeFiltro.fecha).endOf("day").toDate();
-    whereClause.fechaHora = { [Op.gte]: fechaInicio, [Op.lte]: fechaFin };
+  if (idCliente) whereClause.idCliente = idCliente;
+  if (idUsuario) whereClause.idUsuario = idUsuario;
+  if (idEstado) whereClause.idEstado = idEstado;
+  if (fecha) whereClause.fecha = fecha;
+
+  if (busqueda) {
+    const searchTerm = `%${busqueda}%`;
+    includeWhereClause[Op.or] = [
+      { "$cliente.nombre$": { [Op.iLike]: searchTerm } },
+      { "$cliente.apellido$": { [Op.iLike]: searchTerm } },
+      { "$empleado.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
+      { "$empleado.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+    ];
   }
+
   try {
     return await db.Cita.findAll({
-      where: whereClause,
+      where: { ...whereClause, ...includeWhereClause },
       include: [
         { model: db.Cliente, as: "cliente" },
-        { model: db.Usuario, as: "empleado", required: false },
+        {
+          model: db.Usuario,
+          as: "empleado",
+          required: false,
+          include: [{ model: db.Empleado, as: "empleadoInfo" }],
+        },
+        { model: db.Servicio, as: "servicios", through: { attributes: [] } },
         { model: db.Estado, as: "estadoDetalle" },
-        { model: db.Servicio, as: "serviciosProgramados", through: { attributes: [] } },
       ],
-      order: [["fechaHora", "ASC"]],
+      order: [
+        ["fecha", "ASC"],
+        ["horaInicio", "ASC"],
+      ],
     });
   } catch (error) {
-    console.error("Error al obtener todas las citas:", error.message);
+    console.error("Error al obtener todas las citas:", error);
     throw new CustomError(`Error al obtener citas: ${error.message}`, 500);
   }
 };
 
-const obtenerDiasDisponiblesPorNovedad = async (idNovedad, mes, año) => {
-  const novedad = await db.Novedad.findByPk(idNovedad);
-  if (!novedad) {
-    throw new NotFoundError('Novedad no encontrada');
-  }
-
-  // Convertir días JSON a array de números
-  const diasDisponibles = Array.isArray(novedad.dias) ? novedad.dias : JSON.parse(novedad.dias);
-  
-  // Generar todos los días del mes que coincidan con los días disponibles
-  const fechaInicio = moment(`${año}-${mes}-01`);
-  const fechaFin = fechaInicio.clone().endOf('month');
-  const diasDelMes = [];
-
-  while (fechaInicio.isSameOrBefore(fechaFin)) {
-    if (diasDisponibles.includes(fechaInicio.isoWeekday())) {
-      // Verificar que la fecha esté dentro del rango de la novedad
-      const fechaActual = fechaInicio.clone();
-      const fechaInicioNovedad = moment(novedad.fechaInicio);
-      const fechaFinNovedad = moment(novedad.fechaFin);
-      
-      if (fechaActual.isBetween(fechaInicioNovedad, fechaFinNovedad, null, '[]')) {
-        diasDelMes.push(fechaActual.format('YYYY-MM-DD'));
-      }
-    }
-    fechaInicio.add(1, 'day');
-  }
-
-  return diasDelMes;
-};
-
-const obtenerHorariosDisponiblesPorNovedad = async (idNovedad, fecha) => {
-  const novedad = await db.Novedad.findByPk(idNovedad);
-  if (!novedad || !novedad.estado) throw new NotFoundError('Novedad no encontrada o inactiva');
-
-  const fechaMoment = moment.tz(fecha, "America/Bogota");
-  const diaSemana = fechaMoment.isoWeekday();
-  
-  const diasDisponibles = Array.isArray(novedad.dias) ? novedad.dias : JSON.parse(novedad.dias);
-  if (!diasDisponibles.includes(diaSemana)) return [];
-
-  if (!fechaMoment.isBetween(moment(novedad.fechaInicio), moment(novedad.fechaFin), 'day', '[]')) return [];
-
-  // 1. Obtener las citas ya agendadas para ese día y esa novedad
-  const citasExistentes = await db.Cita.findAll({
-    where: {
-      idNovedad,
-      fechaHora: {
-        [Op.between]: [fechaMoment.startOf('day').toDate(), fechaMoment.endOf('day').toDate()]
-      }
-    },
-    attributes: ['fechaHora']
-  });
-  const horariosOcupados = new Set(citasExistentes.map(c => moment(c.fechaHora).format('HH:mm')));
-
-  // 2. Generar dinámicamente los slots de tiempo
-  const horariosDisponibles = [];
-  let horaActual = moment.tz(`${fecha} ${novedad.horaInicio}`, "America/Bogota");
-  const horaFin = moment.tz(`${fecha} ${novedad.horaFin}`, "America/Bogota");
-  
-  while (horaActual.isBefore(horaFin)) {
-    const horarioFormateado = horaActual.format('HH:mm');
-    // 3. Añadir el slot a la lista solo si no está en el conjunto de ocupados
-    if (!horariosOcupados.has(horarioFormateado)) {
-      horariosDisponibles.push(horaActual.format('HH:mm:ss'));
-    }
-    horaActual.add(30, 'minutes'); // Asumiendo slots de 30 minutos
-  }
-  
-  return horariosDisponibles;
-};
-
+/**
+ * Obtiene una cita por su ID.
+ * @param {number} idCita - El ID de la cita.
+ * @returns {Promise<Cita>} La instancia de la cita.
+ */
 const obtenerCitaPorId = async (idCita) => {
-  const cita = await obtenerCitaCompletaPorIdInterno(idCita);
+  const cita = await obtenerCitaCompletaPorId(idCita);
   if (!cita) {
     throw new NotFoundError("Cita no encontrada.");
   }
   return cita;
 };
 
+/**
+ * Actualiza los datos de una cita existente y notifica al cliente del cambio.
+ * @param {number} idCita - El ID de la cita a actualizar.
+ * @param {object} datosActualizar - Los nuevos datos para la cita.
+ * @returns {Promise<Cita>} La instancia de la cita actualizada.
+ */
 const actualizarCita = async (idCita, datosActualizar) => {
   const transaction = await db.sequelize.transaction();
   try {
     const cita = await db.Cita.findByPk(idCita, { transaction });
-    if (!cita) throw new NotFoundError("Cita no encontrada para actualizar.");
-
-    // ✅ FIX: Prevenir el intento de actualizar el campo 'estado' que no existe en la BD.
-    // El modelo puede tenerlo definido, pero la migración final no lo incluyó.
-    if (datosActualizar.estado !== undefined) {
-      delete datosActualizar.estado;
+    if (!cita) {
+      throw new NotFoundError("Cita no encontrada para actualizar.");
     }
-    
-    await cita.update(datosActualizar, { transaction });
 
-    if (datosActualizar.servicios && Array.isArray(datosActualizar.servicios)) {
-        const serviciosDb = await db.Servicio.findAll({ where: { idServicio: datosActualizar.servicios, estado: true }, transaction });
-        if (serviciosDb.length !== datosActualizar.servicios.length) throw new BadRequestError("Uno o más servicios para actualizar no existen o están inactivos.");
-        await cita.setServiciosProgramados(serviciosDb, { transaction });
+    const { servicios, ...datosPrincipales } = datosActualizar;
+
+    // Actualizar campos principales
+    await cita.update(datosPrincipales, { transaction });
+
+    // Si se provee una lista de servicios, se actualizan
+    if (servicios && Array.isArray(servicios)) {
+      const serviciosDb = await db.Servicio.findAll({
+        where: { idServicio: servicios, estado: true },
+        transaction,
+      });
+      if (serviciosDb.length !== servicios.length) {
+        throw new BadRequestError(
+          "Uno o más servicios para actualizar no existen o están inactivos."
+        );
+      }
+      await cita.setServicios(serviciosDb, { transaction });
+      const nuevoPrecioTotal = serviciosDb.reduce(
+        (total, s) => total + parseFloat(s.precio),
+        0
+      );
+      await cita.update({ precioTotal: nuevoPrecioTotal }, { transaction });
     }
 
     await transaction.commit();
-    return await obtenerCitaCompletaPorIdInterno(idCita);
+
+    // --- Notificación por Correo (Post-transacción) ---
+    const citaActualizada = await obtenerCitaCompletaPorId(idCita);
+    const cliente = citaActualizada.cliente;
+    if (cliente && cliente.correo) {
+      const empleadoInfo = citaActualizada.empleado?.empleadoInfo;
+      const nombreEmpleado = empleadoInfo
+        ? `${empleadoInfo.nombre} ${empleadoInfo.apellido}`
+        : "Por confirmar";
+
+      enviarCorreoCita({
+        correo: cliente.correo,
+        nombreCliente: cliente.nombre,
+        citaInfo: {
+          accion: "actualizada",
+          fechaHora: formatDateTime(
+            `${citaActualizada.fecha} ${citaActualizada.horaInicio}`
+          ),
+          estado: citaActualizada.estadoDetalle.nombreEstado,
+          empleado: nombreEmpleado,
+          servicios: citaActualizada.servicios.map((s) => s.toJSON()),
+          total: citaActualizada.precioTotal,
+        },
+      }).catch((err) =>
+        console.error("Error al enviar correo de actualización de cita:", err)
+      );
+    }
+
+    return citaActualizada;
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof NotFoundError || error instanceof BadRequestError)
+      throw error;
+    console.error("Error en servicio al actualizar cita:", error);
     throw new CustomError(`Error al actualizar la cita: ${error.message}`, 500);
   }
 };
 
-// Helper para cambiar el estado de la cita buscando el estado por nombre
-const cambiarEstadoPorNombre = async (idCita, nombreEstado) => {
-    const estado = await db.Estado.findOne({ where: { nombreEstado } });
-    if (!estado) {
-        throw new BadRequestError(`El estado "${nombreEstado}" no es válido.`);
-    }
-    const cita = await db.Cita.findByPk(idCita);
+/**
+ * Cambia el estado de una cita y notifica al cliente si se cancela.
+ * @param {number} idCita - El ID de la cita.
+ * @param {number} idNuevoEstado - El ID del nuevo estado.
+ * @returns {Promise<Cita>} La cita con el estado actualizado.
+ */
+const cambiarEstadoCita = async (idCita, idNuevoEstado) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const cita = await db.Cita.findByPk(idCita, { transaction });
     if (!cita) {
-        throw new NotFoundError("Cita no encontrada.");
+      throw new NotFoundError("Cita no encontrada.");
     }
-    await cita.update({ idEstado: estado.idEstado });
-    return await obtenerCitaCompletaPorIdInterno(idCita);
-}
 
-const anularCita = async (idCita) => {
-  return cambiarEstadoPorNombre(idCita, 'Cancelada');
+    const nuevoEstado = await db.Estado.findByPk(idNuevoEstado, {
+      transaction,
+    });
+    if (!nuevoEstado) {
+      throw new BadRequestError("El estado proporcionado no es válido.");
+    }
+
+    await cita.update({ idEstado: idNuevoEstado }, { transaction });
+    await transaction.commit();
+
+    const citaActualizada = await obtenerCitaCompletaPorId(idCita);
+    const cliente = citaActualizada.cliente;
+
+    // Si se cancela la cita, enviar notificación
+    if (
+      nuevoEstado.nombreEstado.toLowerCase() === "cancelada" &&
+      cliente &&
+      cliente.correo
+    ) {
+      const empleadoInfo = citaActualizada.empleado?.empleadoInfo;
+      const nombreEmpleado = empleadoInfo
+        ? `${empleadoInfo.nombre} ${empleadoInfo.apellido}`
+        : "Por confirmar";
+
+      enviarCorreoCita({
+        correo: cliente.correo,
+        nombreCliente: cliente.nombre,
+        citaInfo: {
+          accion: "cancelada",
+          fechaHora: formatDateTime(
+            `${citaActualizada.fecha} ${citaActualizada.horaInicio}`
+          ),
+          estado: nuevoEstado.nombreEstado,
+          empleado: nombreEmpleado,
+          servicios: citaActualizada.servicios.map((s) => s.toJSON()),
+          total: citaActualizada.precioTotal,
+        },
+      }).catch((err) =>
+        console.error("Error al enviar correo de cancelación de cita:", err)
+      );
+    }
+
+    return citaActualizada;
+  } catch (error) {
+    await transaction.rollback();
+    if (error instanceof NotFoundError || error instanceof BadRequestError)
+      throw error;
+    console.error("Error al cambiar estado de la cita:", error);
+    throw new CustomError(`Error al cambiar el estado: ${error.message}`, 500);
+  }
 };
 
-const habilitarCita = async (idCita) => {
-  // Habilitar generalmente significa volver al estado inicial o 'Pendiente'
-  return cambiarEstadoPorNombre(idCita, 'Pendiente');
-};
-
+/**
+ * Elimina una cita de forma permanente, si no está asociada a una venta.
+ * @param {number} idCita - El ID de la cita a eliminar.
+ * @returns {Promise<{mensaje: string}>} Mensaje de confirmación.
+ */
 const eliminarCitaFisica = async (idCita) => {
-  const cita = await db.Cita.findByPk(idCita);
-  if (!cita) {
-    throw new NotFoundError("Cita no encontrada para eliminar.");
+  const transaction = await db.sequelize.transaction();
+  try {
+    const cita = await db.Cita.findByPk(idCita, { transaction });
+    if (!cita) {
+      throw new NotFoundError("Cita no encontrada para eliminar.");
+    }
+
+    const ventasAsociadas = await db.VentaXServicio.count({
+      where: { idCita },
+      transaction,
+    });
+    if (ventasAsociadas > 0) {
+      throw new ConflictError(
+        `No se puede eliminar la cita porque está asociada a ${ventasAsociadas} venta(s). Considere cancelarla en su lugar.`
+      );
+    }
+
+    await cita.destroy({ transaction });
+    await transaction.commit();
+    return { mensaje: "Cita eliminada permanentemente." };
+  } catch (error) {
+    await transaction.rollback();
+    if (error instanceof NotFoundError || error instanceof ConflictError)
+      throw error;
+    console.error("Error al eliminar cita:", error);
+    throw new CustomError(`Error al eliminar la cita: ${error.message}`, 500);
   }
-  
-  const ventasAsociadasCount = await cita.countDetallesVenta();
-  if (ventasAsociadasCount > 0) {
-    throw new ConflictError(`No se puede eliminar la cita porque tiene ${ventasAsociadasCount} servicio(s) facturado(s).`);
-  }
-
-  await cita.destroy();
-  return { message: "Cita eliminada permanentemente." };
-};
-
-const agregarServiciosACita = async (idCita, idServicios) => {
-  const cita = await db.Cita.findByPk(idCita);
-  if (!cita) throw new NotFoundError("Cita no encontrada.");
-
-  const servicios = await db.Servicio.findAll({ where: { idServicio: idServicios, estado: true } });
-  if (servicios.length !== idServicios.length) throw new BadRequestError("Uno o más servicios no existen o están inactivos.");
-
-  await cita.addServiciosProgramados(servicios);
-  return await obtenerCitaCompletaPorIdInterno(idCita);
-};
-
-const quitarServiciosDeCita = async (idCita, idServicios) => {
-  const cita = await db.Cita.findByPk(idCita);
-  if (!cita) throw new NotFoundError("Cita no encontrada.");
-  
-  await cita.removeServiciosProgramados(idServicios);
-  return await obtenerCitaCompletaPorIdInterno(idCita);
-};
-
-// Función para cambiar estado booleano (debe llamarse diferente)
-const cambiarEstadoBooleanoCita = async (idCita, estado) => {
-  const cita = await db.Cita.findByPk(idCita);
-  if (!cita) {
-    throw new NotFoundError("Cita no encontrada.");
-  }
-  
-  await cita.update({ estado });
-  return await obtenerCitaCompletaPorIdInterno(idCita);
-};
-
-// Obtener empleados por novedad
-const obtenerEmpleadosPorNovedad = async (idNovedad) => {
-  const novedad = await db.Novedad.findByPk(idNovedad, {
-    include: [{
-      model: db.Usuario,
-      as: 'empleados',
-      attributes: ['idUsuario', 'nombre', 'correo'],
-      through: { attributes: [] },
-      include: [{
-        model: db.Empleado,
-        as: 'empleadoInfo',
-        attributes: ['telefono']
-      }]
-    }]
-  });
-
-  if (!novedad) {
-    throw new NotFoundError('Novedad no encontrada');
-  }
-
-  // Formatear respuesta para incluir teléfono
-  return novedad.empleados.map(empleado => ({
-    idUsuario: empleado.idUsuario,
-    nombre: empleado.nombre,
-    correo: empleado.correo,
-    telefono: empleado.empleadoInfo?.telefono || 'No disponible'
-  }));
-};
-
-// Buscar clientes
-const buscarClientes = async (terminoBusqueda) => {
-  return await db.Cliente.findAll({
-    where: {
-      [Op.or]: [
-        { nombre: { [Op.iLike]: `%${terminoBusqueda}%` } },
-        { apellido: { [Op.iLike]: `%${terminoBusqueda}%` } },
-        { correo: { [Op.iLike]: `%${terminoBusqueda}%` } }
-      ],
-      estado: true
-    },
-    limit: 10,
-    attributes: ['idCliente', 'nombre', 'apellido', 'correo', 'telefono']
-  });
-};
-
-// Obtener servicios disponibles
-const obtenerServiciosDisponibles = async () => {
-  return await db.Servicio.findAll({
-    where: { estado: true },
-    attributes: ['idServicio', 'nombre', 'precio', 'descripcion'],
-    order: [['nombre', 'ASC']]
-  });
 };
 
 module.exports = {
   crearCita,
   obtenerTodasLasCitas,
-  obtenerDiasDisponiblesPorNovedad,
-  obtenerHorariosDisponiblesPorNovedad,
-  buscarClientes,
   obtenerCitaPorId,
   actualizarCita,
-  anularCita,
-  habilitarCita,
+  cambiarEstadoCita,
   eliminarCitaFisica,
-  agregarServiciosACita,
-  quitarServiciosDeCita,
-  obtenerEmpleadosPorNovedad,
-  obtenerServiciosDisponibles,
-  cambiarEstadoBooleanoCita
+  // Funciones de consulta para el formulario que no cambian
+  obtenerDiasDisponiblesPorNovedad: require("./novedades.service.js")
+    .obtenerDiasDisponibles,
+  obtenerHorariosDisponiblesPorNovedad: require("./novedades.service.js")
+    .obtenerHorasDisponibles,
+  obtenerEmpleadosPorNovedad: require("./novedades.service.js")
+    .obtenerEmpleadosPorNovedad,
+  buscarClientes: require("./cliente.service.js").buscarClientesPorTermino,
+  obtenerServiciosDisponibles: require("./servicio.service.js")
+    .obtenerServiciosDisponibles,
 };
-
