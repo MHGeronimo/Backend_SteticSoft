@@ -142,17 +142,17 @@ const obtenerDiasDisponiblesPorNovedad = async (idNovedad, mes, anio) => {
     const diasDisponibles = Array.isArray(novedad.dias)
       ? novedad.dias
       : JSON.parse(novedad.dias);
-
+  
     const fechaInicio = moment(`${anio}-${mes}-01`);
     const fechaFin = fechaInicio.clone().endOf("month");
     const diasDelMes = [];
-
+  
     while (fechaInicio.isSameOrBefore(fechaFin)) {
       if (diasDisponibles.includes(fechaInicio.isoWeekday())) {
         const fechaActual = fechaInicio.clone();
         const fechaInicioNovedad = moment(novedad.fechaInicio);
         const fechaFinNovedad = moment(novedad.fechaFin);
-
+  
         if (
           fechaActual.isBetween(fechaInicioNovedad, fechaFinNovedad, null, "[]")
         ) {
@@ -169,15 +169,15 @@ const obtenerDiasDisponiblesPorNovedad = async (idNovedad, mes, anio) => {
     const novedad = await db.Novedad.findByPk(idNovedad);
     if (!novedad || !novedad.estado)
       throw new NotFoundError("Novedad no encontrada o inactiva");
-
+  
     const fechaMoment = moment.tz(fecha, "America/Bogota");
     const diaSemana = fechaMoment.isoWeekday();
-
+  
     const diasDisponibles = Array.isArray(novedad.dias)
       ? novedad.dias
       : JSON.parse(novedad.dias);
     if (!diasDisponibles.includes(diaSemana)) return [];
-
+  
     if (
       !fechaMoment.isBetween(
         moment(novedad.fechaInicio),
@@ -187,7 +187,7 @@ const obtenerDiasDisponiblesPorNovedad = async (idNovedad, mes, anio) => {
       )
     )
       return [];
-
+  
     const citasExistentes = await db.Cita.findAll({
       where: {
         idNovedad,
@@ -198,14 +198,14 @@ const obtenerDiasDisponiblesPorNovedad = async (idNovedad, mes, anio) => {
     const horariosOcupados = new Set(
       citasExistentes.map((c) => c.horaInicio)
     );
-
+  
     const horariosDisponibles = [];
     let horaActual = moment.tz(
       `${fecha} ${novedad.horaInicio}`,
       "America/Bogota"
     );
     const horaFin = moment.tz(`${fecha} ${novedad.horaFin}`, "America/Bogota");
-
+  
     while (horaActual.isBefore(horaFin)) {
       const horarioFormateado = horaActual.format("HH:mm:ss");
       if (!horariosOcupados.has(horarioFormateado)) {
