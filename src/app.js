@@ -50,14 +50,6 @@ app.use(sessionMiddleware);
 
 // --- Rutas Estáticas y de Bienvenida ---
 
-// Servir archivos estáticos desde el directorio 'src/public/uploads'
-// Esta ruta es la que se usará en la URL para acceder a las imágenes
-app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
-
-// Mantener la ruta de API para compatibilidad, apuntando al mismo directorio
-app.use("/api/uploads", express.static(path.join(__dirname, "public", "uploads")));
-
-
 // Servir otros archivos estáticos desde 'src/public'
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -68,10 +60,6 @@ app.get("/", (req, res) => {
 
 // --- Rutas Principales de la API ---
 app.use("/api", apiRoutes);
-
-// --- Rutas de Subida de Archivos ---
-const uploadRoutes = require("./routes/upload.routes.js");
-app.use("/api/upload", uploadRoutes);
 
 // --- Manejo de Errores ---
 

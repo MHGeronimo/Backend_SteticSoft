@@ -28,7 +28,6 @@ router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  uploadServicioImage,
   servicioValidators.crearServicioValidators,
   servicioController.crearServicio
 );
@@ -57,7 +56,6 @@ router.put(
   "/:idServicio",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  uploadServicioImage,
   servicioValidators.actualizarServicioValidators,
   servicioController.actualizarServicio
 );

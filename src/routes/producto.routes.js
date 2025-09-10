@@ -25,7 +25,6 @@ router.post(
   authMiddleware,
   checkPermission(PERMISO_MODULO_PRODUCTOS),
   // El middleware de Multer procesa el campo 'imagen' antes de la validación.
-  uploadProductoImage,
   productoValidators.crearProductoValidators,
   productoController.crearProducto
 );
@@ -61,7 +60,6 @@ router.put(
   authMiddleware,
   checkPermission(PERMISO_MODULO_PRODUCTOS),
   // El middleware de Multer también se aplica aquí para la actualización de la imagen.
-  uploadProductoImage,
   productoValidators.actualizarProductoValidators,
   productoController.actualizarProducto
 );
