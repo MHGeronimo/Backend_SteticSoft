@@ -9,8 +9,6 @@ const {
   checkPermission,
 } = require("../middlewares/authorization.middleware.js");
 
-// Se importa el middleware para la subida de imágenes de productos.
-const { uploadProductoImage } = require("../middlewares/upload.middleware.js");
 
 const PERMISO_MODULO_PRODUCTOS = "MODULO_PRODUCTOS_GESTIONAR";
 
