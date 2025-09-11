@@ -96,12 +96,12 @@ const eliminarServicioFisico = async (req, res, next) => {
 };
 
 module.exports = {
-  crearServicio: [validateServicio, handleValidationErrors, crearServicio],
- listarServicios: [listarServiciosValidator, listarServicios],
+  crearServicio,
+ listarServicios,
   listarServiciosPublicos,
   obtenerServicioPorId,
-  actualizarServicio: [validateServicioUpdate, handleValidationErrors, actualizarServicio],
-  cambiarEstadoServicio: [cambiarEstadoServicioValidators, cambiarEstadoServicio], 
-  eliminarServicioFisico: [idServicioValidator, eliminarServicioFisico], 
+  actualizarServicio,
+  cambiarEstadoServicio,
+  eliminarServicioFisico,
   listarServiciosDisponibles,
 };
