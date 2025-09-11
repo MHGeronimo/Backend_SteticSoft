@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 const servicioController = require("../controllers/servicio.controller.js");
 const servicioValidators = require("../validators/servicio.validators.js");
 const authMiddleware = require("../middlewares/auth.middleware.js");
@@ -19,20 +20,6 @@ router.get(
   checkPermission(PERMISO_MODULO_CITAS),
   servicioController.listarServiciosDisponibles
 );
-
-const upload = multer({
-  storage: multer.memoryStorage(), // Almacenar en memoria
-  limits: {
-    fileSize: 2 * 1024 * 1024, // Límite de 2MB
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten imágenes'), false);
-    }
-  }
-});
 
 // MODIFICAR LAS RUTAS QUE RECIBEN IMÁGENES:
 router.post(
