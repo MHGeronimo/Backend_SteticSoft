@@ -161,7 +161,6 @@ const eliminarProductoFisico = async (req, res, next) => {
 const listarProductosInternos = async (req, res, next) => {
   try {
     const productos = await productoService.obtenerProductosInternos();
-    console.log(listaProductos)
     res.status(200).json({
       success: true,
       data: productos,
@@ -207,7 +206,7 @@ const listarProductosPublicos = async (req, res, next) => {
       }));
 
     console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
-
+    console.log(listaProductos)
     res.status(200).json({
       success: true,
       data: productosPublicos,
