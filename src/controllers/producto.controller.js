@@ -198,11 +198,10 @@ const listarProductosPublicos = async (req, res, next) => {
       })
       .map(p => ({
         id: p.idProducto,
-        nombre: p.nombre,
+        name: p.nombre,          // ✅ Adaptado al frontend
         description: p.descripcion,
-        categoria: p.categoria,
         price: p.precio,
-        imagenURL: p.imagen
+        image: p.imagen
       }));
 
     console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
