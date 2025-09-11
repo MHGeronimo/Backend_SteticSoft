@@ -21,15 +21,13 @@ const obtenerVentaCompletaPorId = async (idVenta, transaction = null) => {
             {
                 model: db.Cliente,
                 as: "cliente",
-                // ✅ SOLUCIÓN FINAL CON ALIASING:
-                // Le decimos a Sequelize el nombre exacto de la columna en la BD y el nombre que queremos en el resultado.
                 attributes: [
                     "idCliente", 
                     "nombre", 
                     "apellido", 
                     "correo", 
                     "estado",
-                    ["numero_documento", "numeroDocumento"], // [nombre_en_bd, nombre_para_js]
+                    ["numero_documento", "numeroDocumento"],
                     ["telefono", "telefono"],
                     ["direccion", "direccion"]
                 ],
@@ -82,12 +80,11 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
                 {
                     model: db.Cliente,
                     as: "cliente",
-                    // ✅ SOLUCIÓN FINAL CON ALIASING:
                     attributes: [
                         "idCliente", 
                         "nombre", 
                         "apellido", 
-                        ["numero_documento", "numeroDocumento"] // [nombre_en_bd, nombre_para_js]
+                        ["numero_documento", "numeroDocumento"]
                     ],
                 },
                 {
@@ -98,6 +95,7 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
                 {
                     model: db.Estado,
                     as: "estadoDetalle",
+                    // ✅ CAMBIO REALIZADO: Aseguramos que siempre pida el nombre del estado.
                     attributes: ["idEstado", "nombreEstado"],
                 },
                 {
