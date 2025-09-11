@@ -320,8 +320,7 @@ CREATE TABLE IF NOT EXISTS abastecimiento (
     razon_agotamiento TEXT,
     fecha_agotamiento DATE,
     estado BOOLEAN DEFAULT TRUE NOT NULL,
-    id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    id_categoria_producto INT REFERENCES categoria_producto(id_categoria_producto) ON DELETE RESTRICT
+    id_usuario INT REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS token_recuperacion (
