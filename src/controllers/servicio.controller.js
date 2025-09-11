@@ -9,16 +9,24 @@ const {
 } = require("../validators/servicio.validators");
 const servicioService = require("../services/servicio.service.js");
 
-
-// ... (las funciones crearServicio, listarServicios, etc., se mantienen como estaban)
 const crearServicio = async (req, res, next) => {
-    try {
-        const servicioData = req.body;
-        const nuevo = await servicioService.crearServicio(servicioData);
-        res.status(201).json({ success: true, message: "Servicio creado.", data: nuevo });
-    } catch (error) {
-        next(error);
-    }
+  try {
+    // ✅ Los campos textuales vienen en req.body
+    // ✅ La imagen viene en req.file (si se subió)
+    const servicioData = {
+      ...req.body,
+      imagen: req.file ? {
+        buffer: req.file.buffer,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype
+      } : null
+    };
+
+    const nuevo = await servicioService.crearServicio(servicioData);
+    res.status(201).json({ success: true, message: "Servicio creado.", data: nuevo });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const listarServicios = async (req, res, next) => {

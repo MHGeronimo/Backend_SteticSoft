@@ -20,13 +20,39 @@ router.get(
   servicioController.listarServiciosDisponibles
 );
 
+const upload = multer({
+  storage: multer.memoryStorage(), // Almacenar en memoria
+  limits: {
+    fileSize: 2 * 1024 * 1024, // Límite de 2MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten imágenes'), false);
+    }
+  }
+});
+
+// MODIFICAR LAS RUTAS QUE RECIBEN IMÁGENES:
 router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
+  upload.single('imagen'), // ✅ Middleware de multer
   servicioValidators.crearServicioValidators,
-  handleValidationErrors, // ✅ AÑADIDO
+  handleValidationErrors,
   servicioController.crearServicio
+);
+
+router.put(
+  "/:idServicio",
+  authMiddleware,
+  checkPermission(PERMISO_MODULO_SERVICIOS),
+  upload.single('imagen'), // ✅ Middleware de multer
+  servicioValidators.actualizarServicioValidators,
+  handleValidationErrors,
+  servicioController.actualizarServicio
 );
 
 router.get(

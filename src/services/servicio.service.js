@@ -33,12 +33,21 @@ const crearServicio = async (datosServicio) => {
   }
 
   try {
+    let imagenUrl = null;
+    
+    // ✅ Procesar la imagen si existe
+    if (imagen && imagen.buffer) {
+      // Aquí va tu lógica para guardar la imagen
+      // Por ejemplo: subir a Cloudinary, AWS S3, o guardar en filesystem
+      imagenUrl = await guardarImagen(imagen);
+    }
+
     const servicioParaCrear = {
       nombre: nombre.trim(),
       descripcion: descripcion || null,
       precio: parseFloat(precio).toFixed(2),
-      id_categoria_servicio: idCategoriaServicio,  // ✅ TRANSFORMACIÓN CLAVE
-      imagen: imagen || null,
+      id_categoria_servicio: parseInt(idCategoriaServicio),
+      imagen: imagenUrl, // URL o path de la imagen
       estado: true
     };
 
