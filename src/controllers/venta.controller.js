@@ -8,7 +8,7 @@ const db = require("../models");
  */
 const crearVenta = async (req, res, next) => {
   try {
-    const nuevaVenta = await ventaService.crearVenta(req.body);
+    const nuevaVenta = await ventaService.crearVenta(req.body, req.user);
     res.status(201).json({
       success: true,
       message: "Venta creada exitosamente.",
@@ -185,6 +185,20 @@ const listarVentasClienteMovil = async (req, res, next) => {
   }
 };
 
+const obtenerVentaPorIdClienteMovil = async (req, res, next) => {
+  try {
+    const { idVenta } = req.params;
+    const idUsuario = req.user.idUsuario;
+    const venta = await ventaService.obtenerVentaPorIdClienteMovil(Number(idVenta), idUsuario);
+    res.status(200).json({
+      success: true,
+      data: venta,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearVenta,
   listarVentas,
@@ -195,4 +209,5 @@ module.exports = {
   eliminarVentaFisica,
   cambiarEstadoGeneralVenta,
   listarVentasClienteMovil,
+  obtenerVentaPorIdClienteMovil,
 };

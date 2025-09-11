@@ -169,9 +169,30 @@ const obtenerEstadosCita = (req, res) => {
 
 
 
+/**
+ * Obtiene las citas del cliente que ha iniciado sesión.
+ */
+const listarMisCitas = async (req, res, next) => {
+  try {
+    const idCliente = req.user.clienteInfo?.idCliente;
+    if (!idCliente) {
+      return res.status(403).json({ success: false, message: "Acceso denegado. Perfil de cliente no encontrado." });
+    }
+
+    const citas = await citaService.obtenerCitasPorCliente(idCliente);
+    res.status(200).json({
+      success: true,
+      data: citas,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearCita,
   listarCitas,
+  listarMisCitas,
   obtenerCitaPorId,
   actualizarCita,
   cambiarEstadoCita,

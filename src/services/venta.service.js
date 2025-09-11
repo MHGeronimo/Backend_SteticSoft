@@ -7,6 +7,7 @@ const {
     ConflictError,
     CustomError,
     BadRequestError,
+    UnauthorizedError,
 } = require("../errors");
 const moment = require("moment-timezone");
 const { enviarCorreoVenta } = require("../utils/VentaEmailTemplate.js");
@@ -21,13 +22,15 @@ const obtenerVentaCompletaPorId = async (idVenta, transaction = null) => {
             {
                 model: db.Cliente,
                 as: "cliente",
+                // ✅ SOLUCIÓN FINAL CON ALIASING:
+                // Le decimos a Sequelize el nombre exacto de la columna en la BD y el nombre que queremos en el resultado.
                 attributes: [
                     "idCliente", 
                     "nombre", 
                     "apellido", 
                     "correo", 
                     "estado",
-                    ["numero_documento", "numeroDocumento"],
+                    ["numero_documento", "numeroDocumento"], // [nombre_en_bd, nombre_para_js]
                     ["telefono", "telefono"],
                     ["direccion", "direccion"]
                 ],
@@ -80,11 +83,12 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
                 {
                     model: db.Cliente,
                     as: "cliente",
+                    // ✅ SOLUCIÓN FINAL CON ALIASING:
                     attributes: [
                         "idCliente", 
                         "nombre", 
                         "apellido", 
-                        ["numero_documento", "numeroDocumento"]
+                        ["numero_documento", "numeroDocumento"] // [nombre_en_bd, nombre_para_js]
                     ],
                 },
                 {
@@ -95,7 +99,6 @@ const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
                 {
                     model: db.Estado,
                     as: "estadoDetalle",
-                    // ✅ CAMBIO REALIZADO: Aseguramos que siempre pida el nombre del estado.
                     attributes: ["idEstado", "nombreEstado"],
                 },
                 {
@@ -135,8 +138,16 @@ const obtenerVentaPorId = async (idVenta) => {
     return venta;
 };
 
-const crearVenta = async (datosVenta) => {
+const crearVenta = async (datosVenta, user) => {
     const { fecha, idCliente, idDashboard, idEstado, productos = [], servicios = [] } = datosVenta;
+
+    // Ownership check for clients
+    if (user && user.rolNombre === 'Cliente') {
+        const clienteIdFromToken = user.clienteInfo?.idCliente;
+        if (!clienteIdFromToken || clienteIdFromToken !== idCliente) {
+            throw new UnauthorizedError("No tienes permiso para crear una venta para otro cliente.");
+        }
+    }
 
     if (productos.length === 0 && servicios.length === 0) {
         throw new BadRequestError("Una venta debe tener al menos un producto o un servicio.");
@@ -382,6 +393,24 @@ const findVentasByClienteIdMovil = async (idCliente) => {
     });
 };
 
+const obtenerVentaPorIdClienteMovil = async (idVenta, idUsuario) => {
+    const cliente = await db.Cliente.findOne({ where: { idUsuario } });
+    if (!cliente) {
+        throw new NotFoundError("No se encontró un perfil de cliente para este usuario.");
+    }
+
+    const venta = await obtenerVentaCompletaPorId(idVenta);
+    if (!venta) {
+        throw new NotFoundError("Venta no encontrada.");
+    }
+
+    if (venta.idCliente !== cliente.idCliente) {
+        throw new UnauthorizedError("No tienes permiso para ver esta venta.");
+    }
+
+    return venta;
+};
+
 module.exports = {
     crearVenta,
     obtenerTodasLasVentas,
@@ -391,4 +420,5 @@ module.exports = {
     habilitarVenta,
     eliminarVentaFisica,
     findVentasByClienteIdMovil,
+    obtenerVentaPorIdClienteMovil,
 };

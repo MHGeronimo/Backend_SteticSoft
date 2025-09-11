@@ -438,9 +438,41 @@ const eliminarCitaFisica = async (idCita) => {
   }
 };
 
+/**
+ * Obtiene todas las citas de un cliente específico.
+ * @param {number} idCliente - El ID del cliente.
+ * @returns {Promise<Cita[]>} Una lista de citas del cliente.
+ */
+const obtenerCitasPorCliente = async (idCliente) => {
+  try {
+    return await db.Cita.findAll({
+      where: { idCliente },
+      include: [
+        { model: db.Cliente, as: "cliente" },
+        {
+          model: db.Usuario,
+          as: "empleado",
+          required: false,
+          include: [{ model: db.Empleado, as: "empleadoInfo" }],
+        },
+        { model: db.Servicio, as: "servicios", through: { attributes: [] } },
+        { model: db.Estado, as: "estadoDetalle" },
+      ],
+      order: [
+        ["fecha", "DESC"],
+        ["horaInicio", "DESC"],
+      ],
+    });
+  } catch (error) {
+    console.error("Error al obtener las citas del cliente:", error);
+    throw new CustomError(`Error al obtener las citas del cliente: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearCita,
   obtenerTodasLasCitas,
+  obtenerCitasPorCliente,
   obtenerCitaPorId,
   actualizarCita,
   cambiarEstadoCita,

@@ -1,26 +1,44 @@
+// src/services/abastecimiento.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
-// Se importa el modelo Rol para usarlo en las consultas anidadas
-const { Abastecimiento, Producto, Usuario, Rol, sequelize } = db;
+const { Abastecimiento, Producto, sequelize } = db;
 const {
   NotFoundError,
   ConflictError,
   CustomError,
   BadRequestError,
 } = require("../errors");
-const { checkAndSendStockAlert } = require("../utils/stockAlertHelper.js");
+const { checkAndSendStockAlert } = require("../utils/stockAlertHelper.js"); // Import stock alert helper
 
+/**
+ * Crear un nuevo registro de abastecimiento (salida de producto para empleado)
+ * y DISMINUIR la existencia del producto.
+ * @param {object} datosAbastecimiento - Datos del abastecimiento.
+ * Ej: { productoId, cantidad, fechaIngreso?, empleadoAsignado?, estado? }
+ * @returns {Promise<object>} El registro de abastecimiento creado.
+ */
 const crearAbastecimiento = async (datosAbastecimiento) => {
-  const { idProducto, cantidad, idUsuario } = datosAbastecimiento;
+  const { idProducto, cantidad, fechaIngreso, estado, empleadoAsignado } =
+    datosAbastecimiento;
 
   const producto = await Producto.findByPk(idProducto);
-  if (!producto) throw new BadRequestError(`Producto con ID ${idProducto} no encontrado.`);
-  if (!producto.estado) throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
+  if (!producto)
+    throw new BadRequestError(`Producto con ID ${idProducto} no encontrado.`);
+  if (!producto.estado)
+    throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
+
+  console.log("### Objeto 'producto' completo que se está validando ###");
+  console.log(producto.toJSON()); // Usamos .toJSON() para ver los datos puros del objeto.
+  console.log("###################################################");
+
+  // --- INICIO DE NUEVA VALIDACIÓN ---
   if (producto.tipoUso?.toLowerCase() !== "interno") {
     throw new BadRequestError(
-      `El producto '${producto.nombre}' no es de tipo 'Interno' y no puede ser abastecido.`
+      `El producto '${producto.nombre}' (ID: ${idProducto}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`
     );
   }
+  // --- FIN DE NUEVA VALIDACIÓN ---
+
   if (producto.existencia < cantidad) {
     throw new ConflictError(
       `No hay suficiente stock para '${producto.nombre}'. Solicitado: ${cantidad}, Disponible: ${producto.existencia}.`
@@ -31,15 +49,20 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   try {
     const nuevoAbastecimiento = await Abastecimiento.create(
       {
-        idProducto,
+        idProducto: idProducto,
         cantidad: Number(cantidad),
-        fechaIngreso: new Date(),
-        idUsuario,
+        fechaIngreso: fechaIngreso || new Date(),
+        estaAgotado: false,
+        estado: typeof estado === "boolean" ? estado : true,
+        empleadoAsignado: empleadoAsignado,
       },
       { transaction }
     );
 
-    await producto.decrement("existencia", { by: Number(cantidad), transaction });
+    await producto.decrement("existencia", {
+      by: Number(cantidad),
+      transaction,
+    });
     await transaction.commit();
 
     const productoActualizado = await Producto.findByPk(idProducto);
@@ -49,9 +72,11 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
         `tras abastecimiento ID ${nuevoAbastecimiento.idAbastecimiento}`
       );
     }
+
     return nuevoAbastecimiento;
   } catch (error) {
     await transaction.rollback();
+    console.error("Error detallado al crear abastecimiento:", error);
     throw new CustomError(
       `Error al crear el abastecimiento: ${error.message}`,
       500
@@ -59,44 +84,36 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   }
 };
 
+// ... (El resto de las funciones: obtenerTodosLosAbastecimientos, obtenerAbastecimientoPorId, etc. se mantienen igual que en tu archivo original)
+// Aquí pego el resto del archivo para que lo tengas completo.
+
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
-  const { page = 1, limit = 10, search, estado } = opcionesDeFiltro;
+  const { page = 1, limit = 10, ...filtros } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
-
-  const whereClause = {};
-  if (estado !== undefined && estado !== 'todos') {
-    whereClause.estado = estado === 'true' || estado === true;
-  }
-
-  if (search) {
-    whereClause[Op.or] = [
-      { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.rol.nombre$': { [Op.iLike]: `%${search}%` } },
-    ];
-  }
 
   try {
     const { count, rows } = await Abastecimiento.findAndCountAll({
-      where: whereClause, // CORRECCIÓN: Se usa la cláusula 'where' construida
+      where: filtros,
       include: [
-        { model: Producto, as: "producto", attributes: ["idProducto", "nombre", "existencia"] },
         {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id_usuario", "correo"],
-          include: {
-            model: Rol,
-            as: "rol",
-            attributes: ["nombre"]
-          }
+          model: Producto,
+          as: "producto",
+          attributes: [
+            "idProducto",
+            "nombre",
+            "stockMinimo",
+            "existencia",
+            "vida_util_dias",
+          ],
         },
       ],
-      order: [["fechaIngreso", "DESC"]],
+      order: [
+        ["fechaIngreso", "DESC"],
+        ["idAbastecimiento", "DESC"],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
       distinct: true,
-      subQuery: false,
     });
 
     return {
@@ -106,6 +123,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       data: rows,
     };
   } catch (error) {
+    console.error("Error al obtener todos los abastecimientos:", error.message);
     throw new CustomError(
       `Error al obtener abastecimientos: ${error.message}`,
       500
@@ -117,17 +135,11 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   try {
     const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, {
       include: [
-        { model: Producto, as: "producto" },
         {
-          model: Usuario,
-          as: "usuario",
-          attributes: ["id_usuario", "correo"],
-          include: {
-            model: Rol,
-            as: "rol",
-            attributes: ["nombre"]
-          }
-        }
+          model: Producto,
+          as: "producto",
+          attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
+        },
       ],
     });
     if (!abastecimiento)
@@ -135,6 +147,10 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
     return abastecimiento;
   } catch (error) {
     if (error instanceof NotFoundError) throw error;
+    console.error(
+      `Error al obtener el abastecimiento con ID ${idAbastecimiento}:`,
+      error.message
+    );
     throw new CustomError(
       `Error al obtener el abastecimiento: ${error.message}`,
       500
@@ -143,119 +159,220 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
 };
 
 const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
+  const {
+    estaAgotado,
+    razonAgotamiento,
+    fechaAgotamiento,
+    estado,
+    cantidad,
+    empleadoAsignado,
+  } = datosActualizar;
+
   const transaction = await sequelize.transaction();
+  let productoIdAfectado;
   try {
-    const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, { transaction });
+    const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, {
+      transaction,
+    });
     if (!abastecimiento) {
+      await transaction.rollback();
       throw new NotFoundError("Registro de abastecimiento no encontrado.");
     }
+    productoIdAfectado = abastecimiento.idProducto;
 
-    const producto = await Producto.findByPk(abastecimiento.idProducto, { transaction });
+    const producto = await Producto.findByPk(abastecimiento.idProducto, {
+      transaction,
+    });
     if (!producto) {
-      throw new BadRequestError(`Producto asociado no encontrado.`);
+      await transaction.rollback();
+      throw new BadRequestError(
+        `Producto asociado (ID: ${abastecimiento.idProducto}) no encontrado.`
+      );
     }
 
-    const cantidadOriginal = abastecimiento.cantidad;
     const estadoOriginal = abastecimiento.estado;
-    const nuevaCantidad = datosActualizar.cantidad !== undefined ? Number(datosActualizar.cantidad) : cantidadOriginal;
-    const nuevoEstado = datosActualizar.estado !== undefined ? datosActualizar.estado : estadoOriginal;
-    
-    // Lógica para ajustar el inventario
-    let diferenciaStock = 0;
+    const cantidadOriginal = abastecimiento.cantidad;
+    const camposAActualizar = {};
+
+    if (estaAgotado !== undefined) camposAActualizar.estaAgotado = estaAgotado;
+    if (empleadoAsignado !== undefined)
+      camposAActualizar.empleadoAsignado = empleadoAsignado;
+    if (estaAgotado === true) {
+      if (razonAgotamiento !== undefined)
+        camposAActualizar.razonAgotamiento = razonAgotamiento;
+      if (fechaAgotamiento !== undefined)
+        camposAActualizar.fechaAgotamiento = fechaAgotamiento;
+    } else if (estaAgotado === false) {
+      camposAActualizar.razonAgotamiento = null;
+      camposAActualizar.fechaAgotamiento = null;
+    }
+
+    const nuevoEstado = Object.prototype.hasOwnProperty.call(
+      datosActualizar,
+      "estado"
+    )
+      ? estado
+      : abastecimiento.estado;
+    const nuevaCantidad = Object.prototype.hasOwnProperty.call(
+      datosActualizar,
+      "cantidad"
+    )
+      ? Number(cantidad)
+      : abastecimiento.cantidad;
+
+    camposAActualizar.estado = nuevoEstado;
+    camposAActualizar.cantidad = nuevaCantidad;
+
+    if (Object.keys(camposAActualizar).length > 0) {
+      await abastecimiento.update(camposAActualizar, { transaction });
+    }
+
+    let diferenciaCantidadInventario = 0;
+
     if (estadoOriginal === true && nuevoEstado === true) {
-      diferenciaStock = cantidadOriginal - nuevaCantidad; // Si se reduce la cantidad, se devuelve stock
+      diferenciaCantidadInventario = cantidadOriginal - nuevaCantidad;
     } else if (estadoOriginal === false && nuevoEstado === true) {
-      diferenciaStock = -nuevaCantidad; // Se activa un registro, se resta stock
+      diferenciaCantidadInventario = -nuevaCantidad;
     } else if (estadoOriginal === true && nuevoEstado === false) {
-      diferenciaStock = cantidadOriginal; // Se inactiva un registro, se devuelve todo el stock
+      diferenciaCantidadInventario = cantidadOriginal;
     }
 
-    if (producto.existencia + diferenciaStock < 0) {
-      throw new ConflictError(`No hay suficiente stock para realizar el ajuste.`);
-    }
-    
-    if (diferenciaStock !== 0) {
-        await producto.increment('existencia', { by: diferenciaStock, transaction });
+    if (diferenciaCantidadInventario !== 0) {
+      if (diferenciaCantidadInventario > 0) {
+        await producto.increment("existencia", {
+          by: diferenciaCantidadInventario,
+          transaction,
+        });
+      } else {
+        if (producto.existencia < Math.abs(diferenciaCantidadInventario)) {
+          await transaction.rollback();
+          throw new ConflictError(
+            `No hay suficiente existencia para ajustar el producto '${producto.nombre}'. Requerido: ${Math.abs(diferenciaCantidadInventario)}, Disponible: ${producto.existencia}.`
+          );
+        }
+        await producto.decrement("existencia", {
+          by: Math.abs(diferenciaCantidadInventario),
+          transaction,
+        });
+      }
     }
 
-    await abastecimiento.update(datosActualizar, { transaction });
     await transaction.commit();
+
+    if (productoIdAfectado) {
+      const productoActualizadoPostCommit =
+        await Producto.findByPk(productoIdAfectado);
+      if (productoActualizadoPostCommit) {
+        await checkAndSendStockAlert(
+          productoActualizadoPostCommit,
+          `tras actualizar abastecimiento ID ${idAbastecimiento}`
+        );
+      }
+    }
 
     return obtenerAbastecimientoPorId(idAbastecimiento);
   } catch (error) {
     await transaction.rollback();
-    if (error instanceof NotFoundError || error instanceof BadRequestError || error instanceof ConflictError) {
+    if (
+      error instanceof NotFoundError ||
+      error instanceof BadRequestError ||
+      error instanceof ConflictError
+    )
       throw error;
-    }
-    throw new CustomError(`Error al actualizar el abastecimiento: ${error.message}`, 500);
+    console.error(
+      `Error al actualizar abastecimiento con ID ${idAbastecimiento}:`,
+      error.message,
+      error.stack
+    );
+    throw new CustomError(
+      `Error al actualizar el abastecimiento: ${error.message}`,
+      500
+    );
   }
 };
 
 const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
   const transaction = await sequelize.transaction();
+  let productoIdAfectado;
+  let productoOriginal;
   try {
-    const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, { transaction });
+    const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, {
+      transaction,
+    });
     if (!abastecimiento) {
-      throw new NotFoundError("Registro de abastecimiento no encontrado.");
+      await transaction.rollback();
+      throw new NotFoundError("Abastecimiento no encontrado.");
+    }
+    productoIdAfectado = abastecimiento.idProducto;
+
+    if (abastecimiento.estado) {
+      productoOriginal = await Producto.findByPk(abastecimiento.idProducto, {
+        transaction,
+      });
+      if (productoOriginal) {
+        await productoOriginal.increment("existencia", {
+          by: abastecimiento.cantidad,
+          transaction,
+        });
+      } else {
+        console.warn(
+          `Advertencia: Producto ID ${abastecimiento.idProducto} no encontrado al eliminar abastecimiento ID ${idAbastecimiento}. No se pudo revertir stock.`
+        );
+      }
     }
 
-    // Si el registro estaba activo, se devuelve la cantidad al inventario
-    if (abastecimiento.estado) {
-      await Producto.increment('existencia', {
-        by: abastecimiento.cantidad,
-        where: { idProducto: abastecimiento.idProducto },
-        transaction
-      });
-    }
-    
-    await abastecimiento.destroy({ transaction });
+    const filasEliminadas = await Abastecimiento.destroy({
+      where: { idAbastecimiento },
+      transaction,
+    });
     await transaction.commit();
-    return true; // Indica que la eliminación fue exitosa
-  } catch(error) {
+
+    if (productoIdAfectado && abastecimiento.estado && productoOriginal) {
+      const productoActualizadoPostCommit =
+        await Producto.findByPk(productoIdAfectado);
+      if (productoActualizadoPostCommit) {
+        await checkAndSendStockAlert(
+          productoActualizadoPostCommit,
+          `tras eliminar abastecimiento ID ${idAbastecimiento} (stock revertido)`
+        );
+      }
+    }
+    return filasEliminadas;
+  } catch (error) {
     await transaction.rollback();
     if (error instanceof NotFoundError) throw error;
-    throw new CustomError(`Error al eliminar abastecimiento: ${error.message}`, 500);
+    console.error(
+      `Error al eliminar abastecimiento con ID ${idAbastecimiento}:`,
+      error.message
+    );
+    throw new CustomError(
+      `Error al eliminar abastecimiento: ${error.message}`,
+      500
+    );
   }
 };
 
+// Nueva función para marcar un abastecimiento como agotado
 const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
   const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento);
   if (!abastecimiento) {
-    throw new NotFoundError(`Abastecimiento con ID ${idAbastecimiento} no encontrado.`);
+    throw new NotFoundError(
+      `Abastecimiento con ID ${idAbastecimiento} no encontrado.`
+    );
   }
   if (abastecimiento.estaAgotado) {
-    throw new ConflictError(`El abastecimiento ya está marcado como agotado.`);
+    // Corresponde a esta_agotado en BD
+    throw new ConflictError(
+      `El abastecimiento con ID ${idAbastecimiento} ya está marcado como agotado.`
+    );
   }
 
   abastecimiento.estaAgotado = true;
-  abastecimiento.razonAgotamiento = razonAgotamiento || null;
-  abastecimiento.fechaAgotamiento = new Date();
+  abastecimiento.razonAgotamiento = razonAgotamiento || null; // Corresponde a razon_agotamiento
+  abastecimiento.fechaAgotamiento = new Date(); // Corresponde a fecha_agotamiento
 
   await abastecimiento.save();
   return abastecimiento;
-};
-
-const obtenerEmpleados = async () => {
-  try {
-    const empleados = await Usuario.findAll({
-      include: {
-        model: Rol,
-        as: 'rol',
-        where: {
-          nombre: { [Op.iLike]: 'empleado' }
-        },
-        // CORRECCIÓN: Le pedimos que nos traiga el nombre del rol
-        attributes: ['nombre'] 
-      },
-      where: {
-        estado: true
-      },
-      attributes: ['id_usuario', 'correo']
-    });
-    return empleados;
-  } catch (error) {
-    throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
-  }
 };
 
 module.exports = {
@@ -265,5 +382,4 @@ module.exports = {
   actualizarAbastecimiento,
   eliminarAbastecimientoFisico,
   agotarAbastecimiento,
-  obtenerEmpleados,
 };

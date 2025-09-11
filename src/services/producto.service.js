@@ -381,7 +381,7 @@ const obtenerProductosInternos = async () => {
  */
 const obtenerProductosPublicos = async (filtros) => {
   const { idCategoria, ...restFiltros } = filtros;
-  
+
   const query = {
     ...restFiltros,
     estado: 'true',

@@ -175,10 +175,15 @@ const loginUsuario = async (correo, contrasena) => {
           {
             model: db.Permisos,
             as: "permisos",
-            attributes: ["nombre"], // Solo necesitamos el nombre del permiso
-            through: { attributes: [] }, // No traer la tabla de unión
+            attributes: ["nombre"],
+            through: { attributes: [] },
           },
         ],
+      },
+      {
+        model: db.Cliente,
+        as: "clienteInfo",
+        required: false,
       },
     ],
   });

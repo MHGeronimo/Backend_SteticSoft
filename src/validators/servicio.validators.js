@@ -6,6 +6,8 @@ const { Op } = db.Sequelize;
 // Expresión regular: letras, números y espacios (incluye tildes y ñ)
 const regexNombre = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]+$/;
 
+const regexImagen = /\.(jpg|jpeg|png|webp)$/i;
+
 const crearServicioValidators = [
   body("nombre")
     .trim()
@@ -39,9 +41,10 @@ const crearServicioValidators = [
       }
     }),
 
-  // ✅ CORRECCIÓN: Se elimina la validación para el campo 'imagen'.
-  // La validación del archivo (tipo, tamaño) ahora es manejada por el middleware de Multer ('upload.middleware.js').
-  // Este validador se ejecutaba sobre req.body, donde 'imagen' no existe como texto cuando se sube un archivo.
+  body("imagen")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString().withMessage("La URL de la imagen debe ser texto.")
+    .matches(regexImagen).withMessage("La imagen debe ser .jpg, .jpeg, .png o .webp."),
 
   handleValidationErrors,
 ];
@@ -86,8 +89,11 @@ const actualizarServicioValidators = [
         return Promise.reject("La categoría seleccionada no existe o no está activa.");
       }
     }),
-  
-  // ✅ CORRECCIÓN: Se elimina también la validación de imagen aquí por la misma razón.
+
+  body("imagen")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString().withMessage("La URL de la imagen debe ser texto.")
+    .matches(regexImagen).withMessage("La imagen debe ser .jpg, .jpeg, .png o .webp."),
 
   handleValidationErrors,
 ];
@@ -150,7 +156,6 @@ const listarServiciosValidator = [
   handleValidationErrors,
 ];
 
-// ✅ MEJORA: Se eliminan las funciones exportadas que no eran validadores.
 module.exports = {
   crearServicioValidators,
   actualizarServicioValidators,

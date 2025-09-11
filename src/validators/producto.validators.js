@@ -159,19 +159,9 @@ const cambiarEstadoProductoValidators = [
   handleValidationErrors,
 ];
 
-const idCategoriaProductoValidator = [
-  param("idCategoria")
-    .isInt({ gt: 0 })
-    .withMessage(
-      "El ID de la categoría de producto debe ser un entero positivo."
-    ),
-  handleValidationErrors,
-];
-
 module.exports = {
   crearProductoValidators,
   actualizarProductoValidators,
   idProductoValidator,
   cambiarEstadoProductoValidators,
-  idCategoriaProductoValidator,
 };

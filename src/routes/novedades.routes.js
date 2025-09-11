@@ -14,7 +14,7 @@ const PERMISO_MODULO_NOVEDADES = "MODULO_NOVEDADES_EMPLEADOS_GESTIONAR";
 router.get(
   "/agendables",
   authMiddleware,
-  checkPermission(PERMISO_MODULO_CITAS),
+  checkPermission("MODULO_CITAS_CLIENTE"),
   novedadesController.listarNovedadesAgendables
 );
 

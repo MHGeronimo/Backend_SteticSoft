@@ -19,6 +19,13 @@ const {
 const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR";
 
 // Endpoints de Gestión de Citas (CRUD)
+router.get(
+  "/mis-citas",
+  authMiddleware,
+  checkPermission("MODULO_CITAS_CLIENTE"), // Permiso específico para clientes
+  citaController.listarMisCitas
+);
+
 router.post(
   "/",
   authMiddleware,
