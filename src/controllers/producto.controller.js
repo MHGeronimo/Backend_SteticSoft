@@ -31,7 +31,6 @@ const crearProducto = async (req, res, next) => {
 const listarProductos = async (req, res, next) => {
   try {
     const productos = await productoService.obtenerTodosLosProductos(req.query);
-    console.log(listaProductos)
     res.status(200).json({
       success: true,
       data: productos,
@@ -162,6 +161,7 @@ const eliminarProductoFisico = async (req, res, next) => {
 const listarProductosInternos = async (req, res, next) => {
   try {
     const productos = await productoService.obtenerProductosInternos();
+    console.log(listaProductos)
     res.status(200).json({
       success: true,
       data: productos,
