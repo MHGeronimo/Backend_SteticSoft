@@ -13,41 +13,50 @@ const path = require("path");
 // ... (las funciones crearServicio, obtenerServicioPorId, etc., se mantienen como estaban)
 
 const crearServicio = async (datosServicio) => {
-  const { nombre, precio, id_categoria_servicio, descripcion, imagen } = datosServicio;
+  // ✅ OPCIÓN RECOMENDADA: Recibir idCategoriaServicio del frontend
+  const { nombre, precio, idCategoriaServicio, descripcion, imagen } = datosServicio;
+  
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
     if (imagen) {
       const imagePath = path.join(__dirname, "..", "public", imagen);
-      fs.unlink(imagePath, (err) => { if (err) console.error(`Error al eliminar imagen huérfana:`, err); });
+      fs.unlink(imagePath, (err) => { 
+        if (err) console.error(`Error al eliminar imagen huérfana:`, err); 
+      });
     }
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
-  const categoriaServicio = await db.CategoriaServicio.findByPk(id_categoria_servicio);
+
+  const categoriaServicio = await db.CategoriaServicio.findByPk(idCategoriaServicio);
   if (!categoriaServicio || !categoriaServicio.estado) {
     throw new BadRequestError("La categoría de servicio no existe o no está activa.");
   }
+
   try {
     const servicioParaCrear = {
       nombre: nombre.trim(),
       descripcion: descripcion || null,
-      precio: parseFloat(precio).toFixed(2),  // ✅ 2 decimales
-      id_categoria_servicio: idCategoriaServicio,  // ✅ Nombre correcto
+      precio: parseFloat(precio).toFixed(2),
+      id_categoria_servicio: idCategoriaServicio,  // ✅ TRANSFORMACIÓN CLAVE
       imagen: imagen || null,
-      estado: true  // ✅ Valor por defecto
+      estado: true
     };
+
     return await db.Servicio.create(servicioParaCrear);
   } catch (error) {
     console.error("Error al crear el servicio:", error);
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new BadRequestError("La categoría proporcionada no es válida.");
     }
+    if (error.name === "SequelizeValidationError") {
+      throw new BadRequestError("Datos de servicio inválidos.");
+    }
     throw new CustomError(`Error en el servidor al crear el servicio: ${error.message}`, 500);
   }
 };
 
-
 const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
-  const { busqueda, estado, id_categoria_servicio } = opcionesDeFiltro;
+  const { busqueda, estado,idCategoriaServicio } = opcionesDeFiltro;
   const whereClause = {};
 
   if (estado === "true" || estado === "false") {
@@ -58,8 +67,8 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
     whereClause.estado = false;
   }
 
-  if (id_categoria_servicio) {
-    whereClause.id_categoria_servicio = id_categoria_servicio;
+  if (idCategoriaServicio) {
+    whereClause.id_categoria_servicio = idCategoriaServicio;
   }
 
   if (busqueda) {

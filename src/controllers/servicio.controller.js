@@ -1,7 +1,12 @@
 // src/controllers/servicio.controller.js
 const { handleValidationErrors } = require("../middlewares/validation.middleware");
-const { validateServicio } = require("../validators/servicio.validators");
+const { 
+  validateServicio, 
+  validateServicioUpdate,  // ✅ Añadir esto
+  listarServiciosValidator 
+} = require("../validators/servicio.validators");
 const servicioService = require("../services/servicio.service.js");
+
 
 // ... (las funciones crearServicio, listarServicios, etc., se mantienen como estaban)
 const crearServicio = async (req, res, next) => {
@@ -19,7 +24,7 @@ const listarServicios = async (req, res, next) => {
         const filtros = {
             busqueda: req.query.busqueda,
             estado: req.query.estado,
-            idCategoriaServicio: req.query.idCategoriaServicio || req.query.categoriaServicioId,
+            idCategoriaServicio: req.query.idCategoriaServicio,
         };
         const servicios = await servicioService.obtenerTodosLosServicios(filtros);
         res.status(200).json({ success: true, data: servicios });
@@ -40,16 +45,15 @@ const listarServiciosDisponibles = async (req, res, next) => {
     }
 };
 
-// ... (el resto de las funciones: listarServiciosPublicos, obtenerServicioPorId, etc., se mantienen)
-
 const listarServiciosPublicos = async (req, res, next) => {
     try {
-        const servicios = await servicioService.obtenerTodosLosServicios({ estado: "Activo" });
+        const servicios = await servicioService.obtenerTodosLosServicios({ estado: true });  // ✅ Corregido
         res.status(200).json({ success: true, data: servicios });
     } catch (error) {
         next(error);
     }
 };
+
 const obtenerServicioPorId = async (req, res, next) => {
     try {
         const { idServicio } = req.params;
@@ -91,11 +95,11 @@ const eliminarServicioFisico = async (req, res, next) => {
 
 module.exports = {
   crearServicio: [validateServicio, handleValidationErrors, crearServicio],
-  listarServicios,
+ listarServicios: [listarServiciosValidator, listarServicios],
   listarServiciosPublicos,
   obtenerServicioPorId,
   actualizarServicio: [validateServicioUpdate, handleValidationErrors, actualizarServicio],
-  cambiarEstadoServicio,
-  eliminarServicioFisico,
+  cambiarEstadoServicio: [cambiarEstadoServicioValidators, cambiarEstadoServicio], 
+  eliminarServicioFisico: [idServicioValidator, eliminarServicioFisico], 
   listarServiciosDisponibles,
 };
