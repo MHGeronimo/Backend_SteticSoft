@@ -46,7 +46,7 @@ const crearServicio = async (datosServicio) => {
       nombre: nombre.trim(),
       descripcion: descripcion || null,
       precio: parseFloat(precio).toFixed(2),
-      id_categoria_servicio: parseInt(idCategoriaServicio),
+      idCategoriaServicio: parseInt(idCategoriaServicio),
       imagen: imagenUrl, // URL o path de la imagen
       estado: true
     };
