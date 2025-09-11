@@ -20,7 +20,7 @@ module.exports = {
     // Pre-hashed password for 'password123' (example, use a strong unique password)
     // The hash from the prompt: $2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO
     // This hash corresponds to "123456789"
-    const adminPasswordHash = '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO';
+    const adminPasswordHash = '$2b$10$4oSzNMIn624UpMa2koU1iu7JE2sIkahffB1C3PPbvA3RrSIP/5Zb2';
 
     await queryInterface.bulkInsert('usuario', [{
       // nombre_usuario: 'admin', // ELIMINADO
