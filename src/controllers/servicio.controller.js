@@ -1,23 +1,21 @@
 // src/controllers/servicio.controller.js
-const { handleValidationErrors } = require("../middlewares/validation.middleware");
-const { 
-  validateServicio, 
-  validateServicioUpdate,  // ✅ Añadir esto
-  listarServiciosValidator,
-  cambiarEstadoServicioValidators,
-  idServicioValidator
-} = require("../validators/servicio.validators");
 const servicioService = require("../services/servicio.service.js");
+const { uploadImage } = require("../config/cloudinary.config.js");
 
 const crearServicio = async (req, res, next) => {
   try {
-    const servicioData = {
-      ...req.body,
-      imagen: req.file ? req.file.path : null,
-    };
+    const servicioData = { ...req.body };
+
+    // Si se adjunta un archivo en la petición...
+    if (req.file) {
+      // 1. Súbelo a Cloudinary usando el buffer de memoria.
+      const result = await uploadImage(req.file.buffer, "servicios");
+      // 2. Asigna la URL segura devuelta por Cloudinary al campo 'imagen'.
+      servicioData.imagen = result.secure_url;
+    }
 
     const nuevo = await servicioService.crearServicio(servicioData);
-    res.status(201).json({ success: true, message: "Servicio creado.", data: nuevo });
+    res.status(201).json({ success: true, message: "Servicio creado exitosamente.", data: nuevo });
   } catch (error) {
     next(error);
   }
@@ -37,9 +35,6 @@ const listarServicios = async (req, res, next) => {
     }
 };
 
-/**
- * ✅ NUEVA FUNCIÓN: Responde a la ruta /disponibles
- */
 const listarServiciosDisponibles = async (req, res, next) => {
     try {
         const servicios = await servicioService.obtenerServiciosDisponibles();
@@ -49,50 +44,14 @@ const listarServiciosDisponibles = async (req, res, next) => {
     }
 };
 
-/**
- * Obtiene una lista de servicios activos para mostrar en la landing pública.
- */
 const listarServiciosPublicos = async (req, res, next) => {
-  try {
-    console.log("🔍 Entrando a listarServiciosPublicos");
-
-    const resultado = await servicioService.obtenerTodosLosServicios({
-      estado: true,
-    });
-
-    console.log("📥 Resultado crudo de servicioService:", resultado);
-
-    // Aseguramos que siempre trabajamos con un array
-    const listaServicios = Array.isArray(resultado)
-      ? resultado
-      : resultado?.servicios || [];
-
-    console.log("📦 Lista de servicios procesada:", listaServicios.length, "items");
-
-    // Filtrar y mapear al formato esperado por el frontend
-    const serviciosPublicos = listaServicios
-      .filter(s => s.estado === true)
-      .map(s => ({
-        id: s.idServicio,
-        name: s.nombre,
-        description: s.descripcion,
-        price: Number(s.precio),
-        image: s.imagen,
-        categoryName: s.categoria?.nombre || null
-      }));
-
-    console.log("🧾 Servicios públicos listos para enviar:", serviciosPublicos.length);
-
-    res.status(200).json({
-      success: true,
-      data: serviciosPublicos,
-    });
-  } catch (error) {
-    console.error("❌ Error al listar servicios públicos:", error);
-    next(error);
-  }
+    try {
+        const servicios = await servicioService.obtenerTodosLosServicios({ estado: true });
+        res.status(200).json({ success: true, data: servicios });
+    } catch (error) {
+        next(error);
+    }
 };
-
 
 const obtenerServicioPorId = async (req, res, next) => {
     try {
@@ -103,29 +62,36 @@ const obtenerServicioPorId = async (req, res, next) => {
         next(error);
     }
 };
+
 const actualizarServicio = async (req, res, next) => {
     try {
         const { idServicio } = req.params;
-        const servicioData = {
-            ...req.body,
-            imagen: req.file ? req.file.path : req.body.imagen,
-        };
+        const servicioData = { ...req.body };
+
+        // Misma lógica que en 'crearServicio': si hay un nuevo archivo, súbelo a Cloudinary.
+        if (req.file) {
+          const result = await uploadImage(req.file.buffer, "servicios");
+          servicioData.imagen = result.secure_url;
+        }
+
         const actualizado = await servicioService.actualizarServicio(Number(idServicio), servicioData);
-        res.status(200).json({ success: true, message: "Servicio actualizado.", data: actualizado });
+        res.status(200).json({ success: true, message: "Servicio actualizado exitosamente.", data: actualizado });
     } catch (error) {
         next(error);
     }
 };
+
 const cambiarEstadoServicio = async (req, res, next) => {
     try {
         const { idServicio } = req.params;
         const { estado } = req.body;
         const actualizado = await servicioService.cambiarEstadoServicio(Number(idServicio), estado);
-        res.status(200).json({ success: true, message: "Estado del servicio cambiado.", data: actualizado });
+        res.status(200).json({ success: true, message: "Estado del servicio cambiado exitosamente.", data: actualizado });
     } catch (error) {
         next(error);
     }
 };
+
 const eliminarServicioFisico = async (req, res, next) => {
     try {
         const { idServicio } = req.params;
@@ -138,7 +104,7 @@ const eliminarServicioFisico = async (req, res, next) => {
 
 module.exports = {
   crearServicio,
- listarServicios,
+  listarServicios,
   listarServiciosPublicos,
   obtenerServicioPorId,
   actualizarServicio,
@@ -146,3 +112,4 @@ module.exports = {
   eliminarServicioFisico,
   listarServiciosDisponibles,
 };
+

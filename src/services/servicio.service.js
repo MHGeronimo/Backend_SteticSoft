@@ -7,33 +7,41 @@ const {
   CustomError,
   BadRequestError,
 } = require("../errors");
-const fs = require("fs");
-const path = require("path");
 
-// ... (las funciones crearServicio, obtenerServicioPorId, etc., se mantienen como estaban)
+// ✅ MEJORA: Importar los helpers de Cloudinary para poder eliminar imágenes.
+const { deleteImage, getPublicIdFromUrl } = require("../config/cloudinary.config.js");
+
 
 const crearServicio = async (datosServicio) => {
-  // ✅ OPCIÓN RECOMENDADA: Recibir idCategoriaServicio del frontend
   const { nombre, precio, idCategoriaServicio, descripcion, imagen } = datosServicio;
   
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
+    // Si la creación falla porque el nombre ya existe, y se subió una imagen,
+    // debemos eliminarla de Cloudinary para no dejar archivos huérfanos.
+    if (imagen) {
+      const publicId = getPublicIdFromUrl(imagen);
+      if (publicId) await deleteImage(publicId);
+    }
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
 
   const categoriaServicio = await db.CategoriaServicio.findByPk(idCategoriaServicio);
   if (!categoriaServicio || !categoriaServicio.estado) {
+    if (imagen) {
+      const publicId = getPublicIdFromUrl(imagen);
+      if (publicId) await deleteImage(publicId);
+    }
     throw new BadRequestError("La categoría de servicio no existe o no está activa.");
   }
 
   try {
-
     const servicioParaCrear = {
       nombre: nombre.trim(),
       descripcion: descripcion || null,
       precio: parseFloat(precio).toFixed(2),
       idCategoriaServicio: parseInt(idCategoriaServicio),
-      imagen: imagen, // URL o path de la imagen
+      imagen: imagen, // Se guarda la URL segura de Cloudinary
       estado: true
     };
 
@@ -51,7 +59,7 @@ const crearServicio = async (datosServicio) => {
 };
 
 const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
-  const { busqueda, estado,idCategoriaServicio } = opcionesDeFiltro;
+  const { busqueda, estado, idCategoriaServicio } = opcionesDeFiltro;
   const whereClause = {};
 
   if (estado === "true" || estado === "false") {
@@ -63,13 +71,14 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   }
 
   if (idCategoriaServicio) {
-    whereClause.id_categoria_servicio = idCategoriaServicio;
+    // Corregido para usar el nombre de campo del modelo (camelCase)
+    whereClause.idCategoriaServicio = idCategoriaServicio;
   }
 
   if (busqueda) {
     whereClause[Op.or] = [
       { nombre: { [Op.iLike]: `%${busqueda}%` } },
-      Sequelize.where(Sequelize.cast(Sequelize.col("precio"), "text"), {
+      Sequelize.where(Sequelize.cast(Sequelize.col("Servicio.precio"), "text"), {
         [Op.iLike]: `%${busqueda}%`,
       }),
     ];
@@ -81,7 +90,7 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
       include: [{
         model: db.CategoriaServicio,
         as: "categoria",
-        attributes: ["id_categoria_servicio", "nombre", "estado"],
+        attributes: ["idCategoriaServicio", "nombre", "estado"],
       }],
       order: [["nombre", "ASC"]],
     });
@@ -91,10 +100,6 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   }
 };
 
-/**
- * ✅ NUEVA FUNCIÓN: Obtiene solo los servicios activos (estado=true).
- * Reutiliza la función existente para mantener el código limpio.
- */
 const obtenerServiciosDisponibles = async () => {
     return await obtenerTodosLosServicios({ estado: "true" });
 };
@@ -108,14 +113,24 @@ const obtenerServicioPorId = async (idServicio) => {
     }
     return servicio;
 };
+
 const actualizarServicio = async (idServicio, datosActualizar) => {
     const servicio = await db.Servicio.findByPk(idServicio);
     if (!servicio) {
+        // Si el servicio no existe pero se subió una imagen, la eliminamos.
+        if (datosActualizar.imagen) {
+            const publicId = getPublicIdFromUrl(datosActualizar.imagen);
+            if (publicId) await deleteImage(publicId);
+        }
         throw new NotFoundError("Servicio no encontrado para actualizar.");
     }
+
+    // Guardamos la URL de la imagen antigua ANTES de actualizar
+    const imagenAntigua = servicio.imagen;
+
     if (datosActualizar.nombre) {
         const existeNombre = await db.Servicio.findOne({
-          where: { nombre: datosActualizar.nombre, id_servicio: { [Op.ne]: idServicio } },
+            where: { nombre: datosActualizar.nombre, idServicio: { [Op.ne]: idServicio } },
         });
         if (existeNombre) {
             throw new ConflictError("El nombre ya está en uso por otro servicio.");
@@ -126,6 +141,16 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
     }
     try {
         await servicio.update(datosActualizar);
+
+        // ✅ MEJORA: Si se subió una nueva imagen y es diferente a la anterior,
+        // eliminamos la antigua de Cloudinary.
+        if (imagenAntigua && datosActualizar.imagen && imagenAntigua !== datosActualizar.imagen) {
+            const publicIdAntiguo = getPublicIdFromUrl(imagenAntigua);
+            if (publicIdAntiguo) {
+                await deleteImage(publicIdAntiguo);
+            }
+        }
+
         return await obtenerServicioPorId(idServicio);
     } catch (error) {
         console.error("Error al actualizar el servicio:", error);
@@ -151,10 +176,18 @@ const eliminarServicioFisico = async (idServicio) => {
     if (citasAsociadas > 0) {
         throw new BadRequestError("No se puede eliminar porque está asociado a citas.");
     }
+
+    // ✅ MEJORA: Antes de eliminar de la BD, si hay una imagen, la eliminamos de Cloudinary.
+    if (servicio.imagen) {
+        const publicId = getPublicIdFromUrl(servicio.imagen);
+        if (publicId) {
+            await deleteImage(publicId);
+        }
+    }
+
     await servicio.destroy();
     return { mensaje: "Servicio eliminado correctamente." };
 };
-
 
 module.exports = {
   crearServicio,
@@ -163,5 +196,6 @@ module.exports = {
   actualizarServicio,
   cambiarEstadoServicio,
   eliminarServicioFisico,
-  obtenerServiciosDisponibles, // ✅ Exportar la nueva función
+  obtenerServiciosDisponibles,
 };
+
