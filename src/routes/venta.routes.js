@@ -76,4 +76,10 @@ router.delete(
   ventaController.eliminarVentaFisica
 );
 
+router.get(
+  "/movil/mis-ventas",
+  authMiddleware,
+  ventaController.listarVentasClienteMovil
+);
+
 module.exports = router;

@@ -345,6 +345,43 @@ const eliminarVentaFisica = async (idVenta) => {
     }
 };
 
+const findVentasByClienteIdMovil = async (idCliente) => {
+    if (!idCliente) {
+        throw new BadRequestError("El ID del cliente es requerido.");
+    }
+    return await db.Venta.findAll({
+        where: { idCliente: idCliente },
+        include: [
+            {
+                model: db.Estado,
+                as: "estadoDetalle",
+                attributes: ["idEstado", "nombreEstado"],
+            },
+            {
+                model: db.Producto,
+                as: "productos",
+                attributes: ["idProducto", "nombre"],
+                through: {
+                    model: db.ProductoXVenta,
+                    as: "detalleProductoVenta",
+                    attributes: ["cantidad", "valorUnitario"],
+                },
+            },
+            {
+                model: db.Servicio,
+                as: "servicios",
+                attributes: ["idServicio", "nombre"],
+                through: {
+                    model: db.VentaXServicio,
+                    as: "detalleServicioVenta",
+                    attributes: ["valorServicio"],
+                },
+            },
+        ],
+        order: [["fecha", "DESC"]],
+    });
+};
+
 module.exports = {
     crearVenta,
     obtenerTodasLasVentas,
@@ -353,4 +390,5 @@ module.exports = {
     anularVenta,
     habilitarVenta,
     eliminarVentaFisica,
+    findVentasByClienteIdMovil,
 };
