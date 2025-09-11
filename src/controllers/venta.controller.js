@@ -1,6 +1,7 @@
 // src/controllers/venta.controller.js
 const ventaService = require("../services/venta.service.js");
-const { BadRequestError } = require("../errors");
+const { BadRequestError, NotFoundError } = require("../errors");
+const db = require("../models");
 
 /**
  * Crea una nueva venta.
@@ -165,6 +166,25 @@ const cambiarEstadoGeneralVenta = async (req, res, next) => {
   }
 };
 
+const listarVentasClienteMovil = async (req, res, next) => {
+  try {
+    const idUsuario = req.usuario.idUsuario;
+    const cliente = await db.Cliente.findOne({ where: { idUsuario: idUsuario } });
+
+    if (!cliente) {
+      throw new NotFoundError("No se encontró un perfil de cliente para este usuario.");
+    }
+
+    const ventas = await ventaService.findVentasByClienteIdMovil(cliente.idCliente);
+    res.status(200).json({
+      success: true,
+      data: ventas,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearVenta,
   listarVentas,
@@ -173,5 +193,6 @@ module.exports = {
   anularVenta,
   habilitarVenta,
   eliminarVentaFisica,
-  cambiarEstadoGeneralVenta
+  cambiarEstadoGeneralVenta,
+  listarVentasClienteMovil,
 };
