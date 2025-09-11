@@ -26,6 +26,24 @@ router.get(
   citaController.listarMisCitas
 );
 
+// Ruta para que un cliente cree su propia cita
+router.post(
+  "/mis-citas",
+  authMiddleware,
+  checkPermission("MODULO_CITAS_CLIENTE"),
+  crearCitaValidators,
+  citaController.crearMiCita
+);
+
+// Ruta para que un cliente vea el detalle de una de sus citas
+router.get(
+  "/mis-citas/:id",
+  authMiddleware,
+  checkPermission("MODULO_CITAS_CLIENTE"),
+  idValidator,
+  citaController.obtenerMiCitaPorId
+);
+
 router.post(
   "/",
   authMiddleware,

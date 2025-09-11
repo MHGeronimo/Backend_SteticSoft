@@ -189,6 +189,48 @@ const listarMisCitas = async (req, res, next) => {
   }
 };
 
+/**
+ * Crea una nueva cita para el cliente autenticado.
+ */
+const crearMiCita = async (req, res, next) => {
+  try {
+    const idCliente = req.user.clienteInfo?.idCliente;
+    if (!idCliente) {
+      return res.status(403).json({ success: false, message: "Acceso denegado. Perfil de cliente no encontrado." });
+    }
+    // El servicio se encargará de asociar esta cita con el idCliente
+    const nuevaCita = await citaService.crearCitaParaCliente(req.body, idCliente);
+    res.status(201).json({
+      success: true,
+      message: "Cita creada exitosamente.",
+      data: nuevaCita,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Obtiene una cita específica del cliente que ha iniciado sesión.
+ */
+const obtenerMiCitaPorId = async (req, res, next) => {
+  try {
+    const idCliente = req.user.clienteInfo?.idCliente;
+    if (!idCliente) {
+      return res.status(403).json({ success: false, message: "Acceso denegado. Perfil de cliente no encontrado." });
+    }
+    const { id } = req.params;
+    const cita = await citaService.obtenerCitaDeClientePorId(Number(id), idCliente);
+    res.status(200).json({
+      success: true,
+      data: cita,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   crearCita,
   listarCitas,
@@ -203,4 +245,6 @@ module.exports = {
   obtenerEmpleadosPorNovedad,
   obtenerServiciosDisponibles,
   obtenerEstadosCita,
+  crearMiCita,
+  obtenerMiCitaPorId,
 };

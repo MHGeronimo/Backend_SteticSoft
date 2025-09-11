@@ -469,6 +469,38 @@ const obtenerCitasPorCliente = async (idCliente) => {
   }
 };
 
+/**
+ * Crea una nueva cita para un cliente específico, asignando el idCliente desde el controlador.
+ * @param {object} datosCita - Datos para la nueva cita.
+ * @param {number} idClienteAuth - El ID del cliente autenticado.
+ * @returns {Promise<Cita>} La instancia de la cita recién creada.
+ */
+const crearCitaParaCliente = async (datosCita, idClienteAuth) => {
+    // Forzamos el uso del idCliente del usuario autenticado
+    const datosCitaSeguros = { ...datosCita, idCliente: idClienteAuth };
+
+    // Reutilizamos la lógica de la función `crearCita` existente
+    return crearCita(datosCitaSeguros);
+};
+
+/**
+ * Obtiene una cita por su ID, asegurándose de que pertenezca al cliente especificado.
+ * @param {number} idCita - El ID de la cita.
+ * @param {number} idCliente - El ID del cliente que solicita.
+ * @returns {Promise<Cita>} La instancia de la cita.
+ */
+const obtenerCitaDeClientePorId = async (idCita, idCliente) => {
+  const cita = await obtenerCitaCompletaPorId(idCita);
+
+  if (!cita || cita.idCliente !== idCliente) {
+    // Se lanza NotFoundError para no revelar la existencia de la cita a usuarios no autorizados.
+    throw new NotFoundError("Cita no encontrada.");
+  }
+
+  return cita;
+};
+
+
 module.exports = {
   crearCita,
   obtenerTodasLasCitas,
@@ -477,6 +509,8 @@ module.exports = {
   actualizarCita,
   cambiarEstadoCita,
   eliminarCitaFisica,
+  crearCitaParaCliente,
+  obtenerCitaDeClientePorId,
   // Funciones de consulta para el formulario que no cambian
   obtenerDiasDisponiblesPorNovedad: require("./novedades.service.js")
     .obtenerDiasDisponibles,

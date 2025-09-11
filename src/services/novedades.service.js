@@ -319,6 +319,20 @@ const obtenerEmpleadosParaAsignar = async () => {
   }
 };
 
+const obtenerNovedadesPublicas = async () => {
+    try {
+        return await db.Novedad.findAll({
+            where: {
+                estado: true,
+            },
+            order: [["fechaInicio", "DESC"]],
+        });
+    } catch (error) {
+        console.error("Error al obtener novedades públicas:", error);
+        throw new CustomError(`Error al obtener novedades públicas: ${error.message}`, 500);
+    }
+};
+
 module.exports = {
   crearNovedad,
   obtenerTodasLasNovedades,
@@ -331,5 +345,6 @@ module.exports = {
   obtenerHorasDisponibles,
   obtenerEmpleadosPorNovedad,
   obtenerEmpleadosParaAsignar,
+  obtenerNovedadesPublicas,
 };
 
