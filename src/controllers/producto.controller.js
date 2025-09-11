@@ -173,48 +173,19 @@ const listarProductosInternos = async (req, res, next) => {
 /**
  * Obtiene una lista de productos activos para mostrar en la landing pública.
  */
-/**
- * Obtiene una lista de productos activos para mostrar en la landing pública.
- */
 const listarProductosPublicos = async (req, res, next) => {
   try {
-    console.log("🔍 Entrando a listarProductosPublicos");
-
-    const resultado = await productoService.obtenerTodosLosProductos({
-      tipoUso: "Externo",
-    });
-    console.log("📥 Resultado crudo de productoService:", resultado);
-
-    // Aseguramos que siempre trabajamos con un array
-    const listaProductos = Array.isArray(resultado)
-      ? resultado
-      : resultado?.productos || [];
-
-    console.log("📦 Lista de productos procesada:", listaProductos.length, "items");
-
-    // Filtrar solo productos activos
-    const productosPublicos = listaProductos
-  .filter(p => p.estado === true)
-  .map(p => ({
-    id: p.idProducto,
-    name: p.nombre,
-    description: p.descripcion,
-    price: p.precio ? Number(p.precio) : null, // 🔹 aseguramos que sea número
-    image: p.imagen || null, // 🔹 si no hay imagen, enviamos null
-    categoryName: p.categoria?.nombre || null
-  }));
-
-    console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
-    console.log(listaProductos)
+    const { idCategoria } = req.params;
+    const productos = await productoService.obtenerProductosPublicos({ idCategoria });
     res.status(200).json({
       success: true,
-      data: productosPublicos,
+      data: productos,
     });
   } catch (error) {
-    console.error("❌ Error al listar productos públicos:", error);
     next(error);
   }
 };
+
 
 module.exports = {
   crearProducto,

@@ -19,6 +19,13 @@ router.get(
   productoController.listarProductosPublicos
 );
 
+// Ruta pública para obtener productos activos por categoría
+router.get(
+  "/public/:idCategoria",
+  productoValidators.idCategoriaProductoValidator,
+  productoController.listarProductosPublicos
+);
+
 
 // Ruta para crear un nuevo producto, incluye subida de imagen.
 router.post(

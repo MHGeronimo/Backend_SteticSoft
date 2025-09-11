@@ -376,6 +376,25 @@ const obtenerProductosInternos = async () => {
   }
 };
 
+/**
+ * Obtener todos los productos públicos (activos y de uso externo).
+ */
+const obtenerProductosPublicos = async (filtros) => {
+  const { idCategoria, ...restFiltros } = filtros;
+  
+  const query = {
+    ...restFiltros,
+    estado: 'true',
+    tipoUso: 'Externo',
+  };
+
+  if (idCategoria) {
+    query.idCategoria = idCategoria;
+  }
+
+  return obtenerTodosLosProductos(query);
+};
+
 module.exports = {
   crearProducto,
   obtenerTodosLosProductos,
@@ -386,4 +405,5 @@ module.exports = {
   eliminarProductoFisico,
   cambiarEstadoProducto,
   obtenerProductosInternos,
+  obtenerProductosPublicos,
 };
