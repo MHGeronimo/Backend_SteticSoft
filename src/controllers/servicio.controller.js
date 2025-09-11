@@ -1,6 +1,6 @@
 // src/controllers/servicio.controller.js
 const { handleValidationErrors } = require("../middlewares/validation.middleware");
-const { validateServicio } = require("../validators/servicio.validator");
+const { validateServicio } = require("../validators/servicio.validators");
 const servicioService = require("../services/servicio.service.js");
 
 // ... (las funciones crearServicio, listarServicios, etc., se mantienen como estaban)
