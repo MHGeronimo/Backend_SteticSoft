@@ -19,6 +19,14 @@ router.get(
   clienteController.getMiPerfil
 );
 
+// Ruta para que un cliente actualice su propio perfil
+router.put(
+  "/me",
+  authMiddleware,
+  clienteValidators.updateMiPerfilValidators,
+  clienteController.updateMiPerfil
+);
+
 router.get(
   "/buscar",
   authMiddleware,

@@ -177,6 +177,21 @@ const eliminarNovedadFisica = async (req, res, next) => {
   }
 };
 
+/**
+ * Lista todas las novedades activas para el público general.
+ */
+const listarNovedadesPublicas = async (req, res, next) => {
+    try {
+        const novedades = await novedadesService.obtenerNovedadesPublicas();
+        res.status(200).json({
+            success: true,
+            data: novedades,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
   crearNovedad,
   listarNovedades,
