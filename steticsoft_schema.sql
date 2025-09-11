@@ -364,6 +364,7 @@ INSERT INTO permisos (nombre, descripcion, estado) VALUES
 ('MODULO_VENTAS_GESTIONAR', 'Permite la gestión de las ventas a clientes (Admin/Empleado).', TRUE),
 ('MODULO_VENTAS_CREAR_PROPIA', 'Permite a un cliente crear/realizar una venta (compra).', TRUE),
 ('MODULO_VENTAS_VER_PROPIAS', 'Permite a un cliente ver sus propias ventas.', TRUE),
+('MODULO_CITAS_CLIENTE', 'Permite a un cliente ver y seleccionar recursos para agendar una cita.', TRUE),
 ('MODULO_CITAS_GESTIONAR', 'Permite la gestión completa de las citas (Admin/Empleado).', TRUE),
 ('MODULO_CITAS_CREAR_PROPIA', 'Permite a un cliente agendar sus propias citas.', TRUE),
 ('MODULO_CITAS_VER_PROPIAS', 'Permite a un cliente ver sus propias citas.', TRUE),

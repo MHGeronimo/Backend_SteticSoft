@@ -193,16 +193,16 @@ const listarNovedadesPublicas = async (req, res, next) => {
 };
 
 module.exports = {
-  crearNovedad,
-  listarNovedades,
-  obtenerNovedadPorId,
-  actualizarNovedad,
-  cambiarEstadoNovedad,
-  eliminarNovedadFisica,
-  listarNovedadesAgendables,
-  listarDiasDisponibles,
-  listarHorasDisponibles,
-  listarEmpleadosPorNovedad,
-  listarEmpleadosParaAsignar, // ✅ Se exporta la nueva función
+  crearNovedad,
+  listarNovedades,
+  obtenerNovedadPorId,
+  actualizarNovedad,
+  cambiarEstadoNovedad,
+  eliminarNovedadFisica,
+  listarNovedadesAgendables,
+  listarDiasDisponibles,
+  listarHorasDisponibles,
+  listarEmpleadosPorNovedad,
+  listarEmpleadosParaAsignar,
+  listarNovedadesPublicas, // <--- AÑADIR ESTA LÍNEA QUE FALTABA
 };
-
