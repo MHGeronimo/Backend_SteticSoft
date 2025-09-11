@@ -10,6 +10,9 @@ const {
 } = require("../middlewares/authorization.middleware.js");
 const upload = require("../middlewares/upload.middleware.js");
 
+// INICIO DE MODIFICACIÓN: Importar el validador correcto
+const categoriaProductoValidators = require("../validators/categoriaProducto.validators.js");
+// FIN DE MODIFICACIÓN
 
 const PERMISO_MODULO_PRODUCTOS = "MODULO_PRODUCTOS_GESTIONAR";
 
@@ -22,7 +25,9 @@ router.get(
 // Ruta pública para obtener productos activos por categoría
 router.get(
   "/public/:idCategoria",
-  productoValidators.idCategoriaProductoValidator,
+  // INICIO DE MODIFICACIÓN: Usar el validador importado correctamente
+  categoriaProductoValidators.idCategoriaProductoValidator,
+  // FIN DE MODIFICACIÓN
   productoController.listarProductosPublicos
 );
 
