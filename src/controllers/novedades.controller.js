@@ -203,6 +203,7 @@ module.exports = {
   listarDiasDisponibles,
   listarHorasDisponibles,
   listarEmpleadosPorNovedad,
-  listarEmpleadosParaAsignar, // ✅ Se exporta la nueva función
+  listarEmpleadosParaAsignar,
+  listarNovedadesPublicas, // ✅ Se exporta la nueva función
 };
 
