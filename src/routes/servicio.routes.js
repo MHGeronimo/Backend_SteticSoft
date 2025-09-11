@@ -21,6 +21,7 @@ router.get(
   servicioController.listarServiciosDisponibles
 );
 
+const upload = require("../middlewares/upload.middleware.js");
 // MODIFICAR LAS RUTAS QUE RECIBEN IMÁGENES:
 router.post(
   "/",
@@ -58,15 +59,6 @@ router.get(
   servicioValidators.idServicioValidator,
   handleValidationErrors, // ✅ AÑADIDO
   servicioController.obtenerServicioPorId
-);
-
-router.put(
-  "/:idServicio",
-  authMiddleware,
-  checkPermission(PERMISO_MODULO_SERVICIOS),
-  servicioValidators.actualizarServicioValidators,
-  handleValidationErrors, // ✅ AÑADIDO
-  servicioController.actualizarServicio
 );
 
 router.patch(

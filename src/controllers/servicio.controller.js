@@ -11,15 +11,9 @@ const servicioService = require("../services/servicio.service.js");
 
 const crearServicio = async (req, res, next) => {
   try {
-    // ✅ Los campos textuales vienen en req.body
-    // ✅ La imagen viene en req.file (si se subió)
     const servicioData = {
       ...req.body,
-      imagen: req.file ? {
-        buffer: req.file.buffer,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype
-      } : null
+      imagen: req.file ? req.file.path : null,
     };
 
     const nuevo = await servicioService.crearServicio(servicioData);
@@ -76,7 +70,10 @@ const obtenerServicioPorId = async (req, res, next) => {
 const actualizarServicio = async (req, res, next) => {
     try {
         const { idServicio } = req.params;
-        const servicioData = req.body;
+        const servicioData = {
+            ...req.body,
+            imagen: req.file ? req.file.path : req.body.imagen,
+        };
         const actualizado = await servicioService.actualizarServicio(Number(idServicio), servicioData);
         res.status(200).json({ success: true, message: "Servicio actualizado.", data: actualizado });
     } catch (error) {
