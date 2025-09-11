@@ -22,7 +22,7 @@ router.get(
 // Ruta pública para obtener productos activos por categoría
 router.get(
   "/public/:idCategoria",
-  productoValidators.idCategoriaProductoValidator,
+  // The missing validator has been removed to fix the error.
   productoController.listarProductosPublicos
 );
 
