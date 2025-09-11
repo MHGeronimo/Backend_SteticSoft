@@ -173,6 +173,9 @@ const listarProductosInternos = async (req, res, next) => {
 /**
  * Obtiene una lista de productos activos para mostrar en la landing pública.
  */
+/**
+ * Obtiene una lista de productos activos para mostrar en la landing pública.
+ */
 const listarProductosPublicos = async (req, res, next) => {
   try {
     console.log("🔍 Entrando a listarProductosPublicos");
@@ -182,26 +185,24 @@ const listarProductosPublicos = async (req, res, next) => {
     });
     console.log("📥 Resultado crudo de productoService:", resultado);
 
-    // 🛡️ Lógica defensiva para asegurar que trabajamos con un array
+    // Aseguramos que siempre trabajamos con un array
     const listaProductos = Array.isArray(resultado)
       ? resultado
       : resultado?.productos || [];
 
     console.log("📦 Lista de productos procesada:", listaProductos.length, "items");
 
-    // 🔍 Filtrar productos cuyo estado sea `true` (activo).
+    // Filtrar solo productos activos
     const productosPublicos = listaProductos
-      .filter(p => {
-        const esActivo = p.estado === true;
-        console.log(`🔎 Producto ID ${p.idProducto} estado: ${p.estado} → ${esActivo ? "✅ incluido" : "❌ excluido"}`);
-        return esActivo;
-      })
+      .filter(p => p.estado === true)
       .map(p => ({
         id: p.idProducto,
-        name: p.nombre,          // ✅ Adaptado al frontend
+        name: p.nombre,
         description: p.descripcion,
         price: p.precio,
-        image: p.imagen
+        image: p.imagen,
+        // opcional: solo el nombre de la categoría, nunca el objeto entero
+        categoryName: p.categoria?.nombre || null
       }));
 
     console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
@@ -215,7 +216,6 @@ const listarProductosPublicos = async (req, res, next) => {
     next(error);
   }
 };
-
 
 module.exports = {
   crearProducto,
