@@ -3,7 +3,9 @@ const { handleValidationErrors } = require("../middlewares/validation.middleware
 const { 
   validateServicio, 
   validateServicioUpdate,  // ✅ Añadir esto
-  listarServiciosValidator 
+  listarServiciosValidator,
+  cambiarEstadoServicioValidators,
+  idServicioValidator
 } = require("../validators/servicio.validators");
 const servicioService = require("../services/servicio.service.js");
 
