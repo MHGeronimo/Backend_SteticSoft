@@ -244,7 +244,8 @@ const obtenerEmpleados = async () => {
         where: {
           nombre: { [Op.iLike]: 'empleado' }
         },
-        attributes: []
+        // CORRECCIÓN: Le pedimos que nos traiga el nombre del rol
+        attributes: ['nombre'] 
       },
       where: {
         estado: true
