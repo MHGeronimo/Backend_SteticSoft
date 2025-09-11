@@ -1,27 +1,28 @@
 // src/services/servicio.service.js
 const db = require("../models");
-const { Op, Sequelize } = db.Sequelize;
+const { Op } = db.Sequelize;
 const {
   NotFoundError,
   ConflictError,
   CustomError,
   BadRequestError,
 } = require("../errors");
-
-// ✅ MEJORA: Importar los helpers de Cloudinary para poder eliminar imágenes.
 const { deleteImage, getPublicIdFromUrl } = require("../config/cloudinary.config.js");
 
-
+/**
+ * Crea un nuevo servicio. Gestiona la URL de la imagen de Cloudinary.
+ * @param {object} datosServicio - Datos del servicio, incluyendo la URL de la imagen si se subió.
+ * @returns {Promise<object>} El servicio recién creado.
+ */
 const crearServicio = async (datosServicio) => {
   const { nombre, precio, idCategoriaServicio, descripcion, imagen } = datosServicio;
-  
+
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
     // Si la creación falla porque el nombre ya existe, y se subió una imagen,
     // debemos eliminarla de Cloudinary para no dejar archivos huérfanos.
     if (imagen) {
-      const publicId = getPublicIdFromUrl(imagen);
-      if (publicId) await deleteImage(publicId);
+      await deleteImage(getPublicIdFromUrl(imagen));
     }
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
@@ -29,8 +30,7 @@ const crearServicio = async (datosServicio) => {
   const categoriaServicio = await db.CategoriaServicio.findByPk(idCategoriaServicio);
   if (!categoriaServicio || !categoriaServicio.estado) {
     if (imagen) {
-      const publicId = getPublicIdFromUrl(imagen);
-      if (publicId) await deleteImage(publicId);
+      await deleteImage(getPublicIdFromUrl(imagen));
     }
     throw new BadRequestError("La categoría de servicio no existe o no está activa.");
   }
@@ -39,48 +39,41 @@ const crearServicio = async (datosServicio) => {
     const servicioParaCrear = {
       nombre: nombre.trim(),
       descripcion: descripcion || null,
-      precio: parseFloat(precio).toFixed(2),
+      precio: parseFloat(precio),
       idCategoriaServicio: parseInt(idCategoriaServicio),
-      imagen: imagen, // Se guarda la URL segura de Cloudinary
+      imagen: imagen || null, // Guarda la URL de Cloudinary
       estado: true
     };
-
     return await db.Servicio.create(servicioParaCrear);
   } catch (error) {
-    console.error("Error al crear el servicio:", error);
-    if (error.name === "SequelizeForeignKeyConstraintError") {
-      throw new BadRequestError("La categoría proporcionada no es válida.");
-    }
-    if (error.name === "SequelizeValidationError") {
-      throw new BadRequestError("Datos de servicio inválidos.");
-    }
+    console.error("Error al crear el servicio en la base de datos:", error);
     throw new CustomError(`Error en el servidor al crear el servicio: ${error.message}`, 500);
   }
 };
 
+/**
+ * Obtiene todos los servicios con filtros opcionales.
+ * @param {object} opcionesDeFiltro - Opciones para filtrar y buscar.
+ * @returns {Promise<Array<object>>} Lista de servicios.
+ */
 const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   const { busqueda, estado, idCategoriaServicio } = opcionesDeFiltro;
   const whereClause = {};
 
-  if (estado === "true" || estado === "false") {
-    whereClause.estado = estado === "true";
-  } else if (estado === "Activo") {
+  if (estado === "true" || estado === "Activo") {
     whereClause.estado = true;
-  } else if (estado === "Inactivo") {
+  } else if (estado === "false" || estado === "Inactivo") {
     whereClause.estado = false;
   }
 
   if (idCategoriaServicio) {
-    // Corregido para usar el nombre de campo del modelo (camelCase)
+    // ✅ CORRECCIÓN: Usar el nombre del campo del modelo (camelCase)
     whereClause.idCategoriaServicio = idCategoriaServicio;
   }
 
   if (busqueda) {
     whereClause[Op.or] = [
       { nombre: { [Op.iLike]: `%${busqueda}%` } },
-      Sequelize.where(Sequelize.cast(Sequelize.col("Servicio.precio"), "text"), {
-        [Op.iLike]: `%${busqueda}%`,
-      }),
     ];
   }
 
@@ -90,7 +83,7 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
       include: [{
         model: db.CategoriaServicio,
         as: "categoria",
-        attributes: ["idCategoriaServicio", "nombre", "estado"],
+        attributes: ["idCategoriaServicio", "nombre"],
       }],
       order: [["nombre", "ASC"]],
     });
@@ -100,10 +93,19 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
   }
 };
 
+/**
+ * Obtiene solo los servicios activos.
+ * @returns {Promise<Array<object>>}
+ */
 const obtenerServiciosDisponibles = async () => {
     return await obtenerTodosLosServicios({ estado: "true" });
 };
 
+/**
+ * Obtiene un servicio por su ID.
+ * @param {number} idServicio
+ * @returns {Promise<object>} El servicio encontrado.
+ */
 const obtenerServicioPorId = async (idServicio) => {
     const servicio = await db.Servicio.findByPk(idServicio, {
         include: [{ model: db.CategoriaServicio, as: "categoria" }],
@@ -114,41 +116,43 @@ const obtenerServicioPorId = async (idServicio) => {
     return servicio;
 };
 
+/**
+ * Actualiza un servicio. Si se provee una nueva imagen, elimina la anterior de Cloudinary.
+ * @param {number} idServicio
+ * @param {object} datosActualizar
+ * @returns {Promise<object>} El servicio actualizado.
+ */
 const actualizarServicio = async (idServicio, datosActualizar) => {
     const servicio = await db.Servicio.findByPk(idServicio);
     if (!servicio) {
-        // Si el servicio no existe pero se subió una imagen, la eliminamos.
         if (datosActualizar.imagen) {
-            const publicId = getPublicIdFromUrl(datosActualizar.imagen);
-            if (publicId) await deleteImage(publicId);
+            await deleteImage(getPublicIdFromUrl(datosActualizar.imagen));
         }
         throw new NotFoundError("Servicio no encontrado para actualizar.");
     }
 
-    // Guardamos la URL de la imagen antigua ANTES de actualizar
-    const imagenAntigua = servicio.imagen;
+    const imagenAntigua = servicio.imagen; // Guardamos la URL de la imagen antigua
 
     if (datosActualizar.nombre) {
         const existeNombre = await db.Servicio.findOne({
-            where: { nombre: datosActualizar.nombre, idServicio: { [Op.ne]: idServicio } },
+          where: { nombre: datosActualizar.nombre, idServicio: { [Op.ne]: idServicio } },
         });
         if (existeNombre) {
             throw new ConflictError("El nombre ya está en uso por otro servicio.");
         }
     }
-    if (datosActualizar.precio !== undefined) {
-        datosActualizar.precio = parseFloat(datosActualizar.precio);
-    }
+
     try {
         await servicio.update(datosActualizar);
 
-        // ✅ MEJORA: Si se subió una nueva imagen y es diferente a la anterior,
-        // eliminamos la antigua de Cloudinary.
-        if (imagenAntigua && datosActualizar.imagen && imagenAntigua !== datosActualizar.imagen) {
-            const publicIdAntiguo = getPublicIdFromUrl(imagenAntigua);
-            if (publicIdAntiguo) {
-                await deleteImage(publicIdAntiguo);
-            }
+        // Si se subió una nueva imagen (y es diferente a la anterior), borramos la antigua de Cloudinary.
+        if (imagenAntigua && datosActualizar.imagen && datosActualizar.imagen !== imagenAntigua) {
+            await deleteImage(getPublicIdFromUrl(imagenAntigua));
+        }
+
+        // Si se envió explícitamente la imagen como null, es para eliminarla.
+        if (imagenAntigua && datosActualizar.imagen === null) {
+            await deleteImage(getPublicIdFromUrl(imagenAntigua));
         }
 
         return await obtenerServicioPorId(idServicio);
@@ -158,6 +162,12 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
     }
 };
 
+/**
+ * Cambia el estado (activo/inactivo) de un servicio.
+ * @param {number} idServicio
+ * @param {boolean} estado
+ * @returns {Promise<object>}
+ */
 const cambiarEstadoServicio = async (idServicio, estado) => {
     const servicio = await db.Servicio.findByPk(idServicio);
     if (!servicio) {
@@ -167,25 +177,31 @@ const cambiarEstadoServicio = async (idServicio, estado) => {
     return servicio;
 };
 
+/**
+ * Elimina un servicio físicamente y su imagen asociada de Cloudinary.
+ * @param {number} idServicio
+ * @returns {Promise<object>}
+ */
 const eliminarServicioFisico = async (idServicio) => {
     const servicio = await db.Servicio.findByPk(idServicio);
     if (!servicio) {
         throw new NotFoundError("Servicio no encontrado.");
     }
+
     const citasAsociadas = await servicio.countCitas();
     if (citasAsociadas > 0) {
         throw new BadRequestError("No se puede eliminar porque está asociado a citas.");
     }
 
-    // ✅ MEJORA: Antes de eliminar de la BD, si hay una imagen, la eliminamos de Cloudinary.
-    if (servicio.imagen) {
-        const publicId = getPublicIdFromUrl(servicio.imagen);
-        if (publicId) {
-            await deleteImage(publicId);
-        }
-    }
+    const imagenParaEliminar = servicio.imagen;
 
     await servicio.destroy();
+
+    // Si había una imagen, la eliminamos de Cloudinary después de borrar el registro
+    if (imagenParaEliminar) {
+        await deleteImage(getPublicIdFromUrl(imagenParaEliminar));
+    }
+
     return { mensaje: "Servicio eliminado correctamente." };
 };
 
