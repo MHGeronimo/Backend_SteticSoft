@@ -18,12 +18,6 @@ const crearServicio = async (datosServicio) => {
   
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
-    if (imagen) {
-      const imagePath = path.join(__dirname, "..", "public", imagen);
-      fs.unlink(imagePath, (err) => { 
-        if (err) console.error(`Error al eliminar imagen huérfana:`, err); 
-      });
-    }
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
 
@@ -33,21 +27,13 @@ const crearServicio = async (datosServicio) => {
   }
 
   try {
-    let imagenUrl = null;
-    
-    // ✅ Procesar la imagen si existe
-    if (imagen && imagen.buffer) {
-      // Aquí va tu lógica para guardar la imagen
-      // Por ejemplo: subir a Cloudinary, AWS S3, o guardar en filesystem
-      imagenUrl = await guardarImagen(imagen);
-    }
 
     const servicioParaCrear = {
       nombre: nombre.trim(),
       descripcion: descripcion || null,
       precio: parseFloat(precio).toFixed(2),
       idCategoriaServicio: parseInt(idCategoriaServicio),
-      imagen: imagenUrl, // URL o path de la imagen
+      imagen: imagen, // URL o path de la imagen
       estado: true
     };
 
@@ -125,16 +111,11 @@ const obtenerServicioPorId = async (idServicio) => {
 const actualizarServicio = async (idServicio, datosActualizar) => {
     const servicio = await db.Servicio.findByPk(idServicio);
     if (!servicio) {
-        if (datosActualizar.imagen) {
-            const imagePath = path.join(__dirname, "..", "public", datosActualizar.imagen);
-            fs.unlink(imagePath, (err) => { if (err) console.error(`Error al eliminar imagen:`, err); });
-        }
         throw new NotFoundError("Servicio no encontrado para actualizar.");
     }
-    const oldImage = servicio.imagen;
     if (datosActualizar.nombre) {
         const existeNombre = await db.Servicio.findOne({
-            where: { nombre: datosActualizar.nombre, idServicio: { [Op.ne]: idServicio } },
+          where: { nombre: datosActualizar.nombre, id_servicio: { [Op.ne]: idServicio } },
         });
         if (existeNombre) {
             throw new ConflictError("El nombre ya está en uso por otro servicio.");
@@ -145,10 +126,6 @@ const actualizarServicio = async (idServicio, datosActualizar) => {
     }
     try {
         await servicio.update(datosActualizar);
-        if (oldImage && datosActualizar.imagen !== oldImage) {
-            const oldImagePath = path.join(__dirname, "..", "public", oldImage);
-            fs.unlink(oldImagePath, (err) => { if (err) console.error(`Error al eliminar imagen antigua:`, err); });
-        }
         return await obtenerServicioPorId(idServicio);
     } catch (error) {
         console.error("Error al actualizar el servicio:", error);
@@ -174,12 +151,7 @@ const eliminarServicioFisico = async (idServicio) => {
     if (citasAsociadas > 0) {
         throw new BadRequestError("No se puede eliminar porque está asociado a citas.");
     }
-    const image = servicio.imagen;
     await servicio.destroy();
-    if (image) {
-        const imagePath = path.join(__dirname, "..", "public", image);
-        fs.unlink(imagePath, (err) => { if (err) console.error(`Error al eliminar imagen:`, err); });
-    }
     return { mensaje: "Servicio eliminado correctamente." };
 };
 
