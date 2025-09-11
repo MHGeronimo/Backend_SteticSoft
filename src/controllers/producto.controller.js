@@ -194,16 +194,15 @@ const listarProductosPublicos = async (req, res, next) => {
 
     // Filtrar solo productos activos
     const productosPublicos = listaProductos
-      .filter(p => p.estado === true)
-      .map(p => ({
-        id: p.idProducto,
-        name: p.nombre,
-        description: p.descripcion,
-        price: p.precio,
-        image: p.imagen,
-        // opcional: solo el nombre de la categoría, nunca el objeto entero
-        categoryName: p.categoria?.nombre || null
-      }));
+  .filter(p => p.estado === true)
+  .map(p => ({
+    id: p.idProducto,
+    name: p.nombre,
+    description: p.descripcion,
+    price: p.precio ? Number(p.precio) : null, // 🔹 aseguramos que sea número
+    image: p.imagen || null, // 🔹 si no hay imagen, enviamos null
+    categoryName: p.categoria?.nombre || null
+  }));
 
     console.log("🧾 Productos públicos listos para enviar:", productosPublicos.length);
     console.log(listaProductos)
