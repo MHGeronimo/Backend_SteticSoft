@@ -13,7 +13,7 @@ const path = require("path");
 // ... (las funciones crearServicio, obtenerServicioPorId, etc., se mantienen como estaban)
 
 const crearServicio = async (datosServicio) => {
-  const { nombre, precio, idCategoriaServicio, descripcion, imagen } = datosServicio;
+  const { nombre, precio, id_categoria_servicio, descripcion, imagen } = datosServicio;
   const servicioExistente = await db.Servicio.findOne({ where: { nombre } });
   if (servicioExistente) {
     if (imagen) {
@@ -22,17 +22,18 @@ const crearServicio = async (datosServicio) => {
     }
     throw new ConflictError(`El servicio con el nombre '${nombre}' ya existe.`);
   }
-  const categoriaServicio = await db.CategoriaServicio.findByPk(idCategoriaServicio);
+  const categoriaServicio = await db.CategoriaServicio.findByPk(id_categoria_servicio);
   if (!categoriaServicio || !categoriaServicio.estado) {
     throw new BadRequestError("La categoría de servicio no existe o no está activa.");
   }
   try {
     const servicioParaCrear = {
-      nombre,
+      nombre: nombre.trim(),
       descripcion: descripcion || null,
-      precio: parseFloat(precio),
-      idCategoriaServicio,
+      precio: parseFloat(precio).toFixed(2),  // ✅ 2 decimales
+      id_categoria_servicio: idCategoriaServicio,  // ✅ Nombre correcto
       imagen: imagen || null,
+      estado: true  // ✅ Valor por defecto
     };
     return await db.Servicio.create(servicioParaCrear);
   } catch (error) {
@@ -46,7 +47,7 @@ const crearServicio = async (datosServicio) => {
 
 
 const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
-  const { busqueda, estado, idCategoriaServicio } = opcionesDeFiltro;
+  const { busqueda, estado, id_categoria_servicio } = opcionesDeFiltro;
   const whereClause = {};
 
   if (estado === "true" || estado === "false") {
@@ -57,8 +58,8 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
     whereClause.estado = false;
   }
 
-  if (idCategoriaServicio) {
-    whereClause.idCategoriaServicio = idCategoriaServicio;
+  if (id_categoria_servicio) {
+    whereClause.id_categoria_servicio = id_categoria_servicio;
   }
 
   if (busqueda) {
@@ -76,7 +77,7 @@ const obtenerTodosLosServicios = async (opcionesDeFiltro = {}) => {
       include: [{
         model: db.CategoriaServicio,
         as: "categoria",
-        attributes: ["idCategoriaServicio", "nombre", "estado"],
+        attributes: ["id_categoria_servicio", "nombre", "estado"],
       }],
       order: [["nombre", "ASC"]],
     });

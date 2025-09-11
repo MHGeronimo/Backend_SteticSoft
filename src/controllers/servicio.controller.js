@@ -1,4 +1,6 @@
 // src/controllers/servicio.controller.js
+const { handleValidationErrors } = require("../middlewares/validation.middleware");
+const { validateServicio } = require("../validators/servicio.validator");
 const servicioService = require("../services/servicio.service.js");
 
 // ... (las funciones crearServicio, listarServicios, etc., se mantienen como estaban)
@@ -88,12 +90,12 @@ const eliminarServicioFisico = async (req, res, next) => {
 };
 
 module.exports = {
-  crearServicio,
+  crearServicio: [validateServicio, handleValidationErrors, crearServicio],
   listarServicios,
   listarServiciosPublicos,
   obtenerServicioPorId,
-  actualizarServicio,
+  actualizarServicio: [validateServicioUpdate, handleValidationErrors, actualizarServicio],
   cambiarEstadoServicio,
   eliminarServicioFisico,
-  listarServiciosDisponibles, // ✅ Exportar la nueva función
+  listarServiciosDisponibles,
 };
