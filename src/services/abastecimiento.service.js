@@ -1,7 +1,7 @@
 // src/services/abastecimiento.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
-const { Abastecimiento, Producto, CategoriaProducto, sequelize } = db;
+const { Abastecimiento, Producto, sequelize } = db;
 const {
   NotFoundError,
   ConflictError,
@@ -104,13 +104,6 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
             "stockMinimo",
             "existencia",
             "vida_util_dias",
-          ],
-          include: [
-            {
-              model: CategoriaProducto,
-              as: "categoria",
-              attributes: ["idCategoria", "nombre"],
-            },
           ],
         },
       ],
