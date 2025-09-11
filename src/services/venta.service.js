@@ -21,16 +21,17 @@ const obtenerVentaCompletaPorId = async (idVenta, transaction = null) => {
             {
                 model: db.Cliente,
                 as: "cliente",
-                // ✅ CORRECCIÓN DEFINITIVA: Nombres confirmados según tu 'cliente.model.js'
+                // ✅ SOLUCIÓN FINAL CON ALIASING:
+                // Le decimos a Sequelize el nombre exacto de la columna en la BD y el nombre que queremos en el resultado.
                 attributes: [
                     "idCliente", 
                     "nombre", 
                     "apellido", 
                     "correo", 
-                    "numeroDocumento", // Nombre exacto del modelo
-                    "telefono",        // Nombre exacto del modelo
-                    "direccion",       // Nombre exacto del modelo
-                    "estado"
+                    "estado",
+                    ["numero_documento", "numeroDocumento"], // [nombre_en_bd, nombre_para_js]
+                    ["telefono", "telefono"],
+                    ["direccion", "direccion"]
                 ],
             },
             {
@@ -68,8 +69,75 @@ const obtenerVentaCompletaPorId = async (idVenta, transaction = null) => {
     });
 };
 
+const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
+    try {
+        const whereClause = {};
+        if (opcionesDeFiltro.idEstado) { whereClause.idEstado = opcionesDeFiltro.idEstado; }
+        if (opcionesDeFiltro.idCliente) { whereClause.idCliente = opcionesDeFiltro.idCliente; }
+        if (opcionesDeFiltro.idDashboard) { whereClause.idDashboard = opcionesDeFiltro.idDashboard; }
+
+        return await db.Venta.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: db.Cliente,
+                    as: "cliente",
+                    // ✅ SOLUCIÓN FINAL CON ALIASING:
+                    attributes: [
+                        "idCliente", 
+                        "nombre", 
+                        "apellido", 
+                        ["numero_documento", "numeroDocumento"] // [nombre_en_bd, nombre_para_js]
+                    ],
+                },
+                {
+                    model: db.Dashboard,
+                    as: "dashboard",
+                    attributes: ["idDashboard", "nombreDashboard"],
+                },
+                {
+                    model: db.Estado,
+                    as: "estadoDetalle",
+                    attributes: ["idEstado", "nombreEstado"],
+                },
+                {
+                    model: db.Producto,
+                    as: "productos",
+                    attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
+                    through: {
+                        model: db.ProductoXVenta,
+                        as: "detalleProductoVenta",
+                        attributes: ["cantidad", "valorUnitario"],
+                    },
+                },
+                {
+                    model: db.Servicio,
+                    as: "servicios",
+                    attributes: ["idServicio", "nombre"],
+                    through: {
+                        model: db.VentaXServicio,
+                        as: "detalleServicioVenta",
+                        attributes: ["valorServicio"],
+                    },
+                },
+            ],
+            order: [["fecha", "DESC"], ["idVenta", "DESC"]],
+        });
+    } catch (error) {
+        console.error("Error al obtener todas las ventas:", error.message);
+        throw new CustomError(`Error al obtener ventas: ${error.message}`, 500);
+    }
+};
+
+const obtenerVentaPorId = async (idVenta) => {
+    const venta = await obtenerVentaCompletaPorId(idVenta);
+    if (!venta) {
+        throw new NotFoundError("Venta no encontrada.");
+    }
+    return venta;
+};
+
 const crearVenta = async (datosVenta) => {
-    // Esta función ya estaba correcta, no necesita cambios.
     const { fecha, idCliente, idDashboard, idEstado, productos = [], servicios = [] } = datosVenta;
 
     if (productos.length === 0 && servicios.length === 0) {
@@ -174,64 +242,11 @@ const crearVenta = async (datosVenta) => {
     }
 };
 
-const obtenerTodasLasVentas = async (opcionesDeFiltro = {}) => {
-    try {
-        const whereClause = {};
-        if (opcionesDeFiltro.idEstado) { whereClause.idEstado = opcionesDeFiltro.idEstado; }
-        if (opcionesDeFiltro.idCliente) { whereClause.idCliente = opcionesDeFiltro.idCliente; }
-        if (opcionesDeFiltro.idDashboard) { whereClause.idDashboard = opcionesDeFiltro.idDashboard; }
-
-        return await db.Venta.findAll({
-            where: whereClause,
-            include: [
-                {
-                    model: db.Cliente,
-                    as: "cliente",
-                    // ✅ CORRECCIÓN DEFINITIVA: Nombres confirmados según tu 'cliente.model.js'
-                    attributes: [
-                        "idCliente", 
-                        "nombre", 
-                        "apellido", 
-                        "numeroDocumento" // Nombre exacto del modelo
-                    ],
-                },
-                {
-                    model: db.Dashboard,
-                    as: "dashboard",
-                    attributes: ["idDashboard", "nombreDashboard"],
-                },
-                {
-                    model: db.Estado,
-                    as: "estadoDetalle",
-                    attributes: ["idEstado", "nombreEstado"],
-                },
-                // ... (los 'include' de Producto y Servicio se mantienen igual)
-            ],
-            order: [["fecha", "DESC"], ["idVenta", "DESC"]],
-        });
-    } catch (error) {
-        console.error("Error al obtener todas las ventas:", error.message);
-        throw new CustomError(`Error al obtener ventas: ${error.message}`, 500);
-    }
-};
-
-// --- El resto de las funciones (obtenerVentaPorId, actualizarEstadoProcesoVenta, etc.) se mantienen igual ---
-// --- ya que no dependen de los nombres de campo específicos del cliente. ---
-
-const obtenerVentaPorId = async (idVenta) => {
-    const venta = await obtenerVentaCompletaPorId(idVenta);
-    if (!venta) {
-        throw new NotFoundError("Venta no encontrada.");
-    }
-    return venta;
-};
-
 const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
     const { idEstado } = datosActualizar;
     if (idEstado === undefined) {
         throw new BadRequestError("Se requiere 'idEstado' (estado del proceso) para actualizar.");
     }
-
     const transaction = await db.sequelize.transaction();
     try {
         let venta = await db.Venta.findByPk(idVenta, {
@@ -253,19 +268,15 @@ const actualizarEstadoProcesoVenta = async (idVenta, datosActualizar) => {
             await transaction.rollback();
             throw new NotFoundError("Venta no encontrada para actualizar estado.");
         }
-
         const estadoOriginalDB = venta.estadoDetalle;
         const nuevoEstadoProcesoDB = await db.Estado.findByPk(idEstado, { transaction });
         if (!nuevoEstadoProcesoDB) {
             await transaction.rollback();
             throw new BadRequestError(`El nuevo estado de proceso con ID ${idEstado} no existe.`);
         }
-
         const esEstadoProcesableOriginal = ["Completado", "En proceso"].includes(estadoOriginalDB.nombreEstado);
         const esEstadoProcesableNuevo = ["Completado", "En proceso"].includes(nuevoEstadoProcesoDB.nombreEstado);
-
         await venta.update({ idEstado }, { transaction });
-
         if (esEstadoProcesableOriginal !== esEstadoProcesableNuevo && venta.productos) {
             for (const pV of venta.productos) {
                 const cantVendida = pV.detalleProductoVenta.cantidad;
@@ -325,7 +336,6 @@ const eliminarVentaFisica = async (idVenta) => {
                 await db.Producto.increment("existencia", { by: pV.detalleProductoVenta.cantidad, where: {idProducto: pV.idProducto}, transaction });
             }
         }
-
         const filasEliminadas = await db.Venta.destroy({ where: { idVenta }, transaction });
         await transaction.commit();
         return filasEliminadas;
