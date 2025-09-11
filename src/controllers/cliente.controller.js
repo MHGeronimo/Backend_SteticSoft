@@ -247,6 +247,23 @@ const getMiPerfil = async (req, res, next) => {
   }
 };
 
+const updateMiPerfil = async (req, res, next) => {
+  try {
+    const idCliente = req.user.clienteInfo?.idCliente;
+    if (!idCliente) {
+      return res.status(404).json({ success: false, message: "Perfil de cliente no encontrado para este usuario." });
+    }
+    const clienteActualizado = await clienteService.actualizarPerfilCliente(idCliente, req.body);
+    res.status(200).json({
+      success: true,
+      message: "Perfil actualizado exitosamente.",
+      data: clienteActualizado,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearCliente,
   listarClientes,
@@ -259,4 +276,5 @@ module.exports = {
   obtenerTodosLosClientes,
   buscarClientes,
   getMiPerfil,
+  updateMiPerfil,
 };
