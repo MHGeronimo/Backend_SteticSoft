@@ -1,6 +1,6 @@
 const db = require("../models");
 const { Op } = db.Sequelize;
-// CAMBIO: Se importa el modelo Rol para usarlo en las consultas anidadas
+// Se importa el modelo Rol para usarlo en las consultas anidadas
 const { Abastecimiento, Producto, Usuario, Rol, sequelize } = db;
 const {
   NotFoundError,
@@ -10,7 +10,6 @@ const {
 } = require("../errors");
 const { checkAndSendStockAlert } = require("../utils/stockAlertHelper.js");
 
-// --- La función crearAbastecimiento se mantiene igual en su lógica ---
 const crearAbastecimiento = async (datosAbastecimiento) => {
   const { idProducto, cantidad, idUsuario } = datosAbastecimiento;
 
@@ -60,12 +59,6 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   }
 };
 
-
-/**
- * ==================================================================
- * FUNCIÓN CORREGIDA: Usa el correo y el rol del usuario
- * ==================================================================
- */
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   const { page = 1, limit = 10, search, estado } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
@@ -78,24 +71,24 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   if (search) {
     whereClause[Op.or] = [
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },      // <-- Busca en el correo
-      { '$usuario.rol.nombre$': { [Op.iLike]: `%${search}%` } },  // <-- Busca en el nombre del rol
+      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.rol.nombre$': { [Op.iLike]: `%${search}%` } },
     ];
   }
 
   try {
     const { count, rows } = await Abastecimiento.findAndCountAll({
-      where: whereClause,
+      where: whereClause, // CORRECCIÓN: Se usa la cláusula 'where' construida
       include: [
         { model: Producto, as: "producto", attributes: ["idProducto", "nombre", "existencia"] },
         {
           model: Usuario,
           as: "usuario",
-          attributes: ["id_usuario", "correo"], // <-- Pide el correo
+          attributes: ["id_usuario", "correo"],
           include: {
             model: Rol,
             as: "rol",
-            attributes: ["nombre"] // <-- Pide el nombre del rol
+            attributes: ["nombre"]
           }
         },
       ],
@@ -128,11 +121,11 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
         {
           model: Usuario,
           as: "usuario",
-          attributes: ["id_usuario", "correo"], // <-- Pide el correo
+          attributes: ["id_usuario", "correo"],
           include: {
             model: Rol,
             as: "rol",
-            attributes: ["nombre"] // <-- Pide el nombre del rol
+            attributes: ["nombre"]
           }
         }
       ],
@@ -149,27 +142,99 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   }
 };
 
-
-// --- Las funciones de actualizar, eliminar y agotar se mantienen igual ---
-// No necesitan cambios porque operan con IDs, no con nombres.
 const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
-    // ... Tu código original para esta función
+  const transaction = await sequelize.transaction();
+  try {
+    const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, { transaction });
+    if (!abastecimiento) {
+      throw new NotFoundError("Registro de abastecimiento no encontrado.");
+    }
+
+    const producto = await Producto.findByPk(abastecimiento.idProducto, { transaction });
+    if (!producto) {
+      throw new BadRequestError(`Producto asociado no encontrado.`);
+    }
+
+    const cantidadOriginal = abastecimiento.cantidad;
+    const estadoOriginal = abastecimiento.estado;
+    const nuevaCantidad = datosActualizar.cantidad !== undefined ? Number(datosActualizar.cantidad) : cantidadOriginal;
+    const nuevoEstado = datosActualizar.estado !== undefined ? datosActualizar.estado : estadoOriginal;
+    
+    // Lógica para ajustar el inventario
+    let diferenciaStock = 0;
+    if (estadoOriginal === true && nuevoEstado === true) {
+      diferenciaStock = cantidadOriginal - nuevaCantidad; // Si se reduce la cantidad, se devuelve stock
+    } else if (estadoOriginal === false && nuevoEstado === true) {
+      diferenciaStock = -nuevaCantidad; // Se activa un registro, se resta stock
+    } else if (estadoOriginal === true && nuevoEstado === false) {
+      diferenciaStock = cantidadOriginal; // Se inactiva un registro, se devuelve todo el stock
+    }
+
+    if (producto.existencia + diferenciaStock < 0) {
+      throw new ConflictError(`No hay suficiente stock para realizar el ajuste.`);
+    }
+    
+    if (diferenciaStock !== 0) {
+        await producto.increment('existencia', { by: diferenciaStock, transaction });
+    }
+
+    await abastecimiento.update(datosActualizar, { transaction });
+    await transaction.commit();
+
+    return obtenerAbastecimientoPorId(idAbastecimiento);
+  } catch (error) {
+    await transaction.rollback();
+    if (error instanceof NotFoundError || error instanceof BadRequestError || error instanceof ConflictError) {
+      throw error;
+    }
+    throw new CustomError(`Error al actualizar el abastecimiento: ${error.message}`, 500);
+  }
 };
 
 const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
-    // ... Tu código original para esta función
+  const transaction = await sequelize.transaction();
+  try {
+    const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, { transaction });
+    if (!abastecimiento) {
+      throw new NotFoundError("Registro de abastecimiento no encontrado.");
+    }
+
+    // Si el registro estaba activo, se devuelve la cantidad al inventario
+    if (abastecimiento.estado) {
+      await Producto.increment('existencia', {
+        by: abastecimiento.cantidad,
+        where: { idProducto: abastecimiento.idProducto },
+        transaction
+      });
+    }
+    
+    await abastecimiento.destroy({ transaction });
+    await transaction.commit();
+    return true; // Indica que la eliminación fue exitosa
+  } catch(error) {
+    await transaction.rollback();
+    if (error instanceof NotFoundError) throw error;
+    throw new CustomError(`Error al eliminar abastecimiento: ${error.message}`, 500);
+  }
 };
 
 const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
-    // ... Tu código original para esta función
+  const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento);
+  if (!abastecimiento) {
+    throw new NotFoundError(`Abastecimiento con ID ${idAbastecimiento} no encontrado.`);
+  }
+  if (abastecimiento.estaAgotado) {
+    throw new ConflictError(`El abastecimiento ya está marcado como agotado.`);
+  }
+
+  abastecimiento.estaAgotado = true;
+  abastecimiento.razonAgotamiento = razonAgotamiento || null;
+  abastecimiento.fechaAgotamiento = new Date();
+
+  await abastecimiento.save();
+  return abastecimiento;
 };
 
-
-/**
- * ==================================================================
- * FUNCIÓN CORREGIDA: Busca usuarios que pertenezcan al rol "Empleado"
- * ==================================================================
- */
 const obtenerEmpleados = async () => {
   try {
     const empleados = await Usuario.findAll({
@@ -177,15 +242,14 @@ const obtenerEmpleados = async () => {
         model: Rol,
         as: 'rol',
         where: {
-          // Comparamos el nombre del rol, ignorando mayúsculas/minúsculas
           nombre: { [Op.iLike]: 'empleado' }
         },
-        attributes: [] // No necesitamos las columnas del rol en el resultado final
+        attributes: []
       },
       where: {
         estado: true
       },
-      attributes: ['id_usuario', 'correo'] // <-- Pide el correo del usuario
+      attributes: ['id_usuario', 'correo']
     });
     return empleados;
   } catch (error) {
@@ -193,8 +257,6 @@ const obtenerEmpleados = async () => {
   }
 };
 
-
-// --- EXPORTACIONES ---
 module.exports = {
   crearAbastecimiento,
   obtenerTodosLosAbastecimientos,
