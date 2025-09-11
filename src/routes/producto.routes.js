@@ -8,7 +8,7 @@ const authMiddleware = require("../middlewares/auth.middleware.js");
 const {
   checkPermission,
 } = require("../middlewares/authorization.middleware.js");
-const upload = require("../middlewares/upload.middleware.js");
+const { uploadProductoImage } = require("../middlewares/upload.middleware.js");
 
 
 const PERMISO_MODULO_PRODUCTOS = "MODULO_PRODUCTOS_GESTIONAR";
@@ -32,7 +32,7 @@ router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_PRODUCTOS),
-  upload.single("imagen"), // El middleware de Multer procesa el campo 'imagen' antes de la validación.
+  uploadProductoImage, // El middleware de Multer procesa el campo 'imagen' antes de la validación.
   productoValidators.crearProductoValidators,
   productoController.crearProducto
 );
@@ -67,7 +67,7 @@ router.put(
   "/:idProducto",
   authMiddleware,
   checkPermission(PERMISO_MODULO_PRODUCTOS),
-  upload.single("imagen"), // El middleware de Multer también se aplica aquí para la actualización de la imagen.
+  uploadProductoImage, // El middleware de Multer también se aplica aquí para la actualización de la imagen.
   productoValidators.actualizarProductoValidators,
   productoController.actualizarProducto
 );

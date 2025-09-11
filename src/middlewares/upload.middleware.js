@@ -1,33 +1,35 @@
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary.config.js');
+// src/middlewares/upload.middleware.js
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'servicios',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-    public_id: (req, file) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      return file.fieldname + '-' + uniqueSuffix;
-    },
-  },
-});
+const multer = require("multer");
 
+/**
+ * Configuración de Multer para almacenar archivos en memoria.
+ * Esto es necesario para luego poder enviar el buffer a Cloudinary.
+ */
+const storage = multer.memoryStorage();
+
+// Filtro de archivos: define qué tipos de archivos son aceptados.
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  if (allowedTypes.test(file.mimetype)) {
+    cb(null, true); // Aceptar el archivo
+  } else {
+    // Rechazar el archivo con un error específico
+    cb(new Error("Tipo de archivo no permitido. Solo se aceptan imágenes."), false);
+  }
+};
+
+// Se crea la instancia de Multer con la configuración de memoria y el filtro.
 const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB
-  },
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif/;
-    const mimetype = filetypes.test(file.mimetype);
-    if (mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten imágenes (jpeg, jpg, png, gif)'), false);
-    }
-  },
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5MB por archivo
 });
 
-module.exports = upload;
+// Se exportan middlewares específicos para cada caso de uso.
+// .single('imagen') indica que se esperará un solo archivo en el campo 'imagen' del FormData.
+module.exports = {
+  uploadServicioImage: upload.single("imagen"),
+  uploadProductoImage: upload.single("imagen"),
+  // Puedes añadir más si los necesitas
+};
