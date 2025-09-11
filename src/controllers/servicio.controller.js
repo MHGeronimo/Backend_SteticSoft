@@ -49,14 +49,50 @@ const listarServiciosDisponibles = async (req, res, next) => {
     }
 };
 
+/**
+ * Obtiene una lista de servicios activos para mostrar en la landing pública.
+ */
 const listarServiciosPublicos = async (req, res, next) => {
-    try {
-        const servicios = await servicioService.obtenerTodosLosServicios({ estado: true });  // ✅ Corregido
-        res.status(200).json({ success: true, data: servicios });
-    } catch (error) {
-        next(error);
-    }
+  try {
+    console.log("🔍 Entrando a listarServiciosPublicos");
+
+    const resultado = await servicioService.obtenerTodosLosServicios({
+      estado: true,
+    });
+
+    console.log("📥 Resultado crudo de servicioService:", resultado);
+
+    // Aseguramos que siempre trabajamos con un array
+    const listaServicios = Array.isArray(resultado)
+      ? resultado
+      : resultado?.servicios || [];
+
+    console.log("📦 Lista de servicios procesada:", listaServicios.length, "items");
+
+    // Filtrar y mapear al formato esperado por el frontend
+    const serviciosPublicos = listaServicios
+      .filter(s => s.estado === true)
+      .map(s => ({
+        id: s.idServicio,
+        name: s.nombre,
+        description: s.descripcion,
+        price: Number(s.precio),
+        image: s.imagen,
+        categoryName: s.categoria?.nombre || null
+      }));
+
+    console.log("🧾 Servicios públicos listos para enviar:", serviciosPublicos.length);
+
+    res.status(200).json({
+      success: true,
+      data: serviciosPublicos,
+    });
+  } catch (error) {
+    console.error("❌ Error al listar servicios públicos:", error);
+    next(error);
+  }
 };
+
 
 const obtenerServicioPorId = async (req, res, next) => {
     try {
