@@ -14,8 +14,6 @@ const {
   extractPublicIdFromUrl,
 } = require("../utils/cloudinary.util");
 
-// ... (las funciones crearServicio, obtenerServicioPorId, etc., se mantienen como estaban)
-
 const crearServicio = async (datosServicio) => {
   const {
     nombre,
@@ -189,26 +187,15 @@ const eliminarServicioFisico = async (idServicio) => {
       "No se puede eliminar porque está asociado a citas."
     );
   }
-  const image = servicio.imagen;
-  await servicio.destroy();
-  if (image) {
-    const imagePath = path.join(__dirname, "..", "public", image);
-    fs.unlink(imagePath, (err) => {
-      if (err) console.error(`Error al eliminar imagen:`, err);
-    });
+  // Elimina imagen de Cloudinary si existe
+  const publicId =
+    servicio.imagenPublicId || extractPublicIdFromUrl(servicio.imagen);
+  if (publicId) {
+    await deleteByPublicId(publicId);
   }
+  await servicio.destroy();
   return { mensaje: "Servicio eliminado correctamente." };
 };
-
-async function crearServicio(data) {
-  /* idem producto */
-}
-async function actualizarServicio(idServicio, data, oldPublicId) {
-  /* idem producto */
-}
-async function eliminarServicioFisico(idServicio) {
-  /* idem producto */
-}
 
 module.exports = {
   crearServicio,
@@ -218,8 +205,4 @@ module.exports = {
   cambiarEstadoServicio,
   eliminarServicioFisico,
   obtenerServiciosDisponibles,
-  //Moviles
-  crearServicio,
-  actualizarServicio,
-  eliminarServicioFisico,
 };

@@ -291,33 +291,27 @@ const habilitarProducto = async (idProducto) => {
  * Eliminar un producto físicamente.
  */
 const eliminarProductoFisico = async (idProducto) => {
-  try {
-    const producto = await db.Producto.findByPk(idProducto);
-    if (!producto) {
-      throw new NotFoundError(
-        "Producto no encontrado para eliminar físicamente."
-      );
-    }
+  const producto = await db.Producto.findByPk(idProducto);
+  if (!producto) {
+    throw new NotFoundError(
+      "Producto no encontrado para eliminar físicamente."
+    );
+  }
+  const publicId =
+    producto.imagenPublicId || extractPublicIdFromUrl(producto.imagen);
+  if (publicId) await deleteByPublicId(publicId);
 
+  try {
     const filasEliminadas = await db.Producto.destroy({
       where: { idProducto },
     });
     return filasEliminadas;
   } catch (error) {
-    console.error("Error inesperado al eliminar producto físicamente:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-
-    if (error instanceof NotFoundError) throw error;
-
     if (error.name === "SequelizeForeignKeyConstraintError") {
       throw new ConflictError(
         "No se puede eliminar el producto porque está siendo referenciado. Considere anularlo."
       );
     }
-
     throw new CustomError(
       "Ocurrió un error inesperado al eliminar el producto.",
       500
