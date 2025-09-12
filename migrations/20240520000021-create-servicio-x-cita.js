@@ -29,16 +29,17 @@ module.exports = {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
       }
-    });
-
-    await queryInterface.addConstraint('servicio_x_cita', {
-      fields: ['id_servicio', 'id_cita'],
-      type: 'unique',
-      name: 'servicio_x_cita_unique_constraint'
+    }, {
+      indexes: [
+        {
+          unique: true,
+          fields: ['id_servicio', 'id_cita'],
+          name: 'servicio_x_cita_unique_constraint'
+        }
+      ]
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeConstraint('servicio_x_cita', 'servicio_x_cita_unique_constraint');
     await queryInterface.dropTable('servicio_x_cita');
   }
 };
