@@ -60,16 +60,17 @@ module.exports = {
         allowNull: false,
         defaultValue: true
       }
-    });
-
-    await queryInterface.addConstraint('proveedor', {
-      fields: ['nombre', 'tipo'],
-      type: 'unique',
-      name: 'proveedor_nombre_tipo_unique_constraint'
+    }, {
+      indexes: [
+        {
+          unique: true,
+          fields: ['nombre', 'tipo'],
+          name: 'proveedor_nombre_tipo_unique_constraint'
+        }
+      ]
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeConstraint('proveedor', 'proveedor_nombre_tipo_unique_constraint');
     await queryInterface.dropTable('proveedor');
   }
 };
