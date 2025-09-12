@@ -44,7 +44,7 @@ module.exports = {
       fecha_cambio: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.fn('NOW')
+        defaultValue: Sequelize.NOW 
       }
     });
   },
