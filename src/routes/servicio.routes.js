@@ -1,13 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const servicioController = require("../controllers/servicio.controller.js");
 const servicioValidators = require("../validators/servicio.validators.js");
 const authMiddleware = require("../middlewares/auth.middleware.js");
-const { checkPermission } = require("../middlewares/authorization.middleware.js");
-const { handleValidationErrors } = require("../middlewares/validation.middleware.js"); // ✅ IMPORTAR
+const {
+  checkPermission,
+} = require("../middlewares/authorization.middleware.js");
+const {
+  handleValidationErrors,
+} = require("../middlewares/validation.middleware.js");
+const { processImageUpload } = require("../middlewares/upload.middleware"); // ✅ NUEVO
 
-const PERMISO_MODULO_CITAS = "MODULO_CITAS_GESTIONAR";
 const PERMISO_MODULO_SERVICIOS = "MODULO_SERVICIOS_GESTIONAR";
 
 // --- RUTAS PÚBLICAS ---
@@ -21,26 +24,12 @@ router.get(
   servicioController.listarServiciosDisponibles
 );
 
-const upload = multer({
-  storage: multer.memoryStorage(), // Almacenar en memoria
-  limits: {
-    fileSize: 2 * 1024 * 1024, // Límite de 2MB
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten imágenes'), false);
-    }
-  }
-});
-
-// MODIFICAR LAS RUTAS QUE RECIBEN IMÁGENES:
+// Usar processImageUpload para subida de imágenes en servicios
 router.post(
   "/",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  upload.single('imagen'), // ✅ Middleware de multer
+  processImageUpload("imagen", "steticsoft/servicios"), // ✅ Middleware Cloudinary
   servicioValidators.crearServicioValidators,
   handleValidationErrors,
   servicioController.crearServicio
@@ -50,7 +39,7 @@ router.put(
   "/:idServicio",
   authMiddleware,
   checkPermission(PERMISO_MODULO_SERVICIOS),
-  upload.single('imagen'), // ✅ Middleware de multer
+  processImageUpload("imagen", "steticsoft/servicios"), // ✅ Middleware Cloudinary
   servicioValidators.actualizarServicioValidators,
   handleValidationErrors,
   servicioController.actualizarServicio

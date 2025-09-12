@@ -7,6 +7,10 @@ const {
   CustomError,
   BadRequestError,
 } = require("../errors");
+const {
+  deleteByPublicId,
+  extractPublicIdFromUrl,
+} = require("../utils/cloudinary.util");
 
 /**
  * Helper interno para cambiar el estado de un producto.
@@ -32,7 +36,6 @@ const cambiarEstadoProducto = async (idProducto, nuevoEstado) => {
  * Crear un nuevo producto.
  */
 const crearProducto = async (datosProducto) => {
-  // ✅ CORRECCIÓN: Añadimos 'tipoUso' y 'vidaUtilDias' a la desestructuración
   const {
     nombre,
     descripcion,
@@ -41,13 +44,12 @@ const crearProducto = async (datosProducto) => {
     stockMinimo,
     stockMaximo,
     imagen,
+    imagenPublicId,
     estado,
     categoriaProductoId,
-    tipoUso,       // <-- Campo añadido
-    vidaUtilDias,  // <-- Campo añadido
+    tipoUso,
+    vidaUtilDias,
   } = datosProducto;
-
-  // ... (la lógica de validación de stock y categoría se mantiene igual)
 
   if (
     stockMinimo !== undefined &&
@@ -65,7 +67,7 @@ const crearProducto = async (datosProducto) => {
     });
     if (!categoria) {
       throw new BadRequestError(
-        `La categoría de producto con ID ${categoriaProductoId} no existe o no está activa.`
+        "La categoría de producto no existe o no está activa."
       );
     }
   }
@@ -79,23 +81,16 @@ const crearProducto = async (datosProducto) => {
       stockMinimo: stockMinimo !== undefined ? Number(stockMinimo) : 0,
       stockMaximo: stockMaximo !== undefined ? Number(stockMaximo) : 0,
       imagen: imagen || null,
+      imagenPublicId: imagenPublicId || null,
       estado: typeof estado === "boolean" ? estado : true,
       categoriaProductoId: categoriaProductoId || null,
-      // ✅ CORRECCIÓN: Pasamos los nuevos campos al método de creación
       tipoUso: ["Interno", "Externo"].includes(tipoUso) ? tipoUso : "Externo",
       vidaUtilDias: vidaUtilDias || null,
     });
     return nuevoProducto;
   } catch (error) {
-    console.error("Error inesperado al crear producto:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-    throw new CustomError(
-      "Ocurrió un error inesperado en el servicio de productos.",
-      500
-    );
+    console.error("Error al crear el producto:", error);
+    throw new CustomError(`Error al crear el producto: ${error.message}`, 500);
   }
 };
 
@@ -103,7 +98,7 @@ const obtenerTodosLosProductos = async (filtros) => {
   const {
     page = 1,
     limit = 10,
-    search, 
+    search,
     estado,
     idCategoria,
     tipoUso,
@@ -128,14 +123,14 @@ const obtenerTodosLosProductos = async (filtros) => {
   }
 
   if (estado !== undefined) {
-  if (estado === "true" || estado === "false") {
-    whereCondition.estado = estado === "true";
-  } else if (estado === "Activo") {
-    whereCondition.estado = true;
-  } else if (estado === "Inactivo") {
-    whereCondition.estado = false;
+    if (estado === "true" || estado === "false") {
+      whereCondition.estado = estado === "true";
+    } else if (estado === "Activo") {
+      whereCondition.estado = true;
+    } else if (estado === "Inactivo") {
+      whereCondition.estado = false;
+    }
   }
-}
 
   if (idCategoria) {
     whereCondition.categoriaProductoId = idCategoria;
@@ -213,60 +208,46 @@ const obtenerProductoPorId = async (idProducto) => {
 /**
  * Actualizar un producto existente.
  */
-const actualizarProducto = async (idProducto, datosActualizar) => {
-  try {
-    const producto = await db.Producto.findByPk(idProducto);
-    if (!producto) {
-      throw new NotFoundError("Producto no encontrado para actualizar.");
-    }
+const actualizarProducto = async (idProducto, datosActualizar, oldPublicId) => {
+  const producto = await db.Producto.findByPk(idProducto);
+  if (!producto) {
+    throw new NotFoundError("Producto no encontrado para actualizar.");
+  }
 
-    const { stockMinimo, stockMaximo, categoriaProductoId } = datosActualizar;
+  // Si hay nueva imagen y publicId anterior, elimina la imagen anterior de Cloudinary
+  if (
+    datosActualizar.imagen &&
+    oldPublicId &&
+    oldPublicId !== datosActualizar.imagenPublicId
+  ) {
+    await deleteByPublicId(oldPublicId);
+  }
 
-    const valStockMinimo =
-      stockMinimo !== undefined ? Number(stockMinimo) : producto.stockMinimo;
-    const valStockMaximo =
-      stockMaximo !== undefined ? Number(stockMaximo) : producto.stockMaximo;
-
-    if (valStockMaximo < valStockMinimo) {
-      throw new BadRequestError(
-        "El stock máximo no puede ser menor que el stock mínimo."
+  if (datosActualizar.nombre) {
+    const existeNombre = await db.Producto.findOne({
+      where: {
+        nombre: datosActualizar.nombre,
+        idProducto: { [Op.ne]: idProducto },
+      },
+    });
+    if (existeNombre) {
+      throw new ConflictError(
+        `Ya existe un producto con el nombre '${datosActualizar.nombre}'.`
       );
     }
+  }
 
-    if (
-      categoriaProductoId !== undefined &&
-      categoriaProductoId !== producto.categoriaProductoId
-    ) {
-      if (categoriaProductoId === null) {
-        datosActualizar.categoriaProductoId = null;
-      } else {
-        const categoria = await db.CategoriaProducto.findOne({
-          where: { idCategoriaProducto: categoriaProductoId, estado: true },
-        });
-        if (!categoria) {
-          throw new BadRequestError(
-            `La categoría de producto con ID ${categoriaProductoId} no existe o no está activa.`
-          );
-        }
-      }
-    }
-
-    await producto.update(datosActualizar);
-    return obtenerProductoPorId(producto.idProducto);
-  } catch (error) {
-    console.error("Error inesperado al actualizar producto:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
+  try {
+    await producto.update({
+      ...datosActualizar,
+      imagen: datosActualizar.imagen || producto.imagen,
+      imagenPublicId: datosActualizar.imagenPublicId || producto.imagenPublicId,
     });
-    if (
-      error instanceof NotFoundError ||
-      error instanceof BadRequestError ||
-      error instanceof ConflictError
-    )
-      throw error;
+    return producto;
+  } catch (error) {
+    console.error("Error al actualizar el producto:", error);
     throw new CustomError(
-      "Ocurrió un error inesperado al actualizar el producto.",
+      `Error al actualizar el producto: ${error.message}`,
       500
     );
   }
@@ -384,8 +365,8 @@ const obtenerProductosPublicos = async (filtros) => {
 
   const query = {
     ...restFiltros,
-    estado: 'true',
-    tipoUso: 'Externo',
+    estado: "true",
+    tipoUso: "Externo",
   };
 
   if (idCategoria) {
@@ -394,6 +375,30 @@ const obtenerProductosPublicos = async (filtros) => {
 
   return obtenerTodosLosProductos(query);
 };
+
+async function crearProducto(data) {
+  // data.imagen (URL) de Cloudinary y opcional data.imagenPublicId
+  // Guarda imagen: data.imagen (URL). Si tienes campo imagenPublicId, guárdalo.
+  // return registro creado
+}
+
+async function actualizarProducto(idProducto, data, oldPublicId) {
+  // Si llega nueva imagen y oldPublicId, elimina la antigua:
+  if (data.imagen && oldPublicId && oldPublicId !== data.imagenPublicId) {
+    await deleteByPublicId(oldPublicId);
+  }
+  // Actualiza registro con nueva data.imagen y data.imagenPublicId
+  // return registro actualizado
+}
+
+async function eliminarProductoFisico(idProducto) {
+  // Obtén el registro
+  const producto = await findProductoById(idProducto); // reemplaza con tu acceso real
+  const publicId =
+    producto.imagenPublicId || extractPublicIdFromUrl(producto.imagen);
+  if (publicId) await deleteByPublicId(publicId);
+  // Elimina el registro en DB
+}
 
 module.exports = {
   crearProducto,
@@ -404,6 +409,11 @@ module.exports = {
   habilitarProducto,
   eliminarProductoFisico,
   cambiarEstadoProducto,
+
+  //Moviles
+  crearProducto,
+  actualizarProducto,
+  eliminarProductoFisico,
   obtenerProductosInternos,
   obtenerProductosPublicos,
 };
