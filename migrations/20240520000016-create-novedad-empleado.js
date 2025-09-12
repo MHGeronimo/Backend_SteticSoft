@@ -6,6 +6,7 @@ module.exports = {
       id_novedad: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'novedades',
           key: 'id_novedad'
@@ -16,6 +17,7 @@ module.exports = {
       id_usuario: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'usuario',
           key: 'id_usuario'
@@ -23,12 +25,6 @@ module.exports = {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
       }
-    });
-
-    await queryInterface.addConstraint('novedad_empleado', {
-      fields: ['id_novedad', 'id_usuario'],
-      type: 'primary key',
-      name: 'pk_novedad_empleado'
     });
   },
   async down(queryInterface, Sequelize) {
