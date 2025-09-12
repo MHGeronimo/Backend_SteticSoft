@@ -1,8 +1,12 @@
+// src/controllers/mobile.controller.js
 const authService = require("../services/auth.service");
 const clienteService = require("../services/cliente.service");
 const servicioService = require("../services/servicio.service");
 const productoService = require("../services/producto.service");
-const categoriaService = require("../services/categoria.service");
+// INICIO DE LA CORRECCIÓN: Se importan los dos servicios de categoría específicos.
+const categoriaProductoService = require("../services/categoriaProducto.service.js");
+const categoriaServicioService = require("../services/categoriaServicio.service.js");
+// FIN DE LA CORRECCIÓN
 const citaService = require("../services/cita.service");
 const ventaService = require("../services/venta.service");
 
@@ -74,8 +78,10 @@ async function listarProductosPublicosMovil(req, res, next) {
 
 async function listarCategoriasServicioPublicasMovil(req, res, next) {
   try {
+    // INICIO DE LA CORRECCIÓN: Se utiliza el servicio correcto.
     const categorias =
-      await categoriaService.listarCategoriasServicioPublicas();
+      await categoriaServicioService.obtenerCategoriasPublicas();
+    // FIN DE LA CORRECCIÓN
     res.json(categorias);
   } catch (e) {
     next(e);
@@ -84,8 +90,10 @@ async function listarCategoriasServicioPublicasMovil(req, res, next) {
 
 async function listarCategoriasProductoPublicasMovil(req, res, next) {
   try {
+    // INICIO DE LA CORRECCIÓN: Se utiliza el servicio correcto.
     const categorias =
-      await categoriaService.listarCategoriasProductoPublicas();
+      await categoriaProductoService.obtenerCategoriasPublicas();
+    // FIN DE LA CORRECCIÓN
     res.json(categorias);
   } catch (e) {
     next(e);
