@@ -5,12 +5,19 @@ const productoService = require("../services/producto.service.js");
  */
 const crearProducto = async (req, res, next) => {
   console.log("📦 Payload recibido en crearProducto:", req.body);
+  console.log("📁 Archivo recibido:", req.file);
   try {
     const datosProducto = { ...req.body };
 
     // ✅ Mapear idCategoriaProducto → categoriaProductoId
     if (datosProducto.idCategoriaProducto && !datosProducto.categoriaProductoId) {
       datosProducto.categoriaProductoId = Number(datosProducto.idCategoriaProducto);
+    }
+
+    // ✅ Manejar imagen de Cloudinary si existe
+    if (req.file) {
+      datosProducto.imagen = req.file.secure_url;
+      datosProducto.imagenPublicId = req.file.public_id;
     }
 
     const nuevoProducto = await productoService.crearProducto(datosProducto);
@@ -65,6 +72,12 @@ const actualizarProducto = async (req, res, next) => {
 
     if (datosActualizar.idCategoriaProducto && !datosActualizar.categoriaProductoId) {
       datosActualizar.categoriaProductoId = Number(datosActualizar.idCategoriaProducto);
+    }
+
+    // ✅ Manejar imagen de Cloudinary si existe
+    if (req.file) {
+      datosActualizar.imagen = req.file.secure_url;
+      datosActualizar.imagenPublicId = req.file.public_id;
     }
 
     const productoActualizado = await productoService.actualizarProducto(

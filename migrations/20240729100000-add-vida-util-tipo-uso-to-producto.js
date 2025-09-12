@@ -8,9 +8,9 @@ module.exports = {
     });
 
     await queryInterface.addColumn('producto', 'tipo_uso', {
-      type: Sequelize.STRING(255), // Coincide con el SQL
+      type: Sequelize.STRING(10), // Coincide con el SQL
       allowNull: false,
-      defaultValue: 'Venta Directa', // Coincide con el SQL
+      defaultValue: 'Externo', // Coincide con el SQL
     });
   },
 

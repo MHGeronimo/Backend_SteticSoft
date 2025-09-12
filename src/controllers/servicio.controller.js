@@ -13,14 +13,13 @@ const crearServicio = async (req, res, next) => {
   try {
     // ✅ Los campos textuales vienen en req.body
     // ✅ La imagen viene en req.file (si se subió)
-    const servicioData = {
-      ...req.body,
-      imagen: req.file ? {
-        buffer: req.file.buffer,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype
-      } : null
-    };
+    const servicioData = { ...req.body };
+
+    // ✅ Manejar imagen de Cloudinary si existe
+    if (req.file) {
+      servicioData.imagen = req.file.secure_url;
+      servicioData.imagenPublicId = req.file.public_id;
+    }
 
     const nuevo = await servicioService.crearServicio(servicioData);
     res.status(201).json({ success: true, message: "Servicio creado.", data: nuevo });
@@ -76,7 +75,14 @@ const obtenerServicioPorId = async (req, res, next) => {
 const actualizarServicio = async (req, res, next) => {
     try {
         const { idServicio } = req.params;
-        const servicioData = req.body;
+        const servicioData = { ...req.body };
+
+        // ✅ Manejar imagen de Cloudinary si existe
+        if (req.file) {
+            servicioData.imagen = req.file.secure_url;
+            servicioData.imagenPublicId = req.file.public_id;
+        }
+
         const actualizado = await servicioService.actualizarServicio(Number(idServicio), servicioData);
         res.status(200).json({ success: true, message: "Servicio actualizado.", data: actualizado });
     } catch (error) {

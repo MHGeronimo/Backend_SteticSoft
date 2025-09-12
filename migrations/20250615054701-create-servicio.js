@@ -22,6 +22,14 @@ module.exports = {
         allowNull: false,
         defaultValue: 0.00 // Added default value
       },
+      imagen: { // Added for image support
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
+      imagen_public_id: { // Added for Cloudinary support
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
       duracion_estimada_min: { // Renamed from duracion_estimada
         type: Sequelize.INTEGER,
         allowNull: true

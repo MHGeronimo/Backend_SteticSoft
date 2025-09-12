@@ -32,6 +32,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'imagen'
       },
+      imagenPublicId: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        field: 'imagen_public_id'
+      },
       estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

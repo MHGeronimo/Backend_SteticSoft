@@ -1,6 +1,9 @@
 -- =================================================================================================
 --         SCRIPT DE BASE DE DATOS PARA STETICSOFT - DEFINICIÓN Y ESTRUCTURA (ACTUALIZADO)
 -- =================================================================================================
+-- ÚLTIMA ACTUALIZACIÓN: 15 de Enero 2025
+-- CAMBIOS: Agregado campo imagen_public_id a las tablas producto y servicio para soporte de Cloudinary
+-- =================================================================================================
 -- Este script define la estructura completa y las relaciones para la base de datos de SteticSoft.
 -- El diseño se adhiere a los siguientes principios y convenciones:
 --
@@ -189,6 +192,7 @@ CREATE TABLE IF NOT EXISTS producto (
     stock_minimo INT DEFAULT 0,
     stock_maximo INT DEFAULT 0,
     imagen VARCHAR(255),
+    imagen_public_id VARCHAR(255),
     estado BOOLEAN DEFAULT TRUE NOT NULL,
     vida_util_dias INT,
     tipo_uso VARCHAR(10) NOT NULL CHECK (tipo_uso IN ('Interno', 'Externo')),
@@ -201,6 +205,7 @@ CREATE TABLE IF NOT EXISTS servicio (
     descripcion TEXT,
     precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     imagen VARCHAR(255),
+    imagen_public_id VARCHAR(255),
     id_categoria_servicio INT NOT NULL REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT,
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );

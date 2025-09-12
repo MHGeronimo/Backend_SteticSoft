@@ -118,7 +118,7 @@ const obtenerServicioPorId = async (idServicio) => {
   }
   return servicio;
 };
-const actualizarServicio = async (idServicio, datosActualizar, oldPublicId) => {
+const actualizarServicio = async (idServicio, datosActualizar) => {
   const servicio = await db.Servicio.findByPk(idServicio);
   if (!servicio) {
     throw new NotFoundError("Servicio no encontrado para actualizar.");
@@ -126,11 +126,11 @@ const actualizarServicio = async (idServicio, datosActualizar, oldPublicId) => {
 
   // Si hay nueva imagen y publicId anterior, elimina la imagen anterior de Cloudinary
   if (
-    datosActualizar.imagen &&
-    oldPublicId &&
-    oldPublicId !== datosActualizar.imagenPublicId
+    datosActualizar.imagenPublicId &&
+    servicio.imagenPublicId &&
+    servicio.imagenPublicId !== datosActualizar.imagenPublicId
   ) {
-    await deleteByPublicId(oldPublicId);
+    await deleteByPublicId(servicio.imagenPublicId);
   }
 
   if (datosActualizar.nombre) {

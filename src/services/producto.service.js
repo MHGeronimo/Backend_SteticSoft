@@ -208,7 +208,7 @@ const obtenerProductoPorId = async (idProducto) => {
 /**
  * Actualizar un producto existente.
  */
-const actualizarProducto = async (idProducto, datosActualizar, oldPublicId) => {
+const actualizarProducto = async (idProducto, datosActualizar) => {
   const producto = await db.Producto.findByPk(idProducto);
   if (!producto) {
     throw new NotFoundError("Producto no encontrado para actualizar.");
@@ -216,11 +216,11 @@ const actualizarProducto = async (idProducto, datosActualizar, oldPublicId) => {
 
   // Si hay nueva imagen y publicId anterior, elimina la imagen anterior de Cloudinary
   if (
-    datosActualizar.imagen &&
-    oldPublicId &&
-    oldPublicId !== datosActualizar.imagenPublicId
+    datosActualizar.imagenPublicId &&
+    producto.imagenPublicId &&
+    producto.imagenPublicId !== datosActualizar.imagenPublicId
   ) {
-    await deleteByPublicId(oldPublicId);
+    await deleteByPublicId(producto.imagenPublicId);
   }
 
   if (datosActualizar.nombre) {
