@@ -370,29 +370,6 @@ const obtenerProductosPublicos = async (filtros) => {
   return obtenerTodosLosProductos(query);
 };
 
-async function crearProducto(data) {
-  // data.imagen (URL) de Cloudinary y opcional data.imagenPublicId
-  // Guarda imagen: data.imagen (URL). Si tienes campo imagenPublicId, guárdalo.
-  // return registro creado
-}
-
-async function actualizarProducto(idProducto, data, oldPublicId) {
-  // Si llega nueva imagen y oldPublicId, elimina la antigua:
-  if (data.imagen && oldPublicId && oldPublicId !== data.imagenPublicId) {
-    await deleteByPublicId(oldPublicId);
-  }
-  // Actualiza registro con nueva data.imagen y data.imagenPublicId
-  // return registro actualizado
-}
-
-async function eliminarProductoFisico(idProducto) {
-  // Obtén el registro
-  const producto = await findProductoById(idProducto); // reemplaza con tu acceso real
-  const publicId =
-    producto.imagenPublicId || extractPublicIdFromUrl(producto.imagen);
-  if (publicId) await deleteByPublicId(publicId);
-  // Elimina el registro en DB
-}
 
 module.exports = {
   crearProducto,
