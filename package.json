@@ -16,7 +16,10 @@
     "db:seed:all": "sequelize-cli db:seed:all",
     "db:seed:undo:all": "sequelize-cli db:seed:undo:all",
     "db:migration:create": "sequelize-cli migration:generate",
-    "db:seed:create": "sequelize-cli seed:generate"
+    "db:seed:create": "sequelize-cli seed:generate",
+    "render:deploy": "npm install && npx sequelize-cli db:migrate && npm start",
+    "render:build": "npm install",
+    "render:start": "npm start"
   },
   "author": "SteticSoft Dev Team",
   "license": "ISC",

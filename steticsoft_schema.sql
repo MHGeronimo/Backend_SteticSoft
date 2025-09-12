@@ -367,6 +367,7 @@ INSERT INTO permisos (nombre, descripcion, estado) VALUES
 ('MODULO_PRODUCTOS_VER', 'Permite ver los productos (Cliente).', TRUE),
 ('MODULO_COMPRAS_GESTIONAR', 'Permite la gestión de las compras a proveedores.', TRUE),
 ('MODULO_VENTAS_GESTIONAR', 'Permite la gestión de las ventas a clientes (Admin/Empleado).', TRUE),
+('MODULO_VENTAS_CLIENTE', 'Permite a un cliente acceder a funcionalidades de ventas.', TRUE),
 ('MODULO_VENTAS_CREAR_PROPIA', 'Permite a un cliente crear/realizar una venta (compra).', TRUE),
 ('MODULO_VENTAS_VER_PROPIAS', 'Permite a un cliente ver sus propias ventas.', TRUE),
 ('MODULO_CITAS_CLIENTE', 'Permite a un cliente ver y seleccionar recursos para agendar una cita.', TRUE),

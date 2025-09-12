@@ -1,0 +1,73 @@
+# Configuración para Render.com - SteticSoft API
+# Este archivo define cómo Render debe desplegar la aplicación
+
+services:
+  - type: web
+    name: steticsoft-api
+    env: node
+    plan: starter
+    buildCommand: npm install && npx sequelize-cli db:migrate
+    startCommand: npm start
+    healthCheckPath: /api/health/detailed
+    
+    # Variables de entorno requeridas
+    envVars:
+      # Configuración básica de la aplicación
+      - key: APP_NAME
+        value: "SteticSoft API"
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: common
+      
+      # Base de datos PostgreSQL
+      - key: DATABASE_URL
+        fromDatabase:
+          name: steticsoft-db
+          property: connectionString
+      - key: DB_SSL_REQUIRED
+        value: "true"
+      - key: DB_REJECT_UNAUTHORIZED
+        value: "false"
+      
+      # Seguridad - Valores aleatorios generados automáticamente
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      
+      # Cloudinary - Configuración de imágenes
+      - key: CLOUDINARY_CLOUD_NAME
+        value: "M.H Geronimo"
+      - key: CLOUDINARY_API_KEY
+        value: "781461585124195"
+      - key: CLOUDINARY_API_SECRET
+        value: "2NH60U6uL50GA2gf25bf37w4yIE"
+      
+      # Configuración de CORS
+      - key: CORS_ORIGIN
+        value: "https://prototipo-quxa.onrender.com,http://localhost:5173"
+      - key: FRONTEND_URL
+        value: "http://localhost:5173"
+      
+      # Configuración de email (Gmail SMTP)
+      - key: EMAIL_HOST
+        value: "smtp.gmail.com"
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_SECURE
+        value: "false"
+      - key: EMAIL_USER
+        value: "lafuentedelpeluquero@gmail.com"
+      - key: EMAIL_PASS
+        value: "iigutoyfzhesjjfe"
+      - key: EMAIL_FROM
+        value: "\"La fuente del peluquero\" <lafuentedelpeluquero@gmail.com>"
+
+  # Base de datos PostgreSQL
+  - type: pserv
+    name: steticsoft-db
+    env: postgresql
+    plan: starter
+    databaseName: steticsoft_api_web_movil_wqoe
+    databaseUser: steticsoft_api_web_movil_wqoe_user

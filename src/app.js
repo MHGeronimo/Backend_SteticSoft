@@ -15,6 +15,7 @@ const {
 // Importar middlewares
 const sessionMiddleware = require("./config/session.config.js");
 const apiRoutes = require("./routes/index.js");
+const healthRoutes = require("./routes/health.routes.js");
 const { NotFoundError } = require("./errors/NotFoundError.js");
 const errorHandler = require("./middlewares/errorHandler.middleware.js");
 
@@ -60,6 +61,9 @@ app.get("/", (req, res) => {
 
 // --- Rutas Principales de la API ---
 app.use("/api", apiRoutes);
+
+// --- Rutas de Health Check ---
+app.use("/api/health", healthRoutes);
 
 // --- Manejo de Errores ---
 
