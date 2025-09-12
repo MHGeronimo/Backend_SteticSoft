@@ -426,6 +426,49 @@ const actualizarPerfilCliente = async (idCliente, datosActualizar) => {
   }
 };
 
+/**
+ * Obtiene el perfil de cliente por ID de usuario (para móvil).
+ */
+const getPerfilClientePorUsuarioId = async (idUsuario) => {
+  try {
+    const cliente = await db.Cliente.findOne({
+      where: { idUsuario },
+      include: [
+        {
+          model: db.Usuario,
+          as: "usuario",
+          attributes: ["idUsuario", "correo", "estado"],
+        },
+      ],
+    });
+    if (!cliente) {
+      throw new NotFoundError("Perfil de cliente no encontrado.");
+    }
+    return cliente;
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    console.error(`Error al obtener perfil de cliente por usuario ID ${idUsuario}:`, error.message);
+    throw new CustomError(`Error al obtener perfil de cliente: ${error.message}`, 500);
+  }
+};
+
+/**
+ * Actualiza el perfil de cliente por ID de usuario (para móvil).
+ */
+const updatePerfilClientePorUsuarioId = async (idUsuario, datosActualizar) => {
+  try {
+    const cliente = await db.Cliente.findOne({ where: { idUsuario } });
+    if (!cliente) {
+      throw new NotFoundError("Perfil de cliente no encontrado.");
+    }
+    return await actualizarPerfilCliente(cliente.idCliente, datosActualizar);
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    console.error(`Error al actualizar perfil de cliente por usuario ID ${idUsuario}:`, error.message);
+    throw new CustomError(`Error al actualizar perfil de cliente: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearCliente,
   obtenerTodosLosClientes,
@@ -437,4 +480,6 @@ module.exports = {
   cambiarEstadoCliente,
   buscarClientesPorTermino,
   actualizarPerfilCliente,
+  getPerfilClientePorUsuarioId,
+  updatePerfilClientePorUsuarioId,
 };

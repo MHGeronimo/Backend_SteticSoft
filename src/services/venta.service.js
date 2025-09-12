@@ -411,6 +411,13 @@ const obtenerVentaPorIdClienteMovil = async (idVenta, idUsuario) => {
     return venta;
 };
 
+/**
+ * Lista ventas por cliente (móvil).
+ */
+const listarPorCliente = async (idCliente) => {
+    return await findVentasByClienteIdMovil(idCliente);
+};
+
 module.exports = {
     crearVenta,
     obtenerTodasLasVentas,
@@ -421,4 +428,5 @@ module.exports = {
     eliminarVentaFisica,
     findVentasByClienteIdMovil,
     obtenerVentaPorIdClienteMovil,
+    listarPorCliente,
 };

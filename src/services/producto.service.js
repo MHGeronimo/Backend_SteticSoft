@@ -371,6 +371,31 @@ const obtenerProductosPublicos = async (filtros) => {
 };
 
 
+/**
+ * Obtiene productos activos de tipo externo para uso público (móvil).
+ */
+const listarActivosExternosPublicos = async () => {
+  try {
+    return await db.Producto.findAll({
+      where: { 
+        estado: true,
+        tipoUso: "Externo"
+      },
+      include: [
+        {
+          model: db.CategoriaProducto,
+          as: "categoria",
+          attributes: ["idCategoriaProducto", "nombre"],
+        },
+      ],
+      order: [["nombre", "ASC"]],
+    });
+  } catch (error) {
+    console.error("Error al obtener productos públicos:", error);
+    throw new CustomError(`Error al obtener productos públicos: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearProducto,
   obtenerTodosLosProductos,
@@ -380,11 +405,7 @@ module.exports = {
   habilitarProducto,
   eliminarProductoFisico,
   cambiarEstadoProducto,
-
-  //Moviles
-  crearProducto,
-  actualizarProducto,
-  eliminarProductoFisico,
   obtenerProductosInternos,
   obtenerProductosPublicos,
+  listarActivosExternosPublicos,
 };

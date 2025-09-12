@@ -197,6 +197,28 @@ const eliminarServicioFisico = async (idServicio) => {
   return { mensaje: "Servicio eliminado correctamente." };
 };
 
+/**
+ * Obtiene servicios activos para uso público (móvil).
+ */
+const listarActivosPublicos = async () => {
+  try {
+    return await db.Servicio.findAll({
+      where: { estado: true },
+      include: [
+        {
+          model: db.CategoriaServicio,
+          as: "categoria",
+          attributes: ["idCategoriaServicio", "nombre"],
+        },
+      ],
+      order: [["nombre", "ASC"]],
+    });
+  } catch (error) {
+    console.error("Error al obtener servicios públicos:", error);
+    throw new CustomError(`Error al obtener servicios públicos: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearServicio,
   obtenerTodosLosServicios,
@@ -205,4 +227,5 @@ module.exports = {
   cambiarEstadoServicio,
   eliminarServicioFisico,
   obtenerServiciosDisponibles,
+  listarActivosPublicos,
 };

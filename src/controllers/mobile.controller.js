@@ -12,11 +12,9 @@ const ventaService = require("../services/venta.service");
 
 async function loginUsuarioMovil(req, res, next) {
   try {
-    const { email, password } = req.body;
-    const { token, usuario } = await authService.login({ email, password });
-    const clienteInfo = await clienteService.getPerfilClientePorUsuarioId(
-      usuario.id
-    );
+    const { correo, contrasena } = req.body;
+    const { token, usuario } = await authService.loginUsuario(correo, contrasena);
+    const clienteInfo = usuario.clienteInfo;
     res.json({ token, permisos: usuario?.permisos || [], clienteInfo });
   } catch (e) {
     next(e);
@@ -25,11 +23,8 @@ async function loginUsuarioMovil(req, res, next) {
 
 async function registrarUsuarioMovil(req, res, next) {
   try {
-    const usuario = await authService.registrar({
-      ...req.body,
-      rol: "Cliente",
-    });
-    res.status(201).json(usuario);
+    const { usuario, token } = await authService.registrarUsuario(req.body);
+    res.status(201).json({ usuario, token });
   } catch (e) {
     next(e);
   }
@@ -38,7 +33,7 @@ async function registrarUsuarioMovil(req, res, next) {
 async function getMiPerfilMovil(req, res, next) {
   try {
     const clienteInfo = await clienteService.getPerfilClientePorUsuarioId(
-      req.user.id
+      req.user.idUsuario
     );
     res.json(clienteInfo);
   } catch (e) {
@@ -49,7 +44,7 @@ async function getMiPerfilMovil(req, res, next) {
 async function updateMiPerfilMovil(req, res, next) {
   try {
     const updated = await clienteService.updatePerfilClientePorUsuarioId(
-      req.user.id,
+      req.user.idUsuario,
       req.body
     );
     res.json(updated);
@@ -102,7 +97,7 @@ async function listarCategoriasProductoPublicasMovil(req, res, next) {
 
 async function listarMisCitasMovil(req, res, next) {
   try {
-    const citas = await citaService.listarPorCliente(req.user.clienteId);
+    const citas = await citaService.listarPorCliente(req.usuario.clienteInfo.idCliente);
     res.json(citas);
   } catch (e) {
     next(e);
@@ -112,7 +107,7 @@ async function listarMisCitasMovil(req, res, next) {
 async function crearMiCitaMovil(req, res, next) {
   try {
     const created = await citaService.crearParaCliente(
-      req.user.clienteId,
+      req.usuario.clienteInfo.idCliente,
       req.body
     );
     res.status(201).json(created);
@@ -123,7 +118,7 @@ async function crearMiCitaMovil(req, res, next) {
 
 async function listarNovedadesAgendablesMovil(req, res, next) {
   try {
-    const novedades = await citaService.listarNovedadesAgendables();
+    const novedades = await citaService.listarNovedadesAgendablesMovil();
     res.json(novedades);
   } catch (e) {
     next(e);
@@ -133,7 +128,7 @@ async function listarNovedadesAgendablesMovil(req, res, next) {
 async function listarDiasDisponiblesMovil(req, res, next) {
   try {
     const { novedadId, mes, anio } = req.query;
-    const dias = await citaService.listarDiasDisponibles(novedadId, mes, anio);
+    const dias = await citaService.listarDiasDisponiblesMovil(novedadId, mes, anio);
     res.json(dias);
   } catch (e) {
     next(e);
@@ -143,7 +138,7 @@ async function listarDiasDisponiblesMovil(req, res, next) {
 async function listarHorasDisponiblesMovil(req, res, next) {
   try {
     const { novedadId, fecha } = req.query;
-    const horas = await citaService.listarHorasDisponibles(novedadId, fecha);
+    const horas = await citaService.listarHorasDisponiblesMovil(novedadId, fecha);
     res.json(horas);
   } catch (e) {
     next(e);
@@ -153,8 +148,8 @@ async function listarHorasDisponiblesMovil(req, res, next) {
 async function cancelarMiCitaMovil(req, res, next) {
   try {
     const { idCita } = req.params;
-    const updated = await citaService.cancelarCitaDeCliente(
-      req.user.clienteId,
+    const updated = await citaService.cancelarCitaDeClienteMovil(
+      req.usuario.clienteInfo.idCliente,
       idCita
     );
     res.json(updated);
@@ -165,7 +160,7 @@ async function cancelarMiCitaMovil(req, res, next) {
 
 async function listarMisVentasMovil(req, res, next) {
   try {
-    const ventas = await ventaService.listarPorCliente(req.user.clienteId);
+    const ventas = await ventaService.listarPorCliente(req.usuario.clienteInfo.idCliente);
     res.json(ventas);
   } catch (e) {
     next(e);
