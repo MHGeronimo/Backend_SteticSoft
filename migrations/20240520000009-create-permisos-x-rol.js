@@ -6,6 +6,7 @@ module.exports = {
       id_rol: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'rol',
           key: 'id_rol'
@@ -16,6 +17,7 @@ module.exports = {
       id_permiso: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'permisos',
           key: 'id_permiso'
@@ -33,13 +35,6 @@ module.exports = {
         onDelete: 'SET NULL',
         onUpdate: 'CASCADE'
       }
-    });
-
-    // Add composite primary key
-    await queryInterface.addConstraint('permisos_x_rol', {
-      fields: ['id_rol', 'id_permiso'],
-      type: 'primary key',
-      name: 'permisos_x_rol_pkey'
     });
   },
   async down(queryInterface, Sequelize) {
