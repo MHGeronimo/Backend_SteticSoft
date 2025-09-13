@@ -27,12 +27,13 @@ const crearCategoriaServicioValidators = [
       }
     }),
   body("descripcion")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
-    .withMessage("La descripción debe ser texto.")
-    .isLength({ max: 45 })
-    .withMessage("La descripción no debe exceder los 45 caracteres."),
+  .optional({ nullable: true, checkFalsy: true })
+  .trim()
+  .isString()
+  .withMessage("La descripción debe ser texto.")
+  .isLength({ max: 200 })
+  .withMessage("La descripción no debe exceder los 200 caracteres."),
+
   body("estado")
     .optional()
     .isBoolean()
@@ -76,12 +77,13 @@ const actualizarCategoriaServicioValidators = [
       }
     }),
   body("descripcion")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isString()
-    .withMessage("La descripción debe ser texto.")
-    .isLength({ max: 45 })
-    .withMessage("La descripción no debe exceder los 45 caracteres."),
+  .optional({ nullable: true, checkFalsy: true })
+  .trim()
+  .isString()
+  .withMessage("La descripción debe ser texto.")
+  .isLength({ max: 200 })
+  .withMessage("La descripción no debe exceder los 200 caracteres."),
+
   body("estado")
     .optional()
     .isBoolean()
