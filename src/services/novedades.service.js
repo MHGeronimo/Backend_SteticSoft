@@ -246,6 +246,8 @@ const obtenerDiasDisponibles = async (idNovedad, anio, mes) => {
 
   const diasValidos = [];
   
+  moment.locale('es'); // Establecer el idioma a español
+
   let diaActual = inicioDelMes.clone();
   while (diaActual.isSameOrBefore(finDelMes)) {
     
@@ -263,6 +265,8 @@ const obtenerDiasDisponibles = async (idNovedad, anio, mes) => {
 
     diaActual.add(1, 'days');
   }
+
+  moment.locale('en'); // Revertir al idioma original para no afectar otras partes
 
   return diasValidos;
 };
