@@ -88,33 +88,55 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
 // Aquí pego el resto del archivo para que lo tengas completo.
 
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
-  const { page = 1, limit = 10, ...filtros } = opcionesDeFiltro;
+  const { page = 1, limit = 10, search, estado, ...otrosFiltros } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
 
-  try {
-    const { count, rows } = await Abastecimiento.findAndCountAll({
-      where: filtros,
-      include: [
-        {
-          model: Producto,
-          as: "producto",
-          attributes: [
-            "idProducto",
-            "nombre",
-            "stockMinimo",
-            "existencia",
-            "vida_util_dias",
-          ],
+  // Objeto base para la consulta
+  const queryOptions = {
+    where: otrosFiltros,
+    limit: parseInt(limit),
+    offset: parseInt(offset),
+    order: [
+      ["fechaIngreso", "DESC"],
+      ["idAbastecimiento", "DESC"],
+    ],
+    include: [
+      {
+        model: Producto,
+        as: "producto",
+        attributes: ["idProducto", "nombre"],
+      },
+      {
+        model: Usuario,
+        as: "usuario",
+        attributes: ["id_usuario", "nombre", "apellido", "correo"],
+        include: {
+          model: Rol,
+          as: "rol",
+          attributes: ["nombre"],
         },
-      ],
-      order: [
-        ["fechaIngreso", "DESC"],
-        ["idAbastecimiento", "DESC"],
-      ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      distinct: true,
-    });
+      },
+    ],
+    distinct: true,
+  };
+
+  // 1. Filtro por estado (activo/inactivo)
+  if (estado !== undefined && estado !== 'todos') {
+    queryOptions.where.estado = estado === 'activos';
+  }
+
+  // 2. Filtro por término de búsqueda
+  if (search) {
+    queryOptions.where[Op.or] = [
+      { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.nombre$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.apellido$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
+    ];
+  }
+
+  try {
+    const { count, rows } = await Abastecimiento.findAndCountAll(queryOptions);
 
     return {
       totalItems: count,
