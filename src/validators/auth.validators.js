@@ -88,10 +88,26 @@ const solicitarRecuperacionValidators = [
 ];
 
 const resetearContrasenaValidators = [
-  body("token")
+  // AÑADIMOS la validación del correo (ahora es necesario en este endpoint)
+  body("correo")
     .trim()
     .notEmpty()
-    .withMessage("El token de recuperación es obligatorio."),
+    .withMessage("El correo electrónico es obligatorio.")
+    .isEmail()
+    .withMessage("Debe proporcionar un correo electrónico válido.")
+    .normalizeEmail(),
+
+  // MODIFICAMOS la validación del token (ahora es el código OTP)
+  body("token") // Mantenemos el nombre "token" para el campo del código (o puedes cambiarlo a "codigo")
+    .trim()
+    .notEmpty()
+    .withMessage("El código de recuperación es obligatorio.")
+    .isNumeric()
+    .withMessage("El código debe ser numérico.")
+    .isLength({ min: 6, max: 6 })
+    .withMessage("El código debe tener exactamente 6 dígitos."),
+
+  // Mantenemos las validaciones de la nueva contraseña
   body("nuevaContrasena")
     .notEmpty()
     .withMessage("La nueva contraseña es obligatoria.")
