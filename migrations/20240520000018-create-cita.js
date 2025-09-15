@@ -21,11 +21,9 @@ module.exports = {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: true
       },
-      estado: {
-        type: Sequelize.STRING(255),
-        allowNull: false,
-        defaultValue: 'Activa'
-      },
+      // --- CAMBIO 1: Se elimina el campo 'estado' antiguo ---
+      // El campo 'estado' de tipo STRING ha sido removido completamente.
+      
       id_cliente: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -46,9 +44,11 @@ module.exports = {
         onDelete: 'RESTRICT',
         onUpdate: 'CASCADE'
       },
+      // --- CAMBIO 2: Se actualiza 'id_estado' ---
       id_estado: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,        // Ahora es obligatorio
+        defaultValue: 5,         // Por defecto es 'Activa'
         references: {
           model: 'estado',
           key: 'id_estado'

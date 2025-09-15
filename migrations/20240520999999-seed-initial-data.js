@@ -48,7 +48,8 @@ module.exports = {
         { id_estado: 1, nombre_estado: 'En proceso' },
         { id_estado: 2, nombre_estado: 'Pendiente' },
         { id_estado: 3, nombre_estado: 'Completado' },
-        { id_estado: 4, nombre_estado: 'Cancelado' }
+        { id_estado: 4, nombre_estado: 'Cancelado' },
+        { id_estado: 5, nombre_estado: 'Activa' } 
       ], { transaction });
 
       await queryInterface.sequelize.query(`
