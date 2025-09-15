@@ -1,7 +1,7 @@
 // src/services/abastecimiento.service.js
 const db = require("../models");
 const { Op } = db.Sequelize;
-const { Abastecimiento, Producto, sequelize } = db;
+const { Abastecimiento, Producto, sequelize, Usuario, Rol } = db;
 const {
   NotFoundError,
   ConflictError,
@@ -54,7 +54,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
         estado: typeof estado === "boolean" ? estado : true,
-        empleadoAsignado: empleadoAsignado,
+        idUsuario: empleadoAsignado,
       },
       { transaction }
     );
@@ -196,7 +196,7 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
 
     if (estaAgotado !== undefined) camposAActualizar.estaAgotado = estaAgotado;
     if (empleadoAsignado !== undefined)
-      camposAActualizar.empleadoAsignado = empleadoAsignado;
+      camposAActualizar.idUsuario = empleadoAsignado;
     if (estaAgotado === true) {
       if (razonAgotamiento !== undefined)
         camposAActualizar.razonAgotamiento = razonAgotamiento;
@@ -375,6 +375,27 @@ const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
   return abastecimiento;
 };
 
+/**
+ * Obtiene la lista de usuarios con rol de empleado.
+ * @returns {Promise<Array>} - Una lista de empleados.
+ */
+const obtenerEmpleados = async () => {
+  try {
+    const empleados = await Usuario.findAll({
+      include: [{
+        model: Rol,
+        as: 'rol',
+        where: { nombre: 'Empleado' } // Confirma que 'Empleado' es el nombre exacto del rol
+      }],
+      attributes: ['id_usuario', 'correo', 'nombre', 'apellido'] // Define los campos que el frontend necesita
+    });
+    return empleados;
+  } catch (error) {
+    console.error("Error al obtener la lista de empleados:", error);
+    throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
+  }
+};
+
 module.exports = {
   crearAbastecimiento,
   obtenerTodosLosAbastecimientos,
@@ -382,4 +403,5 @@ module.exports = {
   actualizarAbastecimiento,
   eliminarAbastecimientoFisico,
   agotarAbastecimiento,
+  obtenerEmpleados,
 };
