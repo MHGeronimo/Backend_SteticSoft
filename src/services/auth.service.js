@@ -38,6 +38,7 @@ const registrarUsuario = async (datosRegistro) => {
     tipoDocumento,
     numeroDocumento,
     fechaNacimiento,
+    direccion,
   } = datosRegistro;
 
   const usuarioExistente = await db.Usuario.findOne({ where: { correo } });
@@ -98,6 +99,7 @@ const registrarUsuario = async (datosRegistro) => {
         tipoDocumento,
         numeroDocumento,
         fechaNacimiento,
+        direccion,
         estado: true,
       },
       { transaction }
