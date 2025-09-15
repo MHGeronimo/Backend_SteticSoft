@@ -276,10 +276,9 @@ CREATE TABLE IF NOT EXISTS cita (
     fecha DATE NOT NULL,
     hora_inicio TIME NOT NULL,
     precio_total DECIMAL(10, 2),
-    estado VARCHAR(255) NOT NULL DEFAULT 'Activa',
     id_cliente INTEGER NOT NULL REFERENCES cliente (id_cliente),
     id_usuario INTEGER REFERENCES usuario (id_usuario),
-    id_estado INTEGER REFERENCES estado (id_estado),
+    id_estado INTEGER REFERENCES estado (id_estado) DEFAULT 5,
     id_novedad INTEGER NOT NULL REFERENCES novedades (id_novedad)
 );
 
@@ -422,5 +421,5 @@ id_rol = EXCLUDED.id_rol,
 estado = EXCLUDED.estado;
 
 INSERT INTO estado (id_estado, nombre_estado) VALUES
-(1, 'En proceso'), (2, 'Pendiente'), (3, 'Completado'), (4, 'Cancelado')
+(1, 'En proceso'), (2, 'Pendiente'), (3, 'Completado'), (4, 'Cancelado'), (5, 'Activa')
 ON CONFLICT (id_estado) DO UPDATE SET nombre_estado = EXCLUDED.nombre_estado;
