@@ -91,7 +91,6 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   const { page = 1, limit = 10, search, estado, ...otrosFiltros } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
 
-  // Objeto base para la consulta
   const queryOptions = {
     where: otrosFiltros,
     limit: parseInt(limit),
@@ -108,7 +107,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       },
       {
         model: Usuario,
-        as: "usuario",
+        as: "empleado", // <--- ALIAS ACTUALIZADO AQUÍ
         attributes: ["idUsuario", "nombre", "apellido", "correo"],
         include: {
           model: Rol,
@@ -120,18 +119,17 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
     distinct: true,
   };
 
-  // 1. Filtro por estado (activo/inactivo)
   if (estado !== undefined && estado !== 'todos') {
     queryOptions.where.estado = estado === 'activos';
   }
 
-  // 2. Filtro por término de búsqueda
   if (search) {
     queryOptions.where[Op.or] = [
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.apellido$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
+      // V ↓↓↓ --- ALIAS ACTUALIZADO EN TODAS ESTAS LÍNEAS --- V
+      { '$empleado.nombre$': { [Op.iLike]: `%${search}%` } },
+      { '$empleado.apellido$': { [Op.iLike]: `%${search}%` } },
+      { '$empleado.correo$': { [Op.iLike]: `%${search}%` } },
     ];
   }
 
