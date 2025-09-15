@@ -109,7 +109,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       {
         model: Usuario,
         as: "usuario",
-        attributes: ["id_usuario", "nombre", "apellido", "correo"],
+        attributes: ["idUsuario", "nombre", "apellido", "correo"],
         include: {
           model: Rol,
           as: "rol",
