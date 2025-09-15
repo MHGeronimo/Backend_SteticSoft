@@ -1,6 +1,6 @@
 // src/services/abastecimiento.service.js
 const db = require("../models");
-const { Op } = db.Sequelize;
+const { Op, col } = db.Sequelize; // Modifica o añade esta línea
 const { Abastecimiento, Producto, sequelize, Usuario, Rol } = db;
 const {
   NotFoundError,
@@ -124,11 +124,15 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   }
 
   if (search) {
+    // REEMPLAZA el 'where' anterior con este bloque:
     queryOptions.where[Op.or] = [
+      { [Op.and]: col('producto.nombre') }, // Esta sintaxis puede parecer extraña, pero es una forma de forzar la referencia a la columna
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
-      // V ↓↓↓ --- ALIAS ACTUALIZADO EN TODAS ESTAS LÍNEAS --- V
+      { [Op.and]: col('empleado.nombre') },
       { '$empleado.nombre$': { [Op.iLike]: `%${search}%` } },
+      { [Op.and]: col('empleado.apellido') },
       { '$empleado.apellido$': { [Op.iLike]: `%${search}%` } },
+      { [Op.and]: col('empleado.correo') },
       { '$empleado.correo$': { [Op.iLike]: `%${search}%` } },
     ];
   }
