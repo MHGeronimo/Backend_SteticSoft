@@ -237,37 +237,33 @@ const obtenerDiasDisponibles = async (idNovedad, anio, mes) => {
     throw new NotFoundError("Novedad no encontrada.");
   }
 
-  // 2. Establece el rango del mes que se está visualizando en el calendario
-  // Nos aseguramos de usar la zona horaria correcta para evitar errores de un día
-  moment.locale('es'); // Aseguramos que el locale de moment sea español
   const inicioDelMes = moment.tz({ year: anio, month: mes - 1 }, "America/Bogota").startOf('month');
   const finDelMes = moment.tz({ year: anio, month: mes - 1 }, "America/Bogota").endOf('month');
 
-  // El array que contendrá los días válidos
+  // ✅ LÍNEAS AÑADIDAS: Convertimos las fechas de la novedad a objetos moment en la misma zona horaria.
+  const fechaInicioNovedad = moment.tz(novedad.fechaInicio, "America/Bogota").startOf('day');
+  const fechaFinNovedad = moment.tz(novedad.fechaFin, "America/Bogota").endOf('day');
+
   const diasValidos = [];
   
-  // 3. Itera día por día dentro del mes que se está viendo
-  let diaActual = inicioDelMes.clone(); // Usamos .clone() para no modificar la fecha original
+  let diaActual = inicioDelMes.clone();
   while (diaActual.isSameOrBefore(finDelMes)) {
     
-    // 4. Para cada día, verifica 3 condiciones:
-    const esDespuesDeInicioNovedad = diaActual.isSameOrAfter(novedad.fechaInicio, 'day');
-    const esAntesDeFinNovedad = diaActual.isSameOrBefore(novedad.fechaFin, 'day');
+    // ✅ LÍNEAS MODIFICADAS: Comparamos usando los nuevos objetos moment.
+    const esDespuesDeInicioNovedad = diaActual.isSameOrAfter(fechaInicioNovedad);
+    const esAntesDeFinNovedad = diaActual.isSameOrBefore(fechaFinNovedad);
     
-    // moment().format('dddd') devuelve el nombre del día (ej: "Lunes")
     const diaDeLaSemana = diaActual.format('dddd');
-    const esDiaPermitido = novedad.dias.includes(diaDeLaSemana);
+    const diaDeLaSemanaCapitalizado = diaDeLaSemana.charAt(0).toUpperCase() + diaDeLaSemana.slice(1);
+    const esDiaPermitido = novedad.dias.includes(diaDeLaSemanaCapitalizado);
 
     if (esDespuesDeInicioNovedad && esAntesDeFinNovedad && esDiaPermitido) {
-      // Si cumple todo, se añade al array en formato YYYY-MM-DD
       diasValidos.push(diaActual.format('YYYY-MM-DD'));
     }
 
-    // Pasa al siguiente día
     diaActual.add(1, 'days');
   }
 
-  // 5. Devuelve el array con todas las fechas que cumplieron las condiciones
   return diasValidos;
 };
 
@@ -278,9 +274,6 @@ const obtenerHorasDisponibles = async (idNovedad, fecha) => {
   if (!novedad) {
     throw new NotFoundError("Novedad no encontrada.");
   }
-
-  // 2. Busca todas las citas que ya existen para la fecha seleccionada
-  // Esto es crucial para no mostrar horarios que ya están ocupados.
   const citasDelDia = await db.Cita.findAll({
     where: {
       fecha: fecha,
@@ -289,13 +282,8 @@ const obtenerHorasDisponibles = async (idNovedad, fecha) => {
   });
   // Creamos un Set para una búsqueda más rápida de las horas ocupadas
   const horasOcupadas = new Set(citasDelDia.map(cita => cita.horaInicio));
-
-  // 3. Genera todos los posibles horarios dentro del rango de la novedad
   const horariosPosibles = [];
   const formatoHora = 'HH:mm:ss';
-
-  // NOTA: Asumimos un intervalo de 60 minutos entre citas.
-  // Si tienes un campo "intervalo" en tu modelo Novedad, puedes usarlo aquí.
   const intervaloMinutos = 60;
 
   let horaActual = moment(novedad.horaInicio, formatoHora);
@@ -306,11 +294,12 @@ const obtenerHorasDisponibles = async (idNovedad, fecha) => {
     horaActual.add(intervaloMinutos, 'minutes');
   }
 
-  // 4. Filtra los horarios, devolviendo solo los que NO están ocupados
   const horasDisponibles = horariosPosibles.filter(hora => !horasOcupadas.has(hora));
   
   return horasDisponibles;
 };
+
+
 const obtenerEmpleadosPorNovedad = async (idNovedad) => {
   const novedad = await db.Novedad.findByPk(idNovedad, {
     include: [
