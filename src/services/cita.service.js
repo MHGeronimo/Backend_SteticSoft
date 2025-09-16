@@ -31,7 +31,7 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
         attributes: ['idUsuario', 'correo'],
         include: [{
             model: db.Empleado,
-            as: 'empleadoInfo',
+            as: 'empleado',
             attributes: { exclude: ['idUsuario'] }
         }]
       },
@@ -101,7 +101,7 @@ const crearCita = async (datosCita) => {
                     citaInfo: {
                         accion: 'agendada',
                         fechaHora: formatDateTime(fechaHoraParaCorreo), // Usamos el helper
-                        empleado: citaCreadaConDetalles.empleado?.empleadoInfo?.nombre || 'No asignado',
+                        empleado: citaCreadaConDetalles.empleado?.empleado?.nombre || 'No asignado',
                         estado: citaCreadaConDetalles.estadoDetalle?.nombreEstado || 'Pendiente',
                         servicios: citaCreadaConDetalles.serviciosProgramados,
                         total: citaCreadaConDetalles.precio_total,
@@ -144,7 +144,7 @@ const obtenerTodasLasCitas = async (opcionesDeFiltro = {}) => {
           attributes: ['idUsuario', 'correo'],
           include: [{
               model: db.Empleado,
-              as: 'empleadoInfo',
+              as: 'empleado',
               attributes: ['nombre', 'apellido']
           }]
         },
