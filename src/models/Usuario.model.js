@@ -61,8 +61,8 @@ module.exports = (sequelize, DataTypes) => {
 
     // ✅ AJUSTE FINAL: Se especifica la clave foránea de forma explícita en la asociación
     Usuario.hasOne(models.Empleado, {
-      foreignKey: 'idUsuario', 
-      as: 'empleadoInfo'
+      foreignKey: 'idUsuario',
+      as: 'empleado' // <-- ALIAS CORRECTO Y ESPERADO
     });
 
     Usuario.hasMany(models.TokenRecuperacion, {
