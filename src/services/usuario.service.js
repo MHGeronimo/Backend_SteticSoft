@@ -254,7 +254,7 @@ const crearUsuario = async (usuarioData) => {
       include: [
         { model: db.Rol, as: "rol" },
         { model: db.Cliente, as: "clienteInfo" },
-        { model: db.Empleado, as: "empleadoInfo" },
+        { model: db.Empleado, as: "empleado" },
       ],
       attributes: { exclude: ["contrasena"] },
     });
@@ -323,7 +323,7 @@ const obtenerTodosLosUsuarios = async (opcionesDeFiltro = {}) => {
       },
       {
         model: db.Empleado,
-        as: "empleadoInfo",
+        as: "empleado",
         required: false,
       },
     ];
@@ -361,7 +361,7 @@ const obtenerUsuarioPorId = async (idUsuario) => {
           attributes: ["idRol", "nombre", "tipoPerfil"],
         },
         { model: db.Cliente, as: "clienteInfo", required: false },
-        { model: db.Empleado, as: "empleadoInfo", required: false },
+        { model: db.Empleado, as: "empleado", required: false },
       ],
     });
     if (!usuario) {
