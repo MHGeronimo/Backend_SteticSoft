@@ -54,7 +54,7 @@ module.exports = {
 
       await queryInterface.sequelize.query(`
         INSERT INTO usuario (correo, contrasena, id_rol, estado) VALUES
-        ('mrgerito@gmail.com', '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO', 
+        ('steticsoft@gmail.com', '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO', 
          (SELECT id_rol FROM rol WHERE nombre = 'Administrador'), TRUE);
       `, { transaction });
 
