@@ -39,7 +39,7 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
           include: [
             {
               model: db.Empleado,
-              as: "empleadoInfo",
+              as: "empleado",
               attributes: ["nombre", "apellido"],
             },
           ],
@@ -50,9 +50,9 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
     const plainNovedad = novedadCreada.get({ plain: true });
     plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
       ...empleado,
-      nombre: empleado.empleadoInfo?.nombre,
-      apellido: empleado.empleadoInfo?.apellido,
-      empleadoInfo: undefined,
+      nombre: empleado.empleado?.nombre,
+      apellido: empleado.empleado?.apellido,
+      empleado: undefined,
     }));
     return plainNovedad;
   } catch (error) {
@@ -73,7 +73,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     through: { attributes: [] },
     include: [{
       model: db.Empleado,
-      as: 'empleadoInfo', // Alias de la relación Usuario -> Empleado
+      as: 'empleado', // Alias de la relación Usuario -> Empleado
       attributes: ['nombre', 'apellido', 'telefono'], // ¡Traemos los datos completos!
     }],
     required: false
@@ -89,8 +89,8 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
     whereClause[Op.or] = [
       // ... (búsqueda en campos de Novedad)
       { '$empleados.correo$': { [Op.like]: searchTerm } },
-      { '$empleados.empleadoInfo.nombre$': { [Op.like]: searchTerm } },
-      { '$empleados.empleadoInfo.apellido$': { [Op.like]: searchTerm } },
+      { '$empleados.empleado.nombre$': { [Op.like]: searchTerm } },
+      { '$empleados.empleado.apellido$': { [Op.like]: searchTerm } },
     ];
   }
 
@@ -141,7 +141,7 @@ const obtenerNovedadPorId = async (idNovedad) => {
         include: [
           {
             model: db.Empleado,
-            as: "empleadoInfo",
+            as: "empleado",
             attributes: ["nombre", "apellido"],
           },
         ],
@@ -155,9 +155,9 @@ const obtenerNovedadPorId = async (idNovedad) => {
   const plainNovedad = novedad.get({ plain: true });
   plainNovedad.empleados = plainNovedad.empleados.map((empleado) => ({
     ...empleado,
-    nombre: empleado.empleadoInfo?.nombre,
-    apellido: empleado.empleadoInfo?.apellido,
-    empleadoInfo: undefined,
+    nombre: empleado.empleado?.nombre,
+    apellido: empleado.empleado?.apellido,
+    empleado: undefined,
   }));
   return plainNovedad;
 };
@@ -293,7 +293,7 @@ const obtenerEmpleadosPorNovedad = async (idNovedad) => {
         include: [
           {
             model: db.Empleado,
-            as: "empleadoInfo",
+            as: "empleado",
             attributes: ["nombre", "apellido", "telefono"],
           },
         ],
@@ -309,10 +309,10 @@ const obtenerEmpleadosPorNovedad = async (idNovedad) => {
     const plainEmpleado = empleado.get({ plain: true });
     return {
       ...plainEmpleado,
-      nombre: plainEmpleado.empleadoInfo?.nombre,
-      apellido: plainEmpleado.empleadoInfo?.apellido,
-      telefono: plainEmpleado.empleadoInfo?.telefono,
-      empleadoInfo: undefined,
+      nombre: plainEmpleado.empleado?.nombre,
+      apellido: plainEmpleado.empleado?.apellido,
+      telefono: plainEmpleado.empleado?.telefono,
+      empleado: undefined,
     };
   });
 };
@@ -336,17 +336,17 @@ const obtenerEmpleadosParaAsignar = async () => {
       include: [
         {
           model: db.Empleado,
-          as: "empleadoInfo",
+          as: "empleado",
           attributes: ["nombre", "apellido", "telefono"],
           required: true
         },
       ],
-      order: [[{ model: db.Empleado, as: "empleadoInfo" }, "nombre", "ASC"]],
+      order: [[{ model: db.Empleado, as: "empleado" }, "nombre", "ASC"]],
     });
 
     return usuarios.map((usuario) => {
       const plainUsuario = usuario.get({ plain: true });
-      const info = plainUsuario.empleadoInfo;
+      const info = plainUsuario.empleado;
       return {
         idUsuario: plainUsuario.idUsuario,
         nombreCompleto: `${info?.nombre || ""} ${info?.apellido || ""}`.trim(),

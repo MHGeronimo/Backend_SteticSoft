@@ -54,8 +54,6 @@ const cambiarEstadoCitaValidators = [
   param("id")
     .isInt({ gt: 0 })
     .withMessage("El ID de la cita debe ser un entero positivo."),
-  // --- ✅ CORRECCIÓN AQUÍ ---
-  // Se valida 'idEstado' como un número entero requerido.
   body("idEstado")
     .notEmpty()
     .withMessage("El ID del estado es obligatorio.")
@@ -72,6 +70,19 @@ const buscarValidators = [
     .isLength({ min: 2 })
     .withMessage("El término de búsqueda debe tener al menos 2 caracteres."),
   handleValidationErrors,
+];
+
+const actualizarCitaValidators = [
+  param("idCita").isInt({ gt: 0 }).withMessage("El ID de la cita debe ser un entero positivo."),
+  body("fecha").optional().isISO8601().withMessage("La fecha debe ser válida (YYYY-MM-DD)."),
+  body("hora_inicio").optional().matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/).withMessage("La hora debe estar en formato HH:mm."),
+  body("clienteId").optional().isInt({ gt: 0 }).withMessage("El ID del cliente debe ser un entero positivo."),
+  body("usuarioId").optional().isInt({ gt: 0 }).withMessage("El ID del empleado debe ser un entero positivo."),
+  body("idEstado").optional().isInt({ gt: 0 }).withMessage("El ID del estado debe ser un entero positivo."),
+  body("novedadId").optional().isInt({ gt: 0 }).withMessage("El ID de la novedad debe ser un entero positivo."),
+  body("servicios").optional().isArray().withMessage("Los servicios deben ser un array de IDs."),
+  body("servicios.*").optional().isInt({ gt: 0 }).withMessage("Cada ID de servicio debe ser un entero positivo."),
+  handleValidationErrors,
 ];
 
 const obtenerDisponibilidadValidators = [
