@@ -411,10 +411,20 @@ const cambiarEstadoCita = async (idCita, idNuevoEstado) => {
 const eliminarCitaFisica = async (idCita) => {
   const transaction = await db.sequelize.transaction();
   try {
-    const cita = await db.Cita.findByPk(idCita, { transaction });
+    const cita = await db.Cita.findByPk(idCita);
     if (!cita) {
-      throw new NotFoundError("Cita no encontrada para eliminar.");
+        throw new NotFoundError("Cita no encontrada para eliminar.");
     }
+
+    // --- REGLA DE NEGOCIO: Solo se puede eliminar después de una semana ---
+    const ahora = moment();
+    const fechaCita = moment(cita.fechaHora);
+    if (ahora.diff(fechaCita, 'days') < 7) {
+        throw new ForbiddenError("Las citas solo se pueden eliminar una semana después de haberse realizado.");
+    }
+    // --- FIN DE LA REGLA ---
+
+    await db.Cita.destroy({ where: { idCita } });
 
     const ventasAsociadas = await db.VentaXServicio.count({
       where: { idCita },
@@ -593,6 +603,50 @@ const cancelarCitaDeClienteMovil = async (idCliente, idCita) => {
   }
 };
 
+/**
+ * ✅ NUEVA LÓGICA DE NEGOCIO PARA CANCELAR
+ * Cambia el estado de una cita a "Cancelada".
+ * @param {number} idCita - ID de la cita a cancelar.
+ * @returns {Promise<object>} La cita actualizada.
+ */
+const cancelarCita = async (idCita) => {
+    const transaction = await db.sequelize.transaction();
+    try {
+        const cita = await db.Cita.findByPk(idCita, { transaction });
+        if (!cita) throw new NotFoundError("Cita no encontrada.");
+
+        // --- REGLA DE NEGOCIO: No se puede cancelar un día antes ---
+        const ahora = moment();
+        const fechaCita = moment(cita.fechaHora);
+        if (fechaCita.diff(ahora, 'hours') < 24) {
+            throw new ForbiddenError("Las citas no se pueden cancelar con menos de 24 horas de antelación.");
+        }
+        // --- FIN DE LA REGLA ---
+
+        const estadoCancelado = await db.Estado.findOne({ where: { nombreEstado: 'Cancelado' }, transaction });
+        if (!estadoCancelado) throw new CustomError("El estado 'Cancelado' no está configurado.", 500);
+
+        await cita.update({ idEstado: estadoCancelado.idEstado }, { transaction });
+        
+        await transaction.commit();
+        
+        // Lógica de envío de correo
+        const citaCompleta = await obtenerCitaCompletaPorIdInterno(idCita);
+        if (citaCompleta && citaCompleta.cliente.correo) {
+             enviarCorreoCita({
+                correo: citaCompleta.cliente.correo,
+                nombreCliente: citaCompleta.cliente.nombre,
+                citaInfo: { /* ... datos para el correo de cancelación ... */ }
+             });
+        }
+        return citaCompleta;
+
+    } catch (error) {
+        await transaction.rollback();
+        throw error; // Re-lanza el error para que el controlador lo maneje
+    }
+};
+
 module.exports = {
   crearCita,
   obtenerTodasLasCitas,
@@ -610,6 +664,7 @@ module.exports = {
   listarDiasDisponiblesMovil,
   listarHorasDisponiblesMovil,
   cancelarCitaDeClienteMovil,
+  cancelarCita,
   // Funciones de consulta para el formulario que no cambian
   obtenerDiasDisponiblesPorNovedad: require("./novedades.service.js")
     .obtenerDiasDisponibles,
