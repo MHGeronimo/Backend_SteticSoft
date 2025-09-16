@@ -38,7 +38,7 @@ services:
       
       # Cloudinary - Configuración de imágenes
       - key: CLOUDINARY_CLOUD_NAME
-        value: "M.H Geronimo"
+        value: "dkmje8eft"
       - key: CLOUDINARY_API_KEY
         value: "781461585124195"
       - key: CLOUDINARY_API_SECRET
@@ -60,7 +60,7 @@ services:
       - key: EMAIL_USER
         value: "lafuentedelpeluquero@gmail.com"
       - key: EMAIL_PASS
-        value: "iigutoyfzhesjjfe"
+        value: "dwfahrgbkkcvftyp"
       - key: EMAIL_FROM
         value: "\"La fuente del peluquero\" <lafuentedelpeluquero@gmail.com>"
 
