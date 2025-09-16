@@ -14,67 +14,32 @@ const idValidator = [
 ];
 
 const crearCitaValidators = [
-  body("fecha")
-    .notEmpty()
-    .withMessage("La fecha es obligatoria.")
-    .isISO8601()
-    .withMessage("El formato de fecha debe ser YYYY-MM-DD.")
-    .custom((value) => {
-      if (moment(value).isBefore(moment().startOf("day"))) {
-        throw new Error("La fecha de la cita no puede ser en el pasado.");
-      }
-      return true;
-    }),
-  body("horaInicio")
-    .notEmpty()
-    .withMessage("La hora de inicio es obligatoria.")
-    .matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/)
-    .withMessage("El formato de hora debe ser HH:mm o HH:mm:ss."),
-  body("idCliente")
-    .notEmpty()
-    .withMessage("El ID del cliente es obligatorio.")
-    .isInt({ gt: 0 })
-    .withMessage("El ID del cliente debe ser un entero positivo.")
-    .custom(async (value) => {
-      const cliente = await db.Cliente.findOne({
-        where: { idCliente: value, estado: true },
-      });
-      if (!cliente) throw new Error("El cliente no existe o está inactivo.");
-    }),
-  body("idUsuario")
-    .optional()
-    .isInt({ gt: 0 })
-    .withMessage("El ID del empleado debe ser un entero positivo.")
-    .custom(async (value) => {
-      const usuario = await db.Usuario.findOne({
-        where: { idUsuario: value, estado: true },
-      });
-      if (!usuario) throw new Error("El empleado no existe o no está activo.");
-    }),
-  body("idNovedad")
-    .notEmpty()
-    .withMessage("El ID de la novedad es obligatorio.")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la novedad debe ser un entero positivo.")
-    .custom(async (value) => {
-      const novedad = await db.Novedad.findOne({
-        where: { idNovedad: value, estado: true },
-      });
-      if (!novedad) throw new Error("La novedad no existe o está inactiva.");
-    }),
-  body("servicios")
-    .optional()
-    .isArray()
-    .withMessage("Debe seleccionar al menos un servicio.")
-    .custom((servicios) => {
-      if (!servicios.every((id) => Number.isInteger(id) && id > 0)) {
-        throw new Error("Cada ID de servicio debe ser un entero positivo.");
-      }
-      return true;
-    }),
-  handleValidationErrors,
-];
+  body("fechaHora")
+    .notEmpty().withMessage("La fecha y hora son obligatorias.")
+    .isISO8601().withMessage("El formato de fecha y hora no es válido.")
+    .toDate(),
 
+  body("clienteId")
+    .notEmpty().withMessage("El ID del cliente es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID del cliente debe ser un entero positivo."),
+
+  body("usuarioId") // Corresponde al empleado
+    .notEmpty().withMessage("El ID del empleado es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID del empleado debe ser un entero positivo."),
+  
+  body("idServicios")
+    .isArray({ min: 1 }).withMessage("Debe seleccionar al menos un servicio."),
+  
+  body("novedadId")
+    .notEmpty().withMessage("El ID de la novedad es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID de la novedad debe ser un entero positivo."),
+
+  body("estadoCitaId")
+    .notEmpty().withMessage("El estado de la cita es obligatorio.")
+    .isInt({ gt: 0 }),
+    
+  handleValidationErrors,
+];
 const actualizarCitaValidators = [
   param("id")
     .isInt({ gt: 0 })
