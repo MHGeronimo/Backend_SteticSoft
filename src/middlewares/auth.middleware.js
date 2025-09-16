@@ -51,9 +51,9 @@ const authMiddleware = async (req, res, next) => {
         },
         {
           model: db.Empleado,
-          as: "empleadoInfo",
+          as: "empleado",
           required: false,
-        }
+        },
       ],
     });
 
@@ -73,7 +73,7 @@ const authMiddleware = async (req, res, next) => {
       rolNombre: usuario.rol.nombre,
       permisos: permisosUsuario,
       clienteInfo: usuario.clienteInfo ? usuario.clienteInfo.toJSON() : null,
-      empleadoInfo: usuario.empleadoInfo ? usuario.empleadoInfo.toJSON() : null,
+      empleadoInfo: usuario.empleado ? usuario.empleado.toJSON() : null,
     };
 
     next();
