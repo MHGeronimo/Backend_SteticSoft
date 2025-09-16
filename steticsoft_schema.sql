@@ -85,19 +85,19 @@ CREATE TABLE IF NOT EXISTS permisos (
     estado BOOLEAN DEFAULT TRUE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS permisos_x_rol (
-    id_rol INT REFERENCES rol(id_rol) ON DELETE CASCADE,
-    id_permiso INT REFERENCES permisos(id_permiso) ON DELETE CASCADE,
-    asignado_por INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    PRIMARY KEY (id_rol, id_permiso)
-);
-
 CREATE TABLE IF NOT EXISTS usuario (
     id_usuario SERIAL PRIMARY KEY,
     correo VARCHAR(100) NOT NULL UNIQUE,
     contrasena TEXT NOT NULL,
     id_rol INT REFERENCES rol(id_rol) ON DELETE RESTRICT,
     estado BOOLEAN DEFAULT TRUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS permisos_x_rol (
+    id_rol INT REFERENCES rol(id_rol) ON DELETE CASCADE,
+    id_permiso INT REFERENCES permisos(id_permiso) ON DELETE CASCADE,
+    asignado_por INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    PRIMARY KEY (id_rol, id_permiso)
 );
 
 -- Tabla de Auditoría para Roles
