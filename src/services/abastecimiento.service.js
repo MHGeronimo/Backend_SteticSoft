@@ -73,7 +73,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
 };
 
 
-// REEMPLAZA LA FUNCIÓN 'obtenerTodosLosAbastecimientos' ENTERA CON ESTA VERSIÓN:
+// --- OBTENER TODOS LOS ABASTECIMIENTOS (VERSIÓN DEFINITIVA) ---
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   const { page = 1, limit = 10, search, estado } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
@@ -83,8 +83,8 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
     whereClause.estado = estado === 'activos';
   }
 
-  // Se usa el alias corregido 'empleado'
   if (search) {
+    // CORRECIÓN: Las claves de búsqueda se actualizaron para usar el alias 'empleado'.
     whereClause[Op.or] = [
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
       { '$empleado.correo$': { [Op.iLike]: `%${search}%` } },
@@ -97,14 +97,17 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
     const { count, rows } = await Abastecimiento.findAndCountAll({
       where: whereClause,
       include: [
-        { model: Producto, as: "producto" },
+        { 
+            model: Producto, 
+            as: "producto" 
+        },
         {
           model: Usuario,
-          as: "empleado",
+          as: "empleado", // CORRECIÓN: El alias se cambió de "usuario" a "empleado".
           attributes: ['id_usuario', 'correo'],
           include: [
-            { model: Rol, as: "rol" },
-            { model: Empleado, as: "empleado", required: true } // Se usa el alias corregido
+            { model: Rol, as: "rol", attributes: ['nombre'] },
+            { model: Empleado, as: "empleadoInfo", attributes: ['nombre', 'apellido'], required: true }
           ]
         }
       ],
@@ -112,7 +115,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       distinct: true,
-      subQuery: false
+      subQuery: false // Clave para el correcto funcionamiento de JOINs con filtros
     });
 
     return {
@@ -140,10 +143,10 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
         },
         {
           model: Usuario,
-          as: "empleado",
+          as: "empleado", // CORRECIÓN: El alias se cambió de "usuario" a "empleado".
           include: [
               { model: Rol, as: "rol" },
-              { model: Empleado, as: "empleado" }
+              { model: Empleado, as: "empleadoInfo" }
           ]
         }
       ],
@@ -260,20 +263,24 @@ const obtenerEmpleados = async () => {
     try {
       const usuarios = await Usuario.findAll({
         include: [
-          {
-            model: Rol,
-            as: 'rol',
-            where: { nombre: 'Empleado' }
-          },
-          {
-            model: Empleado,
-            as: 'empleado',
-            required: true // Solo trae usuarios que tienen un perfil de empleado asociado
-          }
+          { model: Rol, as: 'rol', attributes: ['nombre'] },
+          { model: Empleado, as: 'empleadoInfo', attributes: ['nombre', 'apellido'], required: true }
         ],
-        attributes: ['id_usuario', 'correo']
+        attributes: ['id_usuario', 'correo'],
+        raw: true,
+        nest: true
       });
-      return usuarios;
+      
+      const empleadosPlano = usuarios.map(u => ({
+          id_usuario: u.id_usuario,
+          correo: u.correo,
+          nombre: u.empleadoInfo.nombre,
+          apellido: u.empleadoInfo.apellido,
+          rol: u.rol.nombre
+      }));
+
+      return empleadosPlano;
+
     } catch (error) {
       console.error("Error al obtener la lista de empleados:", error);
       throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
