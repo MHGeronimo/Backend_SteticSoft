@@ -30,9 +30,22 @@ const cambiarEstadoRol = async (idRol, nuevoEstado) => {
  * @returns {Promise<object>} El rol recién creado con sus permisos.
  */
 const crearRol = async (datosRol) => {
-  // Extraer tipoPerfil de datosRol
-  const { nombre, descripcion, estado, tipoPerfil, idPermisos } = datosRol;
-  
+  // Extraer datos del rol, haciendo tipoPerfil mutable.
+  const { nombre, descripcion, estado, idPermisos } = datosRol;
+  let tipoPerfil = datosRol.tipoPerfil;
+
+  // Forzar el tipo de perfil correcto para roles del sistema.
+  if (nombre === "Cliente") {
+    tipoPerfil = "CLIENTE";
+  } else if (nombre === "Empleado") {
+    tipoPerfil = "EMPLEADO";
+  } else if (nombre === "Administrador") {
+    tipoPerfil = "NINGUNO";
+  } else if (!tipoPerfil) {
+    // Para roles personalizados, si no se especifica un tipo, se asume NINGUNO.
+    tipoPerfil = "NINGUNO";
+  }
+
   // Se utiliza una única transacción para toda la operación.
   const t = await db.sequelize.transaction();
 
@@ -44,12 +57,15 @@ const crearRol = async (datosRol) => {
     }
 
     // 2. Crear el rol principal
-    const nuevoRol = await db.Rol.create({
-      nombre,
-      descripcion,
-      estado: typeof estado === 'boolean' ? estado : true, // Valor por defecto si no se especifica
-      tipoPerfil, // Añadir tipoPerfil aquí
-    }, { transaction: t });
+    const nuevoRol = await db.Rol.create(
+      {
+        nombre,
+        descripcion,
+        estado: typeof estado === "boolean" ? estado : true, // Valor por defecto si no se especifica
+        tipoPerfil, // Usar el tipoPerfil validado
+      },
+      { transaction: t }
+    );
 
     // 3. Asignar los permisos si se proporcionaron en el array
     if (idPermisos && idPermisos.length > 0) {
@@ -186,6 +202,39 @@ const actualizarRol = async (idRol, datosActualizar, idUsuario) => {
     if (!rol) {
       throw new NotFoundError("Rol no encontrado para actualizar.");
     }
+
+    // --- INICIO DE CORRECCIÓN ---
+    const systemRoles = ["Administrador", "Cliente", "Empleado"];
+    const esRolDelSistema = systemRoles.includes(rol.nombre);
+
+    // Regla: No se puede cambiar el nombre de un rol del sistema.
+    if (
+      esRolDelSistema &&
+      datosPrincipalesRol.nombre &&
+      datosPrincipalesRol.nombre !== rol.nombre
+    ) {
+      throw new CustomError(
+        `El nombre del rol del sistema '${rol.nombre}' no puede ser modificado.`,
+        403
+      );
+    }
+
+    // Regla: No se puede cambiar el tipo de perfil de un rol del sistema.
+    if (esRolDelSistema && datosPrincipalesRol.tipoPerfil) {
+      // Se ignora cualquier intento de cambiar el tipoPerfil para roles del sistema.
+      delete datosPrincipalesRol.tipoPerfil;
+    }
+
+    // Regla: Si se cambia el nombre de un rol personalizado a un nombre del sistema, forzar el tipoPerfil.
+    const nombreFinal = datosPrincipalesRol.nombre || rol.nombre;
+    if (nombreFinal === "Cliente") {
+      datosPrincipalesRol.tipoPerfil = "CLIENTE";
+    } else if (nombreFinal === "Empleado") {
+      datosPrincipalesRol.tipoPerfil = "EMPLEADO";
+    } else if (nombreFinal === "Administrador") {
+      datosPrincipalesRol.tipoPerfil = "NINGUNO";
+    }
+    // --- FIN DE CORRECCIÓN ---
 
     const valorAnterior = rol.toJSON(); // Guardamos el estado anterior
 
