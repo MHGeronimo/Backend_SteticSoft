@@ -65,25 +65,19 @@ const crearNovedad = async (datosNovedad, empleadosIds) => {
 const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   const { estado, empleadoId, busqueda } = opcionesDeFiltro;
   const whereClause = {};
+  // Se ajusta el 'include' para traer los datos del modelo Empleado.
   const includeOptions = {
     model: db.Usuario,
-    as: 'empleados', // Este alias viene de Novedades.model.js
-    attributes: [
-        ['id_usuario', 'id'], // Renombramos 'id_usuario' a 'id' para el frontend
-        'correo'
-    ],
-    through: { attributes: [] }, // No incluir la tabla intermedia en el resultado
-    include: [{ // Anidamos la inclusión para obtener el nombre y apellido del perfil del empleado
+    as: 'empleados', // Alias de la relación Novedad -> Usuario
+    attributes: ['idUsuario', 'correo'], // Traemos solo lo necesario de Usuario
+    through: { attributes: [] },
+    include: [{
       model: db.Empleado,
-      as: 'empleadoInfo', // Este alias viene de Usuario.model.js
-      attributes: ['nombre', 'apellido'],
+      as: 'empleadoInfo', // Alias de la relación Usuario -> Empleado
+      attributes: ['nombre', 'apellido', 'telefono'], // ¡Traemos los datos completos!
     }],
     required: false
   };
-
-  if (estado === 'true' || estado === 'false') {
-    whereClause.estado = estado === 'true';
-  }
 
   if (empleadoId) {
     includeOptions.where = { idUsuario: empleadoId };
@@ -93,10 +87,7 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   if (busqueda) {
     const searchTerm = `%${busqueda}%`;
     whereClause[Op.or] = [
-      { fechaInicio: { [Op.like]: searchTerm } },
-      { fechaFin: { [Op.like]: searchTerm } },
-      { horaInicio: { [Op.like]: searchTerm } },
-      { horaFin: { [Op.like]: searchTerm } },
+      // ... (búsqueda en campos de Novedad)
       { '$empleados.correo$': { [Op.like]: searchTerm } },
       { '$empleados.empleadoInfo.nombre$': { [Op.like]: searchTerm } },
       { '$empleados.empleadoInfo.apellido$': { [Op.like]: searchTerm } },
@@ -106,28 +97,16 @@ const obtenerTodasLasNovedades = async (opcionesDeFiltro = {}) => {
   try {
     const novedades = await db.Novedad.findAll({
       where: whereClause,
-      include: [includeOptions], // Aplicamos la nueva configuración de inclusión
+      include: [includeOptions],
       order: [["fechaInicio", "DESC"]],
     });
-
-    // Mapeamos el resultado para darle al frontend una estructura limpia y fácil de usar
-    return novedades.map(novedad => {
-      const plainNovedad = novedad.get({ plain: true });
-      if (plainNovedad.empleados) {
-          plainNovedad.empleados = plainNovedad.empleados.map(emp => ({
-            id: emp.id,
-            // Unimos nombre y apellido para el selector del frontend
-            nombre: `${emp.empleadoInfo.nombre} ${emp.empleadoInfo.apellido}`.trim()
-          }));
-      }
-      return plainNovedad;
-    });
-
+    return novedades;
   } catch (error) {
     console.error("Error al obtener todas las novedades:", error);
     throw new CustomError(`Error al obtener novedades: ${error.message}`, 500);
   }
 };
+
 const obtenerNovedadesActivas = async () => {
     try {
         // Se usa moment().tz para asegurar que la fecha actual se evalúe en la zona horaria correcta (ej. America/Bogota).

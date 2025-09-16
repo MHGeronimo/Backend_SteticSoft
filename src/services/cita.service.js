@@ -26,7 +26,7 @@ const { formatDateTime } = require("../utils/dateHelpers.js");
  * @param {import('sequelize').Transaction} [transaction=null] - Transacción de Sequelize opcional.
  * @returns {Promise<Cita|null>} La instancia de la cita con sus asociaciones.
  */
-const obtenerCitaCompletaPorId = async (idCita, transaction = null) => {
+const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
   return db.Cita.findByPk(idCita, {
     include: [
       {
@@ -34,29 +34,27 @@ const obtenerCitaCompletaPorId = async (idCita, transaction = null) => {
         as: "cliente",
         attributes: ["idCliente", "nombre", "apellido", "correo"],
       },
+      // ✅ CORRECCIÓN: Se anida la consulta para traer el perfil del Empleado a través del Usuario.
       {
         model: db.Usuario,
-        as: "empleado",
-        required: false,
-        attributes: ["idUsuario", "correo"],
-        include: [
-          {
+        as: "empleado", // Alias de la relación Cita -> Usuario
+        attributes: ['idUsuario', 'correo'], // Datos de la cuenta de usuario
+        include: [{
             model: db.Empleado,
-            as: "empleadoInfo",
-            attributes: ["nombre", "apellido"],
-          },
-        ],
-      },
-      {
-        model: db.Servicio,
-        as: "servicios",
-        attributes: ["idServicio", "nombre", "descripcion", "precio"],
-        through: { attributes: [] },
+            as: 'empleadoInfo', // Alias de la relación Usuario -> Empleado
+            attributes: ['nombre', 'apellido', 'telefono'], // ¡Datos completos del perfil!
+        }]
       },
       {
         model: db.Estado,
         as: "estadoDetalle",
         attributes: ["idEstado", "nombreEstado"],
+      },
+      {
+        model: db.Servicio,
+        as: "serviciosProgramados",
+        attributes: [ "idServicio", "nombre", "precio", "descripcion" ],
+        through: { attributes: [] },
       },
     ],
     transaction,
@@ -71,98 +69,60 @@ const obtenerCitaCompletaPorId = async (idCita, transaction = null) => {
 const crearCita = async (datosCita) => {
   const {
     fecha,
-    horaInicio,
-    idCliente,
-    idUsuario,
-    servicios = [],
-    idNovedad,
+    hora_inicio,
+    clienteId,
+    usuarioId,
     idEstado,
+    novedadId,
+    servicios = [],
   } = datosCita;
 
+  // --- 1. VALIDACIONES DE LÓGICA DE NEGOCIO ---
+  const cliente = await db.Cliente.findOne({ where: { idCliente: clienteId, estado: true } });
+  if (!cliente) throw new BadRequestError(`Cliente con ID ${clienteId} no encontrado o inactivo.`);
+
+  const empleado = await db.Usuario.findOne({ where: { idUsuario: usuarioId, estado: true } });
+  if (!empleado) throw new BadRequestError(`Empleado con ID ${usuarioId} no encontrado o inactivo.`);
+  
+  const estado = await db.Estado.findByPk(idEstado);
+  if (!estado) throw new BadRequestError(`Estado con ID ${idEstado} no encontrado.`);
+
+  const novedad = await db.Novedad.findByPk(novedadId);
+  if (!novedad) throw new BadRequestError(`Novedad con ID ${novedadId} no encontrada.`);
+
+  // --- 2. CÁLCULO DE PRECIO Y VALIDACIÓN DE SERVICIOS ---
+  let precioTotalCalculado = 0;
+  const serviciosConsultados = await db.Servicio.findAll({
+    where: { idServicio: servicios, estado: true },
+  });
+
+  if (serviciosConsultados.length !== servicios.length) {
+    throw new BadRequestError(`Uno o más servicios no existen o están inactivos.`);
+  }
+
+  serviciosConsultados.forEach(servicio => {
+    precioTotalCalculado += parseFloat(servicio.precio);
+  });
+
+  // --- 3. CREACIÓN EN BASE DE DATOS DENTRO DE UNA TRANSACCIÓN ---
   const transaction = await db.sequelize.transaction();
   try {
-    // --- Validaciones de Negocio ---
-    const cliente = await db.Cliente.findByPk(idCliente, { transaction });
-    if (!cliente || !cliente.estado) {
-      throw new BadRequestError(
-        "El cliente especificado no existe o está inactivo."
-      );
-    }
+    const nuevaCita = await db.Cita.create({
+      fecha,
+      hora_inicio,
+      precio_total: precioTotalCalculado,
+      idCliente: clienteId,
+      idUsuario: usuarioId,
+      idEstado: idEstado,
+      idNovedad: novedadId,
+    }, { transaction });
 
-    const estado = await db.Estado.findByPk(idEstado, { transaction });
-    if (!estado) {
-      throw new BadRequestError("El estado especificado no es válido.");
-    }
+    await nuevaCita.addServiciosProgramados(serviciosConsultados, { transaction });
 
-    const novedad = await db.Novedad.findByPk(idNovedad, {
-      include: [
-        { model: db.Usuario, as: "empleados", attributes: ["idUsuario"] },
-      ],
-      transaction,
-    });
-    if (!novedad || !novedad.estado) {
-      throw new BadRequestError(
-        "La novedad (horario) seleccionada no existe o no está activa."
-      );
-    }
-
-    // Validar si el empleado pertenece a la novedad
-    if (idUsuario) {
-      const esEmpleadoValido = novedad.empleados.some(
-        (emp) => emp.idUsuario === idUsuario
-      );
-      if (!esEmpleadoValido) {
-        throw new BadRequestError(
-          "El empleado seleccionado no está disponible en este horario."
-        );
-      }
-    }
-
-    // Validar si la hora ya está ocupada
-    const citaExistente = await db.Cita.findOne({
-      where: { fecha, horaInicio, idNovedad },
-      transaction,
-    });
-    if (citaExistente) {
-      throw new ConflictError(
-        "Este horario ya ha sido reservado. Por favor, selecciona otro."
-      );
-    }
-
-    // Validar y calcular el precio total de los servicios
-    const serviciosDb = await db.Servicio.findAll({
-      where: { idServicio: servicios, estado: true },
-      transaction,
-    });
-    if (serviciosDb.length !== servicios.length) {
-      throw new BadRequestError(
-        "Uno o más de los servicios seleccionados no existen o están inactivos."
-      );
-    }
-    const precioTotal = serviciosDb.reduce(
-      (total, s) => total + parseFloat(s.precio),
-      0
-    );
-
-    // --- Creación de la Cita ---
-    const nuevaCita = await db.Cita.create(
-      {
-        fecha,
-        horaInicio,
-        idCliente,
-        idUsuario: idUsuario || null,
-        idNovedad,
-        idEstado,
-        precioTotal,
-      },
-      { transaction }
-    );
-
-    await nuevaCita.setServicios(serviciosDb, { transaction });
     await transaction.commit();
 
     // --- Notificación por Correo (Post-transacción) ---
-    const citaCompleta = await obtenerCitaCompletaPorId(nuevaCita.idCita);
+    const citaCompleta = await obtenerCitaCompletaPorIdInterno(nuevaCita.idCita);
     if (citaCompleta && cliente.correo) {
       const empleadoInfo = citaCompleta.empleado?.empleadoInfo;
       const nombreEmpleado = empleadoInfo
@@ -190,9 +150,7 @@ const crearCita = async (datosCita) => {
     return citaCompleta;
   } catch (error) {
     await transaction.rollback();
-    if (error instanceof BadRequestError || error instanceof ConflictError)
-      throw error;
-    console.error("Error en el servicio al crear la cita:", error);
+    console.error("Error al crear la cita en el servicio:", error.message, error.stack);
     throw new CustomError(`Error al crear la cita: ${error.message}`, 500);
   }
 };
@@ -253,7 +211,7 @@ const obtenerTodasLasCitas = async (opciones = {}) => {
  * @returns {Promise<Cita>} La instancia de la cita.
  */
 const obtenerCitaPorId = async (idCita) => {
-  const cita = await obtenerCitaCompletaPorId(idCita);
+  const cita = await obtenerCitaCompletaPorIdInterno(idCita);
   if (!cita) {
     throw new NotFoundError("Cita no encontrada.");
   }
@@ -301,7 +259,7 @@ const actualizarCita = async (idCita, datosActualizar) => {
     await transaction.commit();
 
     // --- Notificación por Correo (Post-transacción) ---
-    const citaActualizada = await obtenerCitaCompletaPorId(idCita);
+    const citaActualizada = await obtenerCitaCompletaPorIdInterno(idCita);
     const cliente = citaActualizada.cliente;
     if (cliente && cliente.correo) {
       const empleadoInfo = citaActualizada.empleado?.empleadoInfo;
@@ -361,7 +319,7 @@ const cambiarEstadoCita = async (idCita, idNuevoEstado) => {
     await cita.update({ idEstado: idNuevoEstado }, { transaction });
     await transaction.commit();
 
-    const citaActualizada = await obtenerCitaCompletaPorId(idCita);
+    const citaActualizada = await obtenerCitaCompletaPorIdInterno(idCita);
     const cliente = citaActualizada.cliente;
 
     // Si se cancela la cita, enviar notificación
@@ -500,7 +458,7 @@ const crearCitaParaCliente = async (datosCita, idClienteAuth) => {
  * @returns {Promise<Cita>} La instancia de la cita.
  */
 const obtenerCitaDeClientePorId = async (idCita, idCliente) => {
-  const cita = await obtenerCitaCompletaPorId(idCita);
+  const cita = await obtenerCitaCompletaPorIdInterno(idCita);
 
   if (!cita || cita.idCliente !== idCliente) {
     // Se lanza NotFoundError para no revelar la existencia de la cita a usuarios no autorizados.
@@ -636,8 +594,17 @@ const cancelarCita = async (idCita) => {
              enviarCorreoCita({
                 correo: citaCompleta.cliente.correo,
                 nombreCliente: citaCompleta.cliente.nombre,
-                citaInfo: { /* ... datos para el correo de cancelación ... */ }
-             });
+                citaInfo: {
+                  accion: "registrada",
+                  fechaHora: formatDateTime(
+                  `${citaCompleta.fecha} ${citaCompleta.horaInicio}`
+                   ),
+                  estado: citaCompleta.estadoDetalle.nombreEstado,
+                  empleado: nombreEmpleado,
+                  servicios: citaCompleta.servicios.map((s) => s.toJSON()),
+                  total: citaCompleta.precioTotal,
+                },
+              });
         }
         return citaCompleta;
 

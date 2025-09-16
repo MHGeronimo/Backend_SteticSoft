@@ -271,10 +271,9 @@ CREATE TABLE IF NOT EXISTS cita (
     fecha DATE NOT NULL,
     hora_inicio TIME NOT NULL,
     precio_total DECIMAL(10, 2),
-    estado VARCHAR(255) NOT NULL DEFAULT 'Activa',
     id_cliente INTEGER NOT NULL REFERENCES cliente (id_cliente),
     id_usuario INTEGER REFERENCES usuario (id_usuario),
-    id_estado INTEGER REFERENCES estado (id_estado),
+    id_estado INTEGER REFERENCES estado (id_estado) DEFAULT 5,
     id_novedad INTEGER NOT NULL REFERENCES novedades (id_novedad)
 );
 
