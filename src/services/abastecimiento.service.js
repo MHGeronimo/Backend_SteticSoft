@@ -86,9 +86,9 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   if (search) {
     whereClause[Op.or] = [
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.empleadoInfo.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.empleadoInfo.apellido$': { [Op.iLike]: `%${search}%` } },
+      { '$empleado.correo$': { [Op.iLike]: `%${search}%` } },
+      { '$empleado.empleadoInfo.nombre$': { [Op.iLike]: `%${search}%` } },
+      { '$empleado.empleadoInfo.apellido$': { [Op.iLike]: `%${search}%` } },
     ];
   }
 
@@ -102,7 +102,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
         },
         {
           model: Usuario,
-          as: "usuario",
+          as: "empleado",
           attributes: ['id_usuario', 'correo'],
           include: [
             { model: Rol, as: "rol", attributes: ['nombre'] },
@@ -142,7 +142,7 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
         },
         {
           model: Usuario,
-          as: "usuario",
+          as: "empleado",
           include: [
               { model: Rol, as: "rol" },
               { model: Empleado, as: "empleadoInfo" }
