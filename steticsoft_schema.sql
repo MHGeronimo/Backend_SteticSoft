@@ -413,7 +413,7 @@ AND p.nombre IN (
 ) ON CONFLICT (id_rol, id_permiso) DO NOTHING;
 
 INSERT INTO usuario (correo, contrasena, id_rol, estado) VALUES
-('mrgerito@gmail.com', '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO', 
+('steticsoft@gmail.com', '$2b$10$oJOJM36rGGzZftagNM1vWOxLaW96cPBRk.DhhvSvv8gneGTzFIJhO', 
  (SELECT id_rol FROM rol WHERE nombre = 'Administrador'), TRUE)
 ON CONFLICT (correo) DO UPDATE SET
 contrasena = EXCLUDED.contrasena,
