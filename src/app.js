@@ -1,6 +1,6 @@
 // src/app.js
 const express = require("express");
-const cors = require("cors");
+const cors = require("cors"); // Se mantiene la importación de CORS
 const helmet = require("helmet");
 const morgan = require("morgan");
 const path = require("path");
@@ -27,15 +27,25 @@ const app = express();
 // 1. Helmet
 app.use(helmet());
 
-// 2. CORS
-app.use(
-  cors({
-    origin: CORS_ORIGIN,
-    credentials: true,
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    optionsSuccessStatus: 204,
-  })
-);
+// ✅ 2. CORS (CONFIGURACIÓN CORREGIDA Y DEFINITIVA)
+// Esta configuración permite explícitamente que 'http://localhost:5173' se comunique con tu API.
+const whitelist = [CORS_ORIGIN, "http://localhost:5173", "http://localhost:5174"];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
 
 // 3. Morgan
 if (NODE_ENV === "development") {
@@ -69,6 +79,7 @@ app.use("/api/health", healthRoutes);
 
 // Manejador para Rutas No Encontradas (404)
 const manejador404 = (req, res, next) => {
+  // Esta lógica se mantiene como la tenías, es correcta.
   if (!req.route && req.path !== "/" && !req.path.startsWith("/api/")) {
     return next(
       new NotFoundError(
