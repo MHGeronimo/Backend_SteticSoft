@@ -41,7 +41,7 @@ const obtenerCitaCompletaPorIdInterno = async (idCita, transaction = null) => {
         attributes: ['idUsuario', 'correo'], // Datos de la cuenta de usuario
         include: [{
             model: db.Empleado,
-            as: 'empleadoInfo', // Alias de la relación Usuario -> Empleado
+            as: 'empleado', // Alias de la relación Usuario -> Empleado
             attributes: ['nombre', 'apellido', 'telefono'], // ¡Datos completos del perfil!
         }]
       },
@@ -124,9 +124,9 @@ const crearCita = async (datosCita) => {
     // --- Notificación por Correo (Post-transacción) ---
     const citaCompleta = await obtenerCitaCompletaPorIdInterno(nuevaCita.idCita);
     if (citaCompleta && cliente.correo) {
-      const empleadoInfo = citaCompleta.empleado?.empleadoInfo;
-      const nombreEmpleado = empleadoInfo
-        ? `${empleadoInfo.nombre} ${empleadoInfo.apellido}`
+      const empleado = citaCompleta.empleado?.empleado;
+      const nombreEmpleado = empleado
+        ? `${empleado.nombre} ${empleado.apellido}`
         : "Por confirmar";
 
       enviarCorreoCita({
@@ -175,8 +175,8 @@ const obtenerTodasLasCitas = async (opciones = {}) => {
     includeWhereClause[Op.or] = [
       { "$cliente.nombre$": { [Op.iLike]: searchTerm } },
       { "$cliente.apellido$": { [Op.iLike]: searchTerm } },
-      { "$empleado.empleadoInfo.nombre$": { [Op.iLike]: searchTerm } },
-      { "$empleado.empleadoInfo.apellido$": { [Op.iLike]: searchTerm } },
+      { "$empleado.empleado.nombre$": { [Op.iLike]: searchTerm } },
+      { "$empleado.empleado.apellido$": { [Op.iLike]: searchTerm } },
     ];
   }
 
@@ -189,7 +189,7 @@ const obtenerTodasLasCitas = async (opciones = {}) => {
           model: db.Usuario,
           as: "empleado",
           required: false,
-          include: [{ model: db.Empleado, as: "empleadoInfo" }],
+          include: [{ model: db.Empleado, as: "empleado" }],
         },
         { model: db.Servicio, as: "servicios", through: { attributes: [] } },
         { model: db.Estado, as: "estadoDetalle" },
@@ -262,9 +262,9 @@ const actualizarCita = async (idCita, datosActualizar) => {
     const citaActualizada = await obtenerCitaCompletaPorIdInterno(idCita);
     const cliente = citaActualizada.cliente;
     if (cliente && cliente.correo) {
-      const empleadoInfo = citaActualizada.empleado?.empleadoInfo;
-      const nombreEmpleado = empleadoInfo
-        ? `${empleadoInfo.nombre} ${empleadoInfo.apellido}`
+      const empleado = citaActualizada.empleado?.empleado;
+      const nombreEmpleado = empleado
+        ? `${empleadonombre} ${empleado.apellido}`
         : "Por confirmar";
 
       enviarCorreoCita({
@@ -328,9 +328,9 @@ const cambiarEstadoCita = async (idCita, idNuevoEstado) => {
       cliente &&
       cliente.correo
     ) {
-      const empleadoInfo = citaActualizada.empleado?.empleadoInfo;
-      const nombreEmpleado = empleadoInfo
-        ? `${empleadoInfo.nombre} ${empleadoInfo.apellido}`
+      const empleado = citaActualizada.empleado?.empleado;
+      const nombreEmpleado = empleado
+        ? `${empleado.nombre} ${empleado.apellido}`
         : "Por confirmar";
 
       enviarCorreoCita({
@@ -421,7 +421,7 @@ const obtenerCitasPorCliente = async (idCliente) => {
           model: db.Usuario,
           as: "empleado",
           required: false,
-          include: [{ model: db.Empleado, as: "empleadoInfo" }],
+          include: [{ model: db.Empleado, as: "empleado" }],
         },
         { model: db.Servicio, as: "servicios", through: { attributes: [] } },
         { model: db.Estado, as: "estadoDetalle" },
@@ -498,7 +498,7 @@ const listarNovedadesAgendablesMovil = async () => {
           include: [
             {
               model: db.Empleado,
-              as: "empleadoInfo",
+              as: "empleado",
               attributes: ["nombre", "apellido"],
             },
           ],
