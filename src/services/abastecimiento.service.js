@@ -260,31 +260,38 @@ const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
 
 // --- OBTENER EMPLEADOS (VERSIÓN DEFINITIVA) ---
 const obtenerEmpleados = async () => {
-    try {
-      const usuarios = await Usuario.findAll({
-        include: [
-          { model: Rol, as: 'rol', attributes: ['nombre'] },
-          { model: Empleado, as: 'empleadoInfo', attributes: ['nombre', 'apellido'], required: true }
-        ],
-        attributes: ['id_usuario', 'correo'],
-        raw: true,
-        nest: true
-      });
-      
-      const empleadosPlano = usuarios.map(u => ({
-          id_usuario: u.id_usuario,
-          correo: u.correo,
-          nombre: u.empleadoInfo.nombre,
-          apellido: u.empleadoInfo.apellido,
-          rol: u.rol.nombre
-      }));
+  try {
+    const usuarios = await Usuario.findAll({
+      include: [
+        { model: Rol, as: "rol", attributes: ["nombre"] },
+        {
+          model: Empleado,
+          as: "empleado",
+          attributes: ["nombre", "apellido"],
+          required: true,
+        }, // ALIAS CORREGIDO
+      ],
+      attributes: ["id_usuario", "correo"],
+      raw: true,
+      nest: true,
+    });
 
-      return empleadosPlano;
+    const empleadosPlano = usuarios.map((u) => ({
+      id_usuario: u.id_usuario,
+      correo: u.correo,
+      nombre: u.empleado.nombre, // ACCESO CORREGIDO
+      apellido: u.empleado.apellido, // ACCESO CORREGIDO
+      rol: u.rol.nombre,
+    }));
 
-    } catch (error) {
-      console.error("Error al obtener la lista de empleados:", error);
-      throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
-    }
+    return empleadosPlano;
+  } catch (error) {
+    console.error("Error al obtener la lista de empleados:", error);
+    throw new CustomError(
+      `Error al obtener la lista de empleados: ${error.message}`,
+      500
+    );
+  }
 };
 
 module.exports = {
