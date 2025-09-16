@@ -1,20 +1,19 @@
 // src/services/abastecimiento.service.js
 const db = require("../models");
-const { Op, col } = db.Sequelize; // Modifica o añade esta línea
-const { Abastecimiento, Producto, sequelize, Usuario, Rol } = db;
+const { Op } = db.Sequelize;
+const { Abastecimiento, Producto, Usuario, Rol, Empleado, sequelize } = db; // Modelos Requeridos
 const {
   NotFoundError,
   ConflictError,
   CustomError,
   BadRequestError,
 } = require("../errors");
-const { checkAndSendStockAlert } = require("../utils/stockAlertHelper.js"); // Import stock alert helper
+const { checkAndSendStockAlert } = require("../utils/stockAlertHelper.js");
 
 /**
  * Crear un nuevo registro de abastecimiento (salida de producto para empleado)
  * y DISMINUIR la existencia del producto.
  * @param {object} datosAbastecimiento - Datos del abastecimiento.
- * Ej: { productoId, cantidad, fechaIngreso?, empleadoAsignado?, estado? }
  * @returns {Promise<object>} El registro de abastecimiento creado.
  */
 const crearAbastecimiento = async (datosAbastecimiento) => {
@@ -27,17 +26,11 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   if (!producto.estado)
     throw new BadRequestError(`Producto '${producto.nombre}' no está activo.`);
 
-  console.log("### Objeto 'producto' completo que se está validando ###");
-  console.log(producto.toJSON()); // Usamos .toJSON() para ver los datos puros del objeto.
-  console.log("###################################################");
-
-  // --- INICIO DE NUEVA VALIDACIÓN ---
   if (producto.tipoUso?.toLowerCase() !== "interno") {
     throw new BadRequestError(
       `El producto '${producto.nombre}' (ID: ${idProducto}) no es de tipo 'Interno' y no puede ser asignado mediante este módulo de abastecimiento.`
     );
   }
-  // --- FIN DE NUEVA VALIDACIÓN ---
 
   if (producto.existencia < cantidad) {
     throw new ConflictError(
@@ -54,7 +47,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
         fechaIngreso: fechaIngreso || new Date(),
         estaAgotado: false,
         estado: typeof estado === "boolean" ? estado : true,
-        idUsuario: empleadoAsignado,
+        idUsuario: empleadoAsignado, // CORREGIDO: Usar idUsuario
       },
       { transaction }
     );
@@ -84,9 +77,10 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
   }
 };
 
-// ... (El resto de las funciones: obtenerTodosLosAbastecimientos, obtenerAbastecimientoPorId, etc. se mantienen igual que en tu archivo original)
-// Aquí pego el resto del archivo para que lo tengas completo.
-
+/**
+ * ✅ FUNCIÓN COMPLETAMENTE CORREGIDA Y REESTRUCTURADA
+ * Obtiene todos los abastecimientos con filtros, paginación y búsqueda avanzada.
+ */
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   const { page = 1, limit = 10, search, estado, ...otrosFiltros } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
@@ -107,13 +101,20 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       },
       {
         model: Usuario,
-        as: "empleado", // <--- ALIAS ACTUALIZADO AQUÍ
-        attributes: ["idUsuario", "nombre", "apellido", "correo"],
-        include: {
-          model: Rol,
-          as: "rol",
-          attributes: ["nombre"],
-        },
+        as: "usuario",
+        attributes: ["id_usuario", "correo"], // Traemos solo lo necesario de Usuario
+        include: [
+          {
+            model: Rol,
+            as: "rol",
+            attributes: ["nombre"],
+          },
+          {
+            model: Empleado, // ¡INCLUSIÓN CLAVE!
+            as: "empleadoInfo",
+            attributes: ["nombre", "apellido"],
+          },
+        ],
       },
     ],
     distinct: true,
@@ -124,16 +125,11 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   }
 
   if (search) {
-    // REEMPLAZA el 'where' anterior con este bloque:
     queryOptions.where[Op.or] = [
-      { [Op.and]: col('producto.nombre') }, // Esta sintaxis puede parecer extraña, pero es una forma de forzar la referencia a la columna
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
-      { [Op.and]: col('empleado.nombre') },
-      { '$empleado.nombre$': { [Op.iLike]: `%${search}%` } },
-      { [Op.and]: col('empleado.apellido') },
-      { '$empleado.apellido$': { [Op.iLike]: `%${search}%` } },
-      { [Op.and]: col('empleado.correo') },
-      { '$empleado.correo$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.empleadoInfo.nombre$': { [Op.iLike]: `%${search}%` } },   // Ruta correcta
+      { '$usuario.empleadoInfo.apellido$': { [Op.iLike]: `%${search}%` } }, // Ruta correcta
+      { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
     ];
   }
 
@@ -155,6 +151,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   }
 };
 
+
 const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
   try {
     const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento, {
@@ -164,6 +161,11 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
           as: "producto",
           attributes: ["idProducto", "nombre", "stockMinimo", "existencia"],
         },
+        {
+            model: Usuario,
+            as: 'usuario',
+            include: ['rol', 'empleadoInfo']
+        }
       ],
     });
     if (!abastecimiento)
@@ -220,7 +222,7 @@ const actualizarAbastecimiento = async (idAbastecimiento, datosActualizar) => {
 
     if (estaAgotado !== undefined) camposAActualizar.estaAgotado = estaAgotado;
     if (empleadoAsignado !== undefined)
-      camposAActualizar.idUsuario = empleadoAsignado;
+      camposAActualizar.idUsuario = empleadoAsignado; // CORREGIDO
     if (estaAgotado === true) {
       if (razonAgotamiento !== undefined)
         camposAActualizar.razonAgotamiento = razonAgotamiento;
@@ -376,7 +378,6 @@ const eliminarAbastecimientoFisico = async (idAbastecimiento) => {
   }
 };
 
-// Nueva función para marcar un abastecimiento como agotado
 const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
   const abastecimiento = await Abastecimiento.findByPk(idAbastecimiento);
   if (!abastecimiento) {
@@ -385,40 +386,40 @@ const agotarAbastecimiento = async (idAbastecimiento, razonAgotamiento) => {
     );
   }
   if (abastecimiento.estaAgotado) {
-    // Corresponde a esta_agotado en BD
     throw new ConflictError(
       `El abastecimiento con ID ${idAbastecimiento} ya está marcado como agotado.`
     );
   }
 
   abastecimiento.estaAgotado = true;
-  abastecimiento.razonAgotamiento = razonAgotamiento || null; // Corresponde a razon_agotamiento
-  abastecimiento.fechaAgotamiento = new Date(); // Corresponde a fecha_agotamiento
+  abastecimiento.razonAgotamiento = razonAgotamiento || null;
+  abastecimiento.fechaAgotamiento = new Date();
 
   await abastecimiento.save();
   return abastecimiento;
 };
 
-/**
- * Obtiene la lista de usuarios con rol de empleado.
- * @returns {Promise<Array>} - Una lista de empleados.
- */
+// Función para obtener empleados (ya no debería dar error)
 const obtenerEmpleados = async () => {
-  try {
-    const empleados = await Usuario.findAll({
-      include: [{
-        model: Rol,
-        as: 'rol',
-        where: { nombre: 'Empleado' } // Confirma que 'Empleado' es el nombre exacto del rol
-      }],
-      attributes: ['id_usuario', 'correo', 'nombre', 'apellido'] // Define los campos que el frontend necesita
-    });
-    return empleados;
-  } catch (error) {
-    console.error("Error al obtener la lista de empleados:", error);
-    throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
-  }
-};
+    try {
+      const empleados = await Usuario.findAll({
+        include: [{
+          model: Rol,
+          as: 'rol',
+          where: { nombre: 'Empleado' } // O el nombre exacto del rol
+        }, {
+          model: Empleado,
+          as: 'empleadoInfo',
+          attributes: ['nombre', 'apellido']
+        }],
+        attributes: ['id_usuario', 'correo']
+      });
+      return empleados;
+    } catch (error) {
+      console.error("Error al obtener la lista de empleados:", error);
+      throw new CustomError(`Error al obtener la lista de empleados: ${error.message}`, 500);
+    }
+  };
 
 module.exports = {
   crearAbastecimiento,
@@ -427,5 +428,5 @@ module.exports = {
   actualizarAbastecimiento,
   eliminarAbastecimientoFisico,
   agotarAbastecimiento,
-  obtenerEmpleados,
+  obtenerEmpleados // Exportar la función
 };
