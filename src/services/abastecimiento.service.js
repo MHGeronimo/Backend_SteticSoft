@@ -73,7 +73,7 @@ const crearAbastecimiento = async (datosAbastecimiento) => {
 };
 
 
-// --- OBTENER TODOS LOS ABASTECIMIENTOS (VERSIÓN DEFINITIVA) ---
+// REEMPLAZA LA FUNCIÓN 'obtenerTodosLosAbastecimientos' ENTERA CON ESTA VERSIÓN:
 const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
   const { page = 1, limit = 10, search, estado } = opcionesDeFiltro;
   const offset = (page - 1) * limit;
@@ -83,12 +83,13 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
     whereClause.estado = estado === 'activos';
   }
 
+  // Se usa el alias corregido 'empleado'
   if (search) {
     whereClause[Op.or] = [
       { '$producto.nombre$': { [Op.iLike]: `%${search}%` } },
       { '$usuario.correo$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.empleadoInfo.nombre$': { [Op.iLike]: `%${search}%` } },
-      { '$usuario.empleadoInfo.apellido$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.empleado.nombre$': { [Op.iLike]: `%${search}%` } },
+      { '$usuario.empleado.apellido$': { [Op.iLike]: `%${search}%` } },
     ];
   }
 
@@ -96,17 +97,13 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
     const { count, rows } = await Abastecimiento.findAndCountAll({
       where: whereClause,
       include: [
-        { 
-            model: Producto, 
-            as: "producto" 
-        },
+        { model: Producto, as: "producto" },
         {
           model: Usuario,
           as: "usuario",
-          attributes: ['id_usuario', 'correo'],
           include: [
-            { model: Rol, as: "rol", attributes: ['nombre'] },
-            { model: Empleado, as: "empleadoInfo", attributes: ['nombre', 'apellido'], required: true }
+            { model: Rol, as: "rol" },
+            { model: Empleado, as: "empleado", required: true } // Se usa el alias corregido
           ]
         }
       ],
@@ -114,7 +111,7 @@ const obtenerTodosLosAbastecimientos = async (opcionesDeFiltro = {}) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       distinct: true,
-      subQuery: false // Clave para el correcto funcionamiento de JOINs con filtros
+      subQuery: false
     });
 
     return {
@@ -145,7 +142,7 @@ const obtenerAbastecimientoPorId = async (idAbastecimiento) => {
           as: "usuario",
           include: [
               { model: Rol, as: "rol" },
-              { model: Empleado, as: "empleadoInfo" }
+              { model: Empleado, as: "empleado" }
           ]
         }
       ],
@@ -269,7 +266,7 @@ const obtenerEmpleados = async () => {
           },
           {
             model: Empleado,
-            as: 'empleadoInfo',
+            as: 'empleado',
             required: true // Solo trae usuarios que tienen un perfil de empleado asociado
           }
         ],
