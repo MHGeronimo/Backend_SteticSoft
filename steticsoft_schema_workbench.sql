@@ -190,25 +190,23 @@ CREATE TABLE cita (
 
 
 -- Tabla: servicio
-CREATE TABLE IF NOT EXISTS servicio (
-    id_servicio INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    descripcion TEXT,
-    precio DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    imagen_url VARCHAR(255),
-    id_categoria_servicio INT NOT NULL,
-    estado TINYINT(1) DEFAULT 1 NOT NULL,
-    FOREIGN KEY (id_categoria_servicio) REFERENCES categoria_servicio(id_categoria_servicio) ON DELETE RESTRICT
+CREATE TABLE IF NOT EXISTS cita (
+    id_cita SERIAL PRIMARY KEY,
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    precio_total DECIMAL(10, 2),
+    id_cliente INTEGER NOT NULL REFERENCES cliente (id_cliente),
+    id_usuario INTEGER REFERENCES usuario (id_usuario),
+    id_estado INTEGER REFERENCES estado (id_estado) DEFAULT 5,
+    id_novedad INTEGER NOT NULL REFERENCES novedades (id_novedad)
 );
 
--- Tabla: servicio_x_cita
+
 CREATE TABLE IF NOT EXISTS servicio_x_cita (
-    id_servicio_x_cita INT AUTO_INCREMENT PRIMARY KEY,
-    id_servicio INT,
-    id_cita INT,
-    UNIQUE KEY idx_servicio_cita (id_servicio, id_cita),
-    FOREIGN KEY (id_servicio) REFERENCES servicio(id_servicio) ON DELETE CASCADE,
-    FOREIGN KEY (id_cita) REFERENCES cita(id_cita) ON DELETE CASCADE
+    id_servicio_x_cita SERIAL PRIMARY KEY,
+    id_servicio INT REFERENCES servicio(id_servicio) ON DELETE CASCADE,
+    id_cita INT REFERENCES cita(id_cita) ON DELETE CASCADE,
+    UNIQUE (id_servicio, id_cita)
 );
 
 -- Tabla: compra_x_producto

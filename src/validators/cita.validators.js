@@ -14,55 +14,40 @@ const idValidator = [
 ];
 
 const crearCitaValidators = [
-  body("fechaHora")
-    .notEmpty().withMessage("La fecha y hora son obligatorias.")
-    .isISO8601().withMessage("El formato de fecha y hora no es válido.")
-    .toDate(),
+  body("fecha")
+    .notEmpty().withMessage("La fecha de la cita es obligatoria.")
+    .isISO8601().withMessage("La fecha debe estar en formato YYYY-MM-DD."),
+  
+  body("hora_inicio")
+    .notEmpty().withMessage("La hora de inicio es obligatoria.")
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/).withMessage("La hora debe estar en formato HH:mm."),
 
   body("clienteId")
     .notEmpty().withMessage("El ID del cliente es obligatorio.")
     .isInt({ gt: 0 }).withMessage("El ID del cliente debe ser un entero positivo."),
-
-  body("usuarioId") // Corresponde al empleado
+  
+  body("usuarioId")
     .notEmpty().withMessage("El ID del empleado es obligatorio.")
     .isInt({ gt: 0 }).withMessage("El ID del empleado debe ser un entero positivo."),
   
-  body("idServicios")
-    .isArray({ min: 1 }).withMessage("Debe seleccionar al menos un servicio."),
-  
+  body("idEstado")
+    .notEmpty().withMessage("El estado de la cita es obligatorio.")
+    .isInt({ gt: 0 }).withMessage("El ID del estado debe ser un entero positivo."),
+
   body("novedadId")
-    .notEmpty().withMessage("El ID de la novedad es obligatorio.")
+    .notEmpty().withMessage("La novedad de horario es obligatoria.")
     .isInt({ gt: 0 }).withMessage("El ID de la novedad debe ser un entero positivo."),
 
-  body("estadoCitaId")
-    .notEmpty().withMessage("El estado de la cita es obligatorio.")
-    .isInt({ gt: 0 }),
-    
+  body("servicios")
+    .isArray({ min: 1 }).withMessage("Debe seleccionar al menos un servicio.")
+    .custom((servicios) => {
+      if (!servicios.every(id => Number.isInteger(id) && id > 0)) {
+        throw new Error("Cada ID de servicio debe ser un número entero positivo.");
+      }
+      return true;
+    }),
+  
   handleValidationErrors,
-];
-const actualizarCitaValidators = [
-  param("id")
-    .isInt({ gt: 0 })
-    .withMessage("El ID de la cita debe ser un entero positivo."),
-  body("fecha")
-    .optional()
-    .isISO8601()
-    .withMessage("El formato de fecha debe ser YYYY-MM-DD."),
-  body("horaInicio")
-    .optional()
-    .matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/)
-    .withMessage("El formato de hora debe ser HH:mm o HH:mm:ss."),
-  body("idCliente").optional().isInt({ gt: 0 }),
-  body("idUsuario").optional().isInt({ gt: 0 }),
-  body("idNovedad").optional().isInt({ gt: 0 }),
-  body("servicios").optional().isArray(),
-  // --- ✅ CORRECCIÓN AQUÍ ---
-  // Se valida 'idEstado' como un número entero positivo, en lugar de 'estado' como texto.
-  body("idEstado")
-    .optional()
-    .isInt({ gt: 0 })
-    .withMessage("El ID del estado debe ser un entero positivo."),
-  handleValidationErrors,
 ];
 
 const cambiarEstadoCitaValidators = [
