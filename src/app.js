@@ -28,25 +28,22 @@ const app = express();
 // 1. Helmet (para seguridad básica)
 app.use(helmet());
 
-// ✅ 2. CORS (CONFIGURACIÓN DEFINITIVA Y CORRECTA)
-// Esta es la parte más importante. Define qué "orígenes" (dominios) tienen permiso.
+// ✅ 2. CORS (CONFIGURACIÓN CORREGIDA Y DEFINITIVA)
 const whitelist = [CORS_ORIGIN, "http://localhost:5173", "http://localhost:5174"];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite peticiones sin origen (como las de Postman o apps móviles) y las de la whitelist
     if (!origin || whitelist.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      callback(new Error("Petición bloqueada por políticas de CORS"));
     }
   },
-  credentials: true, // Permite que el frontend envíe cookies o tokens de autorización
+  credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   optionsSuccessStatus: 204,
 };
 
-// Se aplica el middleware de CORS ANTES de las rutas.
 app.use(cors(corsOptions));
 
 
